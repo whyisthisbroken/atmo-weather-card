@@ -66,11 +66,13 @@ A detail-oriented weather and forecast card.
 
 ## Examples
 
-<img width="500" alt="Image" src="https://github.com/user-attachments/assets/e54fe71a-1349-4bd2-ba40-24958a27ffa4" /><br>
+<img width="500" alt="Image" src="https://github.com/user-attachments/assets/ebc74f71-1e6e-4f31-aedb-0bb25105efe6" /><br>
 <img width="500" alt="Image" src="https://github.com/user-attachments/assets/e6ebd6f5-8eec-4f47-9247-60ee5dbcddf2" /> 
 
 <details>
 <summary><b>Standalone — Basic Forecast Slider</b></summary>
+
+<img width="500" alt="Image" src="https://github.com/user-attachments/assets/e54fe71a-1349-4bd2-ba40-24958a27ffa4" />
 
 <br>
 
