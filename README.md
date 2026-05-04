@@ -4,7 +4,7 @@
 
 ## Atmospheric Weather Card
 
-<img width="500" alt="Image" src="https://github.com/user-attachments/assets/4b939791-70d3-42af-b267-606b18dede8e" />
+<img width="500" alt="Image" src="https://github.com/user-attachments/assets/99b9a3cc-3512-42fa-9fda-4e8e4c758f13" />
 
 
 A detail-oriented weather and forecast card.
