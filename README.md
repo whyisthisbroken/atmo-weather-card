@@ -70,7 +70,7 @@ A flexible, detail-oriented weather and forecast card.
 <img width="400" alt="Image" src="https://github.com/user-attachments/assets/bea6c454-97bb-4122-851d-5f13b0a7bea1" />
 
 <details>
-<summary><b>Standalone | Example 1 — Basic Card</b></summary>
+<summary><b>Standalone · Example 1 — Basic Card</b></summary>
 
 <br>
 
@@ -103,7 +103,7 @@ tap_action:
 </details>
 
 <details>
-<summary><b>Standalone | Example 2 — Chip Cards</b></summary>
+<summary><b>Standalone · Example 2 — Chip Cards</b></summary>
 
 <br>
 <img width="400" alt="Image" src="https://github.com/user-attachments/assets/f5b0afbb-8f88-4a28-8cbc-34007c3d29c6" />
@@ -200,7 +200,7 @@ chips:
 </details>
 
 <details>
-<summary><b>Immersive | Example 1 — Header Card</b></summary>
+<summary><b>Immersive · Example 1 — Header Card</b></summary>
 
 <br>
 
@@ -229,7 +229,7 @@ chips:
 </details>
 
 <details>
-<summary><b>Immersive | Example 2 — Custom Image</b></summary>
+<summary><b>Immersive · Example 2 — Custom Image</b></summary>
 
 <br>
 
@@ -574,8 +574,9 @@ Useful if you want something like "dark after 9pm", "dark when it's overcast", o
 
 ## Guides
 
+<a name="chips"></a>
 <details>
-<summary><h3>Chips</h3></summary>
+<summary><b>Chips</b></summary>
 
 Chips are the core building blocks of this card. Each chip is its own independent display unit — it picks an entity, reads a value (live or forecasted), and shows it with an optional icon and label. You can style each chip individually and even pull it out of the row to place it anywhere on the card.
 
@@ -678,8 +679,9 @@ Free-positioned chips can still use all the same styling and forecast options as
 
 </details>
 
+<a name="fonts--icons"></a>
 <details>
-<summary><h3>Fonts & Icons</h3></summary>
+<summary><b>Fonts & Icons</b></summary>
 
 If you want to use the exact fonts and weather icons from the screenshots in your own setup, here's how.
 
@@ -715,8 +717,9 @@ The card then resolves the icon by the current weather state. For example, `rain
 
 </details>
 
+<a name="custom-house-image"></a>
 <details>
-<summary><h3>Custom House Image</h3></summary>
+<summary><b>Custom House Image</b></summary>
 
 This explains how to create an image for your own home and use it in the card.
 
