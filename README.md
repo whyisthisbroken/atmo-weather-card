@@ -4,7 +4,7 @@
 
 ## Atmospheric Weather Card
 
-<img width="400" alt="Image" src="https://github.com/user-attachments/assets/4b939791-70d3-42af-b267-606b18dede8e" />
+<img width="500" alt="Image" src="https://github.com/user-attachments/assets/4b939791-70d3-42af-b267-606b18dede8e" />
 
 
 A detail-oriented weather and forecast card.
@@ -66,11 +66,11 @@ A detail-oriented weather and forecast card.
 
 ## Examples
 
-<img width="400" alt="Image" src="https://github.com/user-attachments/assets/fe604ab8-bd69-4710-9ec4-bf21d85a1c67" /><br>
-<img width="400" alt="Image" src="https://github.com/user-attachments/assets/bea6c454-97bb-4122-851d-5f13b0a7bea1" />
+<img width="500" alt="Image" src="https://github.com/user-attachments/assets/e54fe71a-1349-4bd2-ba40-24958a27ffa4" /><br>
+<img width="500" alt="Image" src="https://github.com/user-attachments/assets/e6ebd6f5-8eec-4f47-9247-60ee5dbcddf2" /> 
 
 <details>
-<summary><b>Standalone Mode — Basic Card</b></summary>
+<summary><b>Standalone Mode — Basic Forecast Slider</b></summary>
 
 <br>
 
@@ -79,25 +79,59 @@ type: custom:atmospheric-weather-card
 weather_entity: weather.your_weather_entity
 sun_entity: sun.sun
 moon_phase_entity: sensor.moon_phase
-theme_entity: sun.sun
 card_style: standalone
 card_height: 140px
-card_padding: 20px
-top_position: left
-chips_position: bottom-left
+card_padding: 16px
 sun_moon_size: 50
-sun_moon_x_position: -70
+sun_moon_x_position: "-70"
 sun_moon_y_position: center
-top_font_size: 34px
-chips_font_size: 16px
+top_position: top-left
+chips_position: bottom-left
+disable_top_text: false
+top_font_size: 36px
+top_text_padding: 4px 8px
+chips_font_size: 14px
+chips_name_font_size: 14px
+chips_layout: horizontal-scroll
+chips_visible: 1
+chips_align: center
+chips_width: 160px
+chips_padding: 8px 16px 8px 8px
+chip_gap: 0px
+chip_inner_gap: 8px
 chips_background: true
-background_style: contrast
+chip_icon_bg: false
+chip_icon_padding: 4px
+chip_icon_width: 26px
+chips_grouped: true
+chips_separator: true
 chips:
-  - entity: weather.your_weather_entity
-    icon: weather
-tap_action:
-  action: more-info
-  entity: weather.your_weather_entity
+  - icon: weather
+    entity: weather.your_weather_entity
+    icon_path: /local/Icons/weather/variant-1/ # Change to your local icon path
+    icon_bg: false
+    forecast: daily
+    attribute: temperature
+    forecast_show_min: true
+    forecast_precision: 0
+  - icon: weather
+    entity: weather.your_weather_entity
+    icon_path: /local/Icons/weather/variant-1/ # Change to your local icon path
+    forecast: daily
+    attribute: temperature
+    forecast_show_min: true
+    forecast_precision: 0
+    forecast_offset: 1
+  - icon: weather
+    entity: weather.your_weather_entity
+    icon_path: /local/Icons/weather/variant-1/ # Change to your local icon path
+    forecast: daily
+    attribute: temperature
+    forecast_show_min: true
+    forecast_precision: 0
+    forecast_offset: 2
+grid_options:
+  rows: auto
 ```
 
 </details>
