@@ -138,15 +138,13 @@ grid_options:
 </details>
 
 <details>
-<summary><b>Standalone — Chip Cards</b></summary>
+<summary><b>Standalone — Hourly Forecast Slider</b></summary>
 
 <br>
-<img width="400" alt="Image" src="https://github.com/user-attachments/assets/f5b0afbb-8f88-4a28-8cbc-34007c3d29c6" />
+<img width="500" alt="image" src="https://github.com/user-attachments/assets/7118284c-bf43-43f2-b910-219dd9fb767b" />
+
 
 <br>
-
-<details>
-<summary><b>View YAML</b></summary>
 
 ```yaml
 type: custom:atmospheric-weather-card
@@ -154,81 +152,84 @@ weather_entity: weather.your_weather_entity
 sun_entity: sun.sun
 moon_phase_entity: sensor.moon_phase
 card_style: standalone
-card_height: 120px
-card_padding: 20px
+card_height: 130px
+card_padding: 16px
 sun_moon_size: 50
-celestial_position: fixed
-sun_moon_x_position: "100"
+sun_moon_x_position: "130"
 sun_moon_y_position: center
 top_position: top-left
-chips_position: right
-top_font_size: 40px
-top_text_padding: 8px
+chips_position: top-right
+top_font_size: 28px
+top_text_padding: 2px 4px
 chips_font_size: 14px
-chips_width: 70%
-chips_padding: 8px 12px
-chip_gap: 8px
+chips_name_font_size: 14px
+chips_layout: vertical-scroll
+chips_visible: 2
+chips_align: spread
+chips_width: 160px
+chips_padding: 8px 12px 8px 10px
+chip_gap: 0px
+chip_icon_bg: false
+chip_icon_padding: 0px
+chip_inner_gap: 8px
+chip_icon_width: 24px
+top_text_background: false
 chips_background: true
-background_style: contrast
+chips_grouped: true
+chips_separator: true
 chips:
   - entity: weather.your_weather_entity
-    attribute: wind_speed
+    attribute: precipitation_probability
+    icon_bg: true
+    position: custom
+    position_anchor: bottom-left
+    position_x: 16px
+    position_y: 16px
+    icon: mdi:umbrella
+    icon_size: 14px
+    chip_padding: 8px 12px 8px 8px
+    inner_gap: 8px
+    font_size: 12px
+    chip_format: stacked
+    chip_align: start
+    name: Rain
+    name_font_size: 10px
+    icon_padding: 0px
+    chip_icon_bg_color: rgba(134, 172, 201, 0.5)
+    forecast: daily
+    unit_format: " %"
+    forecast_precision: 0
   - entity: weather.your_weather_entity
-    attribute: humidity
-  - entity: weather.your_weather_entity
+    forecast: hourly
+    attribute: temperature
     icon: weather
+    forecast_precision: 0
+    icon_path: /local/Icons/weather/variant-1/
+    icon_bg: false
   - entity: weather.your_weather_entity
-    attribute: uv_index
-    name: UV
+    forecast: hourly
+    attribute: temperature
+    forecast_offset: 1
+    icon: weather
+    forecast_precision: 0
+    icon_path: /local/Icons/weather/variant-1/
+  - entity: weather.your_weather_entity
+    forecast: hourly
+    attribute: temperature
+    forecast_offset: 2
+    icon: weather
+    forecast_precision: 0
+    icon_path: /local/Icons/weather/variant-1/
+  - entity: weather.your_weather_entity
+    forecast: hourly
+    attribute: temperature
+    forecast_offset: 3
+    icon: weather
+    forecast_precision: 0
+    icon_path: /local/Icons/weather/variant-1/
+grid_options:
+  rows: auto
 ```
-
-</details>
-
-<br>
-
-<img width="400" alt="Image" src="https://github.com/user-attachments/assets/cbd285fa-75d0-4a83-98c3-f100c9c9d0bf" />
-
-<br>
-
-<details>
-<summary><b>View YAML</b></summary>
-
-```yaml
-type: custom:atmospheric-weather-card
-weather_entity: weather.your_weather_entity
-sun_entity: sun.sun
-moon_phase_entity: sensor.moon_phase
-card_style: standalone
-card_height: 160px
-card_padding: 20px
-sun_moon_size: 50
-celestial_position: fixed
-sun_moon_x_position: "-60"
-sun_moon_y_position: "60"
-top_position: top-left
-chips_position: bottom-left
-top_font_size: 36px
-top_text_padding: 10px
-chips_font_size: 16px
-chips_layout: scroll
-chips_width: 100%
-chips_padding: 12px 16px
-chip_gap: 8px
-chips_background: true
-chips:
-  - entity: weather.your_weather_entity
-    attribute: uv_index
-    name: UV-Index
-  - entity: weather.your_weather_entity
-    attribute: humidity
-  - entity: weather.your_weather_entity
-    attribute: wind_speed
-    name: Wind
-  - entity: weather.your_weather_entity
-    attribute: pressure
-```
-
-</details>
 
 <br>
 
