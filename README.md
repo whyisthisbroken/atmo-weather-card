@@ -1,5 +1,4 @@
-[![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=flat-square)](https://github.com/hacs/integration)
-![GitHub release (latest by date)](https://img.shields.io/github/v/release/shpongledsummer/atmospheric-weather-card?style=flat-square)<br>
+[![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=flat-square)](https://github.com/hacs/integration)<br>
 ![Contains](https://img.shields.io/badge/Contains-★_Shooting_Stars-333?style=flat-square)
 
 ## Atmospheric Weather Card
@@ -13,7 +12,7 @@ A detail-oriented weather and forecast card.
 
 ## Contents
 
-**Getting Started** · [Installation](#installation) · [Examples](#examples) · [Setup](#setup)
+**Getting Started** · [Installation](#installation) · [Setup](#setup) · [Examples](#examples)
 
 **Customization** · [Appearance](#appearance) · [CSS Variables](#css-variables)
 
@@ -61,6 +60,19 @@ A detail-oriented weather and forecast card.
 5. Hard-refresh your browser.
 
 </details>
+
+<br>
+
+## Setup
+
+| Option | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| **`weather_entity`** | `string` | — | **Required.** Your weather integration entity (e.g., `weather.your_weather_entity`). |
+| **`sun_entity`** | `string` | — | **Required.** Tracks the sun to auto-switch between day and night. Without this, the card will default to permanent day. |
+| `moon_phase_entity` | `string` | — | *Recommended.* Displays the correct moon phase (e.g., `sensor.moon_phase`). |
+
+> [!IMPORTANT]
+> The `sun_entity` controls the timing of the sun and moon. Without it, the card defaults to permanent day. Additionally, card colors change based on your [configuration](#color-mode).
 
 <br>
 
@@ -444,19 +456,6 @@ full_width: true
 ```
 
 </details>
-
-<br>
-
-## Setup
-
-| Option | Type | Default | Description |
-| :--- | :--- | :--- | :--- |
-| **`weather_entity`** | `string` | — | **Required.** Your weather integration entity (e.g., `weather.your_weather_entity`). |
-| **`sun_entity`** | `string` | — | **Required.** Tracks the sun to auto-switch between day and night. Without this, the card will default to permanent day. |
-| `moon_phase_entity` | `string` | — | *Recommended.* Displays the correct moon phase (e.g., `sensor.moon_phase`). |
-
-> [!IMPORTANT]
-> The `sun_entity` controls the timing of the sun and moon. Without it, the card defaults to permanent day. Additionally, card colors change based on your [configuration](#color-mode).
 
 <br>
 
