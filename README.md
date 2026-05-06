@@ -1,4 +1,4 @@
-[![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=flat-square)](https://github.com/hacs/integration)<br>
+[![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=flat-square)](https://github.com/hacs/integration)
 ![Contains](https://img.shields.io/badge/Contains-★_Shooting_Stars-333?style=flat-square)
 
 ## Atmospheric Weather Card
@@ -96,29 +96,29 @@ moon_phase_entity: sensor.moon_phase
 card_style: standalone
 card_height: 140px
 card_padding: 16px
-sun_moon_size: 50
-sun_moon_x_position: "-70"
-sun_moon_y_position: center
-top_position: top-left
-chips_position: bottom-left
-disable_top_text: false
-top_font_size: 36px
+celestial_size: 50
+celestial_x: "-70"
+celestial_y: center
+top_text_position: top-left
+chip_area_position: bottom-left
+top_text_hide: false
+top_text_size: 36px
 top_text_padding: 4px 8px
-chips_font_size: 14px
-chips_name_font_size: 14px
-chips_layout: horizontal-scroll
-chips_visible: 1
-chips_align: center
-chips_width: 160px
-chips_padding: 8px 16px 8px 8px
-chip_gap: 0px
-chip_inner_gap: 8px
-chips_background: true
-chip_icon_bg: false
+chip_text_size: 14px
+chip_label_size: 14px
+chip_area_layout: horizontal-scroll
+chip_area_scroll_count: 1
+chip_area_align: center
+chip_area_width: 160px
+chip_padding: 8px 16px 8px 8px
+chip_area_gap: 0px
+chip_gap: 8px
+chip_area_background: true
+chip_icon_background: false
 chip_icon_padding: 4px
-chip_icon_width: 26px
-chips_grouped: true
-chips_separator: true
+chip_icon_size: 26px
+chip_area_grouped: true
+chip_area_separator: true
 chips:
   - icon: weather
     entity: weather.your_weather_entity
@@ -299,48 +299,48 @@ moon_phase_entity: sensor.moon_phase
 card_style: standalone
 card_height: 130px
 card_padding: 16px
-sun_moon_size: 50
-sun_moon_x_position: "130"
-sun_moon_y_position: center
-top_position: top-left
-chips_position: top-right
-top_font_size: 28px
+celestial_size: 50
+celestial_x: "130"
+celestial_y: center
+top_text_position: top-left
+chip_area_position: top-right
+top_text_size: 28px
 top_text_padding: 2px 4px
-chips_font_size: 14px
-chips_name_font_size: 14px
-chips_layout: vertical-scroll
-chips_visible: 2
-chips_align: spread
-chips_width: 160px
-chips_padding: 8px 12px 8px 10px
-chip_gap: 0px
-chip_icon_bg: false
+chip_text_size: 14px
+chip_label_size: 14px
+chip_area_layout: vertical-scroll
+chip_area_scroll_count: 2
+chip_area_align: spread
+chip_area_width: 160px
+chip_padding: 8px 12px 8px 10px
+chip_area_gap: 0px
+chip_icon_background: false
 chip_icon_padding: 0px
-chip_inner_gap: 8px
-chip_icon_width: 24px
+chip_gap: 8px
+chip_icon_size: 24px
 top_text_background: false
-chips_background: true
-chips_grouped: true
-chips_separator: true
+chip_area_background: true
+chip_area_grouped: true
+chip_area_separator: true
 chips:
   - entity: weather.your_weather_entity
     attribute: precipitation_probability
-    icon_bg: true
+    icon_background: true
     position: custom
     position_anchor: bottom-left
     position_x: 16px
     position_y: 16px
     icon: mdi:umbrella
     icon_size: 14px
-    chip_padding: 8px 12px 8px 8px
+    padding: 8px 12px 8px 8px
     inner_gap: 8px
-    font_size: 12px
-    chip_format: stacked
-    chip_align: start
+    text_size: 12px
+    style: stacked
+    align: start
     name: Rain
-    name_font_size: 10px
+    label_size: 10px
     icon_padding: 0px
-    chip_icon_bg_color: rgba(134, 172, 201, 0.5)
+    icon_background_color: rgba(134, 172, 201, 0.5)
     forecast: daily
     unit_format: " %"
     forecast_precision: 0
@@ -350,7 +350,7 @@ chips:
     icon: weather
     forecast_precision: 0
     icon_path: /local/Icons/weather/variant-1/
-    icon_bg: false
+    icon_background: false
   - entity: weather.your_weather_entity
     forecast: hourly
     attribute: temperature
@@ -395,17 +395,17 @@ sun_entity: sun.sun
 moon_phase_entity: sensor.moon_phase
 card_height: 130px
 card_padding: 16px
-sun_moon_size: 45px
-sun_moon_x_position: "-65"
-sun_moon_y_position: center
-top_text_sensor: sensor.time
-top_position: top-left
-chips_position: bottom-left
-top_font_size: 42px
+celestial_size: 45px
+celestial_x: "-65"
+celestial_y: center
+top_text_entity: sensor.time
+top_text_position: top-left
+chip_area_position: bottom-left
+top_text_size: 42px
 top_text_padding: 8px 0px 0px 4px
-chips_background: true
-css_mask_vertical: true
-css_mask_horizontal: true
+chip_area_background: true
+card_mask_vertical: true
+card_mask_horizontal: true
 chips:
   - entity: weather.your_weather_entity
     icon: weather
@@ -428,23 +428,23 @@ weather_entity: weather.your_weather_entity
 sun_entity: sun.sun
 moon_phase_entity: sensor.moon_phase
 card_padding: 24px
-sun_moon_size: 55
+celestial_size: 55
 celestial_position: fixed
-sun_moon_x_position: 100
-sun_moon_y_position: 80
-day: /local/home-day.png
-night: /local/home-night.png
+celestial_x: 100
+celestial_y: 80
+image_day: /local/home-day.png
+image_night: /local/home-night.png
 image_scale: 90
 status_entity: binary_sensor.contact_sensor_door
-status_image_day: /local/home-day-door-open.png
-status_image_night: /local/home-night-door-open.png
-top_text_sensor: sensor.time
-top_position: bottom-left
-chips_position: top-right
+status_day: /local/home-day-door-open.png
+status_night: /local/home-night-door-open.png
+top_text_entity: sensor.time
+top_text_position: bottom-left
+chip_area_position: top-right
 top_text_padding: 0px 16px
-chips_width: 70%
-chips_padding: 10px 14px
-chips_background: true
+chip_area_width: 70%
+chip_padding: 10px 14px
+chip_area_background: true
 custom_cards_position: top-right
 chips:
   - entity: sensor.temperature
@@ -452,7 +452,7 @@ chips:
   - entity: sensor.open_windows
     icon: mdi:window-open-variant
     name: Windows
-full_width: true
+card_full_width: true
 ```
 
 </details>
@@ -471,11 +471,11 @@ Everything that controls how your card looks.
 | `card_style` | `string` | `immersive` | Set to `standalone` for a solid background with dynamic weather visuals, or `immersive` for a transparent background. |
 | `card_height` | `number` · `string` | `200` | Height in pixels. Numbers are automatically treated as px (e.g., `110` becomes `110px`). **Set to `auto`** to dynamically fill the available height (for grid layouts). |
 | `card_padding` | `string` | `16px` | Inner padding around the text. Accepts any CSS padding value (e.g., `8px`, `12px 20px`). |
-| `square` | `boolean` | `false` | Forces the card into a perfect square. Highly useful for grid layouts. |
-| `full_width` | `boolean` | `false` | Stretches the card edge-to-edge by removing side margins. |
-| `offset` | `string` | `0px` | Shifts the card using CSS margin (e.g., `"-50px 0px 0px 0px"`). Useful when layering cards. |
-| `stack_order` | `number` | *auto* | Manually sets the z-index (e.g., `1`, `0`, `-1`). Useful for forcing an immersive card to display in front of cards with solid backgrounds. |
-| `tap_action` | `object` | — | A standard Home Assistant [tap action](https://www.home-assistant.io/dashboards/actions/). |
+| `card_square` | `boolean` | `false` | Forces the card into a perfect square. Highly useful for grid layouts. |
+| `card_full_width` | `boolean` | `false` | Stretches the card edge-to-edge by removing side margins. |
+| `card_offset` | `string` | `0px` | Shifts the card using CSS margin (e.g., `"-50px 0px 0px 0px"`). Useful when layering cards. |
+| `card_stack_order` | `number` | *auto* | Manually sets the z-index (e.g., `1`, `0`, `-1`). Useful for forcing an immersive card to display in front of cards with solid backgrounds. |
+| `card_tap_action` | `object` | — | A standard Home Assistant [tap action](https://www.home-assistant.io/dashboards/actions/). |
 
 </details>
 
@@ -484,11 +484,11 @@ Everything that controls how your card looks.
 
 | Option | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `theme` | `string` | `auto` | Forces the card's color scheme. Accepts `dark` or `light` to lock the look, or `night` / `day` to force the sky content. See [Colors](#color-mode). |
-| `filter` | `string` | — | Applies a visual filter preset to the weather canvas. Options: `darken`, `vivid`, `muted`, `warm`. |
-| `moon_style` | `string` | `default` | The moon's glow color. `default` follows the theme (muted blue in light mode, white in dark mode). Other options: `blue`, `yellow`, `purple`, `grey`. |
-| `css_mask_vertical` | `boolean` | `true` | *(Immersive only)* Fades the top and bottom edges. Set to `false` to disable. |
-| `css_mask_horizontal` | `boolean` | `true` | *(Immersive only)* Fades the left and right edges. Set to `false` to disable. |
+| `card_color_mode` | `string` | `auto` | Controls the card's color scheme. By default, it follows your Home Assistant theme. Set to `entity` to follow a `theme_entity`, or `force_dark` / `force_light` to lock the look. Also accepts `night` / `day` to override the sky content. See [Colors](#color-mode). |
+| `card_filter` | `string` | — | Applies a visual filter preset to the weather canvas. Options: `darken`, `vivid`, `muted`, `warm`. |
+| `celestial_moon_style` | `string` | `default` | The moon's glow color. `default` follows the theme (muted blue in light mode, white in dark mode). Other options: `blue`, `yellow`, `purple`, `grey`. |
+| `card_mask_vertical` | `boolean` | `true` | *(Immersive only)* Fades the top and bottom edges. Set to `false` to disable. |
+| `card_mask_horizontal` | `boolean` | `true` | *(Immersive only)* Fades the left and right edges. Set to `false` to disable. |
 | `theme_entity` | `string` | — | Drives the card's color scheme from any entity's state instead of your HA theme. Commonly set to `sun.sun` to sync the card with sunrise/sunset. See [Colors](#color-mode). |
 
 </details>
@@ -500,10 +500,11 @@ The sun and moon share a single position and the card swaps them based on your `
 
 | Option | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `sun_moon_size` | `number` | *auto* | Overrides the sun/moon diameter in pixels. |
-| `celestial_position` | `string` | `fixed` | How the sun and moon are positioned. `fixed` uses the `sun_moon_x_position` and `sun_moon_y_position` values. `dynamic_sun` animates the sun across the sky following the real solar arc (moon stays fixed). `dynamic_both` animates both the sun and the moon. |
-| `sun_moon_x_position` | `number` · `string` | `100` | Horizontal position in pixels from the left edge. **Negative values** position it from the right edge (e.g., `-55` means 55px from the right). Also accepts `center`. Ignored when `celestial_position` is dynamic. |
-| `sun_moon_y_position` | `number` · `string` | `100` | Vertical position in pixels from the top. Also accepts `center`. Ignored when `celestial_position` is dynamic. |
+| `celestial_size` | `number` | *auto* | Overrides the sun/moon diameter in pixels. |
+| `celestial_position` | `string` | `fixed` | How the sun and moon are positioned. `fixed` uses the `celestial_alignment`, `celestial_x`, and `celestial_y` values. `dynamic_sun` animates the sun across the sky following the real solar arc (moon stays fixed). `dynamic_both` animates both the sun and the moon. |
+| `celestial_alignment` | `string` | `top-left` | Where the sun and moon anchor inside the card. Same 9-cell grid as `top_text_position` (e.g., `top-left`, `center`, `bottom-right`). Also accepts `left`, `right` as shorthand. |
+| `celestial_x` | `number` | `0` | Horizontal offset in pixels from the anchored position. |
+| `celestial_y` | `number` | `0` | Vertical offset in pixels from the anchored position. |
 
 </details>
 
@@ -514,16 +515,16 @@ The top text is the large primary line (temperature by default).
 
 | Option | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `top_text_sensor` | `string` | — | The entity to display as the large top text. Defaults to the temperature from your weather entity. Standard entities will automatically translate to your HA language. |
-| `top_position` | `string` | `top-left` | Where the top text anchors inside the card. 9-cell grid: `top-left`, `top-center`, `top-right`, `left`, `center`, `right`, `bottom-left`, `bottom-center`, `bottom-right`. |
-| `top_font_size` | `string` | — | Sets the font size of the top text directly without needing a custom theme or `card_mod`. Accepts any CSS size value (e.g., `3em`, `48px`). |
-| `top_unit_format` | `string` | — | Replaces the unit shown after the value. For example, set to `°` to display `21°` instead of `21 °C`. Only shown when `top_text_sensor` points at a non-weather entity. |
+| `top_text_entity` | `string` | — | The entity to display as the large top text. Defaults to the temperature from your weather entity. Standard entities will automatically translate to your HA language. |
+| `top_text_position` | `string` | `top-left` | Where the top text anchors inside the card. 9-cell grid: `top-left`, `top-center`, `top-right`, `left`, `center`, `right`, `bottom-left`, `bottom-center`, `bottom-right`. |
+| `top_text_size` | `string` | — | Sets the font size of the top text directly without needing a custom theme or `card_mod`. Accepts any CSS size value (e.g., `3em`, `48px`). |
+| `top_text_unit` | `string` | — | Replaces the unit shown after the value. For example, set to `°` to display `21°` instead of `21 °C`. Only shown when `top_text_entity` points at a non-weather entity. |
 | `top_text_padding` | `string` | `8px 14px` | Inner padding around the top text (e.g., `8px 14px`). |
 | `top_text_background` | `boolean` | `false` | Adds a styled background behind the top text to improve readability against the weather visuals. |
-| `top_text_behind_weather` | `boolean` | `false` | Places the top text behind the weather canvases so clouds, rain and particles pass over it. Text backgrounds are disabled while behind. |
-| `background_style` | `string` | `frosted` | Style used by the text and chips backgrounds. Options: `frosted` (translucent fill with a thin border, looks like a small glass container), `pill` (more opaque and higher contrast), `theme` (uses your current Home Assistant card styling). |
-| `disable_top_text` | `boolean` | `false` | Hides only the top text. |
-| `disable_text` | `boolean` | `false` | Hides the top text and the chips row in one go. |
+| `top_text_behind` | `boolean` | `false` | Places the top text behind the weather canvases so clouds, rain and particles pass over it. Text backgrounds are disabled while behind. |
+| `card_background_style` | `string` | `frosted` | Style used by the text and chips backgrounds. Options: `frosted` (translucent fill with a thin border, looks like a small glass container), `pill` (more opaque and higher contrast), `theme` (uses your current Home Assistant card styling). |
+| `top_text_hide` | `boolean` | `false` | Hides only the top text. |
+| `card_hide_text` | `boolean` | `false` | Hides the top text and the chips row in one go. |
 
 </details>
 
@@ -540,27 +541,27 @@ For a more detailed walkthrough — including how to set up forecast chips, per-
 | Option | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `chips` | `list` | — | The list of chips to display. Each entry is an object with its own settings (see below). |
-| `chips_position` | `string` | `bottom-left` | Where the chips row anchors. Same 9-cell grid as `top_position`. |
-| `chips_layout` | `string` | `wrap` | Row behavior. `wrap` moves overflowing chips to a new line, `horizontal-scroll` keeps them on one line with a hidden scrollbar and edge fades, `vertical-scroll` stacks them in a scrollable column, `grid` arranges them in equal columns. `scroll` is accepted as an alias for `horizontal-scroll`. |
-| `chips_columns` | `number` | `3` | Number of equal-width columns when `chips_layout: grid` is active. |
-| `chips_align` | `string` | `start` | How each chip aligns inside its grid cell. Options: `start`, `center`, `end`. Grid layout only. |
-| `chips_width` | `string` | — | Limits the full row width (e.g., `60%` or `200px`). Useful to place the chips row next to the top text instead of spanning the card. |
-| `chips_height` | `string` | — | Sets the height of the chips row (e.g., `120px`). |
-| `chips_padding` | `string` | `5px 10px` | Inner padding of each chip (e.g., `5px 10px`). |
-| `chips_container_padding` | `string` | — | Padding of the outer chips container (the wrapper around all chips). |
-| `chip_gap` | `string` | `8px` | Space between chips. |
-| `chip_inner_gap` | `string` | `6px` | Space between the icon and text inside each chip. |
-| `chip_format` | `string` | `inline` | Controls the chip layout style. `inline` is the default horizontal layout with icon and text side by side. `stacked` arranges the icon, name, and value in a compact two-column grid. `vertical` stacks icon, name, and value in a centered column. |
-| `chips_visible` | `number` | — | Number of chips visible at once when using a scroll layout. Enables snap-scrolling through pages of chips. |
-| `chips_grouped` | `boolean` | `false` | Wraps all chips into a single shared background container instead of styling each chip individually. Requires `chips_background: true`. |
-| `chips_full_width` | `boolean` | `false` | Stretches each chip to fill the available row width. Useful in combination with `chips_visible` or grid layouts. |
-| `chips_font_size` | `string` | — | Font size of the chip value text. Accepts any CSS size value (e.g., `16px`, `1.2em`). |
-| `chips_name_font_size` | `string` | — | Font size of the chip name label. |
-| `chip_icon_width` | `string` | — | Global icon size for all chips. |
+| `chip_area_position` | `string` | `bottom-left` | Where the chips row anchors. Same 9-cell grid as `top_text_position`. |
+| `chip_area_layout` | `string` | `wrap` | Row behavior. `wrap` moves overflowing chips to a new line, `horizontal-scroll` keeps them on one line with a hidden scrollbar and edge fades, `vertical-scroll` stacks them in a scrollable column, `grid` arranges them in equal columns. `scroll` is accepted as an alias for `horizontal-scroll`. |
+| `chip_area_columns` | `number` | `3` | Number of equal-width columns when `chip_area_layout: grid` is active. |
+| `chip_area_align` | `string` | `start` | How each chip aligns inside its grid cell. Options: `start`, `center`, `end`. Grid layout only. |
+| `chip_area_width` | `string` | — | Limits the full row width (e.g., `60%` or `200px`). Useful to place the chips row next to the top text instead of spanning the card. |
+| `chip_area_height` | `string` | — | Sets the height of the chips row (e.g., `120px`). |
+| `chip_padding` | `string` | `5px 10px` | Inner padding of each chip (e.g., `5px 10px`). |
+| `chip_area_padding` | `string` | — | Padding of the outer chips container (the wrapper around all chips). |
+| `chip_area_gap` | `string` | `8px` | Space between chips. |
+| `chip_gap` | `string` | `6px` | Space between the icon and text inside each chip. |
+| `chip_style` | `string` | `inline` | Controls the chip layout style. `inline` is the default horizontal layout with icon and text side by side. `stacked` arranges the icon, name, and value in a compact two-column grid. `vertical` stacks icon, name, and value in a centered column. |
+| `chip_area_scroll_count` | `number` | — | Number of chips visible at once when using a scroll layout. Enables snap-scrolling through pages of chips. |
+| `chip_area_grouped` | `boolean` | `false` | Wraps all chips into a single shared background container instead of styling each chip individually. Requires `chip_area_background: true`. |
+| `chip_area_full_width` | `boolean` | `false` | Stretches each chip to fill the available row width. Useful in combination with `chip_area_scroll_count` or grid layouts. |
+| `chip_text_size` | `string` | — | Font size of the chip value text. Accepts any CSS size value (e.g., `16px`, `1.2em`). |
+| `chip_label_size` | `string` | — | Font size of the chip name label. |
+| `chip_icon_size` | `string` | — | Global icon size for all chips. |
 | `chip_icon_padding` | `string` | — | Global padding around the icon for all chips. |
-| `chip_icon_bg` | `boolean` | `false` | Adds a background behind the icon area of each chip. |
-| `chips_background` | `boolean` | `false` | Adds a styled background behind each chip (the style is controlled by `background_style`). |
-| `disable_chips` | `boolean` | `false` | Hides the chips row entirely. |
+| `chip_icon_background` | `boolean` | `false` | Adds a background behind the icon area of each chip. |
+| `chip_area_background` | `boolean` | `false` | Adds a styled background behind each chip (the style is controlled by `card_background_style`). |
+| `chip_area_hide` | `boolean` | `false` | Hides the chips row entirely. |
 
 </details>
 
@@ -581,16 +582,16 @@ Each entry inside the `chips` list accepts the following keys.
 | `name` | `string` | — | Optional label shown before the value (e.g., `Wind`). For forecast chips, this overrides the auto-generated day/time name. |
 | `icon` | `string` | *auto* | An `mdi:` icon (e.g., `mdi:water-percent`), the keyword `weather` to automatically show the icon matching the current weather state (or the forecasted condition when using `forecast`), or empty to inherit the sensor's own icon. |
 | `icon_path` | `string` | — | Folder for custom SVG icons (e.g., `/local/weather-icons/`). When set, the value of `icon` resolves to an image file instead of an MDI icon. For example, `icon: weather` combined with `icon_path: /local/weather-icons/` loads `/local/weather-icons/rainy.svg` for rainy weather. You can find the animated SVG icons from the examples [here](https://github.com/basmilius/weather-icons). |
-| `disable_icon` | `boolean` | `false` | Hides the icon for this chip. |
+| `hide_icon` | `boolean` | `false` | Hides the icon for this chip. |
 | `width` | `string` | — | Limits the chip's width (e.g., `60%` or `200px`). Required for marquee overflow. |
 | `overflow` | `string` | `ellipsis` | How text exceeding `width` is handled. Options: `ellipsis` (cuts off with `…`), `clip` (cuts off without indicator), `wrap` (breaks onto a second line), `marquee` (scrolls horizontally). |
 | `marquee_speed` | `number` | `30` | Scroll speed in pixels per second when `overflow: marquee` is active. Minimum `5`. |
 | `marquee_rtl` | `boolean` | `false` | Reverses the marquee direction (scrolls right-to-left). |
-| `tap_action` | `object` | `more-info` | A standard Home Assistant [tap action](https://www.home-assistant.io/dashboards/actions/) scoped to this chip. |
+| `card_tap_action` | `object` | `more-info` | A standard Home Assistant [tap action](https://www.home-assistant.io/dashboards/actions/) scoped to this chip. |
 | `name_sensor` | `string` | — | An entity whose state (or attribute) is used as the chip's dynamic name label. Updates in real time. |
 | `name_attribute` | `string` | — | Reads a specific attribute from the `name_sensor` entity instead of its state. |
 | `position` | `string` | — | Set to `custom` to detach this chip from the row and place it freely on the card using `position_anchor`, `position_x`, and `position_y`. |
-| `position_anchor` | `string` | `top-left` | Anchor point for a free-positioned chip. Same 9-cell grid as `top_position`. |
+| `position_anchor` | `string` | `top-left` | Anchor point for a free-positioned chip. Same 9-cell grid as `top_text_position`. |
 | `position_x` | `string` | `0` | Horizontal offset for a free-positioned chip (e.g., `20px`, `10%`). |
 | `position_y` | `string` | `0` | Vertical offset for a free-positioned chip (e.g., `20px`, `10%`). |
 
@@ -603,17 +604,17 @@ Every chip can override the global row styles individually. This is what makes i
 
 | Option | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `chip_format` | `string` | — | Overrides the global `chip_format` for this chip. Accepts `inline`, `stacked`, or `vertical`. |
-| `chip_background` | `boolean` | — | Overrides the global `chips_background` for this chip. Set to `false` to hide the background on a specific chip even when backgrounds are globally enabled (or the other way around). |
-| `chip_bg_color` | `string` | — | Custom background color for this chip. Accepts any CSS color value, including `rgba()` for transparency. |
-| `chip_padding` | `string` | — | Overrides the chip padding for this chip only. |
-| `font_size` | `string` | — | Overrides the value text size for this chip. |
-| `name_font_size` | `string` | — | Overrides the name label text size for this chip. |
+| `chip_style` | `string` | — | Overrides the global `chip_style` for this chip. Accepts `inline`, `stacked`, or `vertical`. |
+| `background` | `boolean` | — | Overrides the global `chip_area_background` for this chip. Set to `false` to hide the background on a specific chip even when backgrounds are globally enabled (or the other way around). |
+| `background_color` | `string` | — | Custom background color for this chip. Accepts any CSS color value, including `rgba()` for transparency. |
+| `padding` | `string` | — | Overrides the chip padding for this chip only. |
+| `text_size` | `string` | — | Overrides the value text size for this chip. |
+| `label_size` | `string` | — | Overrides the name label text size for this chip. |
 | `inner_gap` | `string` | — | Overrides the icon/text gap for this chip. |
 | `icon_size` | `string` | — | Overrides the icon size for this chip. |
 | `icon_padding` | `string` | — | Overrides the icon padding for this chip. |
-| `icon_bg` | `boolean` | — | Overrides the global `chip_icon_bg` for this chip. |
-| `chip_align` | `string` | — | Content alignment within this chip. Options: `start`, `center`, `end`. |
+| `icon_background` | `boolean` | — | Overrides the global `chip_icon_background` for this chip. |
+| `align` | `string` | — | Content alignment within this chip. Options: `start`, `center`, `end`. |
 
 </details>
 
@@ -638,13 +639,13 @@ You can add your own images (such as a house image) to the card. This works in b
 
 | Option | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `day` | `string` | — | File path for the daytime image (e.g., `/local/house-day.png`). |
-| `night` | `string` | — | File path for the nighttime image. Falls back to the day image if left empty. |
+| `image_day` | `string` | — | File path for the daytime image (e.g., `/local/house-day.png`). |
+| `image_night` | `string` | — | File path for the nighttime image. Falls back to the day image if left empty. |
 | `image_scale` | `number` | `100` | Image size as a percentage of the total card height. |
 | `image_alignment` | `string` | `top-right` | Image placement. Options: `center`, `top-right`, `top-left`, `top-center`, `bottom`, `bottom-center`, `bottom-left`, `bottom-right`. |
 | `status_entity` | `string` | — | An entity to monitor (e.g., a door sensor). See [Smart Status Entity](#smart-status-entity). |
-| `status_image_day` | `string` | — | The day image to display when the status entity becomes active. |
-| `status_image_night` | `string` | — | The night image to display when the status entity becomes active. |
+| `status_day` | `string` | — | The day image to display when the status entity becomes active. |
+| `status_night` | `string` | — | The night image to display when the status entity becomes active. |
 
 </details>
 
@@ -722,15 +723,15 @@ custom_cards:
 | `--awc-chip-name-color` | `inherit` | Color of the chip name label. |
 | `--awc-chip-gap` | `6px` | Gap between the icon and text inside each chip. |
 | `--awc-chips-padding` | `0` (`5px 10px` with background) | Inner padding of each chip. |
-| `--awc-row-width` | `calc(100% - padding)` | Width of the chips row. Overrides the `chips_width` option. |
+| `--awc-row-width` | `calc(100% - padding)` | Width of the chips row. Overrides the `chip_area_width` option. |
 | `--awc-row-height` | `auto` | Height of the chips row. Overrides the `chips_height` option. |
-| `--awc-row-columns` | `3` | Number of columns when `chips_layout: grid` is active. |
+| `--awc-row-columns` | `3` | Number of columns when `chip_area_layout: grid` is active. |
 | `--awc-row-fade-l` | *auto* | Left edge fade width for the scrolling chip row. |
 | `--awc-row-fade-r` | *auto* | Right edge fade width for the scrolling chip row. |
 | `--awc-top-bg-color` | *auto* | Background color when `top_text_background` is enabled. Defaults to the active background style. |
 | `--awc-top-bg-radius` | *card radius* | Border radius for the top text background. |
 | `--awc-top-bg-filter` | `blur(10px)` | Backdrop filter for the top text background (only used by the `frosted` style). |
-| `--awc-bottom-bg-color` | *auto* | Background color when `chips_background` is enabled. Defaults to the active background style. |
+| `--awc-bottom-bg-color` | *auto* | Background color when `chip_area_background` is enabled. Defaults to the active background style. |
 | `--awc-bottom-bg-radius` | *card radius* | Border radius for the chip background. |
 | `--awc-bottom-bg-filter` | `blur(10px)` | Backdrop filter for the chip background (only used by the `frosted` style). |
 | `--awc-bg-shadow` | *auto* | Overrides the shadow used by the `pill` background style. |
@@ -747,7 +748,7 @@ custom_cards:
 <details>
 <summary><b>Stacked & Vertical Chip Variables</b></summary>
 
-These variables only apply when `chip_format` is set to `stacked` or `vertical`.
+These variables only apply when `chip_style` is set to `stacked` or `vertical`.
 
 | Variable | Default | Description |
 | :--- | :--- | :--- |
@@ -791,7 +792,7 @@ These variables only apply when `chip_format` is set to `stacked` or `vertical`.
 
 ## Color Mode
 
-The card's look is controlled by two things: your **`sun_entity`**, which handles the sun, moon, and stars in the sky, and your **theme**, which decides whether the card looks light or dark.
+The card's look is controlled by two things: your **`sun_entity`**, which handles the sun, moon, and stars in the sky, and your **`card_color_mode`**, which decides whether the card looks light or dark.
 
 <details>
 <summary><strong>Here are the ways you can set this up</strong></summary>
@@ -801,9 +802,9 @@ The card's look is controlled by two things: your **`sun_entity`**, which handle
 | Mode | Config | What it does |
 | :--- | :--- | :--- |
 | **Follow your HA theme** | `sun_entity: sun.sun` | The card shows the sun during the day and the moon at night, syncing its colors to whatever your Home Assistant theme is doing. Android and iOS can auto-toggle dark mode based on sunrise and sunset — this is exactly what the card was designed for. |
-| **Follow the sun** | `sun_entity: sun.sun`<br>`theme_entity: sun.sun` | The card switches between light and dark at the real sunrise and sunset, regardless of what your Home Assistant theme is doing. Its colors match the time of day no matter what the rest of your dashboard looks like. |
-| **Force light or dark** | `theme: dark`<br>or `theme: light` | Locks the card's colors to one value. The sky still follows `sun_entity`, so you still get the moon and stars at night — only the card's colors are forced. Most users don't need this; if your theme is always the same color, the default already handles it. |
-| **Custom logic** | `theme_entity: sensor.my_custom_mode` | `theme_entity` can point at any entity — a template sensor, an `input_boolean`, or anything else. The card switches to its dark look when the state is `dark`, `night`, `evening`, `on`, `true`, or `below_horizon`. Anything else counts as light. Useful for rules like "dark after 9pm" or "dark when it's overcast". |
+| **Follow the sun** | `sun_entity: sun.sun`<br>`card_color_mode: entity`<br>`theme_entity: sun.sun` | The card switches between light and dark at the real sunrise and sunset, regardless of what your Home Assistant theme is doing. Its colors match the time of day no matter what the rest of your dashboard looks like. |
+| **Force light or dark** | `card_color_mode: force_dark`<br>or `card_color_mode: force_light` | Locks the card's colors to one value. The sky still follows `sun_entity`, so you still get the moon and stars at night — only the card's colors are forced. |
+| **Custom logic** | `card_color_mode: entity`<br>`theme_entity: sensor.my_custom_mode` | `theme_entity` can point at any entity — a template sensor, an `input_boolean`, or anything else. The card switches to its dark look when the state is `dark`, `night`, `evening`, `on`, `true`, or `below_horizon`. Anything else counts as light. Useful for rules like "dark after 9pm" or "dark when it's overcast". |
 
 </details>
 
@@ -868,8 +869,8 @@ Every chip can override the global row styles. This means you can mix different 
 For example, you might want most chips to be small inline elements but make one specific forecast chip larger with a stacked layout and its own background color:
 
 ```yaml
-chip_format: inline
-chips_background: true
+chip_style: inline
+chip_area_background: true
 chips:
   - entity: sensor.outside_temperature
   - entity: sensor.humidity
@@ -877,15 +878,15 @@ chips:
     forecast: daily
     attribute: temperature
     forecast_offset: 1
-    chip_format: stacked
-    chip_bg_color: "rgba(0, 0, 0, 0.3)"
-    chip_padding: 12px 16px
-    font_size: 18px
+    style: stacked
+    background_color: "rgba(0, 0, 0, 0.3)"
+    padding: 12px 16px
+    text_size: 18px
     icon: weather
     icon_path: /local/weather-icons/
 ```
 
-The first two chips follow the global `inline` format and default background. The third chip overrides everything it needs to look different.
+The first two chips follow the global `inline` style and default background. The third chip overrides everything it needs to look different.
 
 All per-chip style overrides are listed in the [Chips reference table](#appearance) under "Per-chip style overrides".
 
@@ -905,7 +906,7 @@ chips:
     position_anchor: top-right
     position_x: 20px
     position_y: 10px
-    chip_background: true
+    background: true
 ```
 
 This places the temperature chip 20px from the right and 10px from the top, independent of where the chips row sits. The `position_anchor` uses the same 9-cell grid as the other position options (`top-left`, `center`, `bottom-right`, etc.).
