@@ -852,24 +852,6 @@ custom_cards:
     entity: weather.your_weather_entity
 ```
 
-> [!TIP]
-> For custom button layouts, I highly recommend using `paper-buttons-row` from HACS. It gives you the flexibility to build incredibly detailed and beautiful designs. Check out the advanced [examples](#usage-modes) for a few prebuilt layouts you can customize.
-
-</details>
-
-<details>
-<summary><strong>Performance Settings</strong></summary>
-
-The card ships with three presets — `low`, `default`, and `ultra` — which cover most setups. If you need more control, each setting can be tuned individually. Any value set manually overrides the preset.
-
-| Option | Type | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `perf_mode` | `string` | `default` | Performance preset. `low` disables effects and lowers resolution for weak devices. `default` is balanced. `ultra` raises the frame rate and cloud detail to maximum. |
-| `perf_fps` | `number` | `30` | Animation frame rate. `30` saves battery, `60` is smoother. |
-| `perf_cloud_quality` | `number` | `1.5` | Cloud detail level. Controls how many puffs each cloud shape gets. `0.5` = low, `1` = medium, `1.5` = high, `2` = ultra. |
-| `perf_effects` | `number` | `1` | Weather effects intensity. `0` disables birds, planes, shooting stars, aurora, and wind vapor. `1` enables them at default rates. `2` increases spawn rates for all effects. |
-| `perf_dpr` | `number` | `2` | Canvas sharpness. Controls the device pixel ratio used for rendering. `0.5` = low, `1` = medium, `1.5` = high, `2` = full retina. Lower values reduce GPU load on high-DPI screens. |
-
 </details>
 
 <a name="css-variables"></a>
@@ -1239,6 +1221,21 @@ Even with all this effort, older setups might still struggle, and the birds may 
 This screenshot shows a 30-second stress test running five weather cards in parallel in my test setup, within a dashboard with lots of other HA cards. Weather states were constantly switched and the UI was heavily interacted with to push the performance.
 
 The blue memory line shows a healthy sawtooth pattern. The browser regularly clears memory and returns to the baseline. The bottom left summary breaks down processor usage. Because the graphics are reused, less than 10 percent of the time was spent rendering and just about 5% was spent actually painting the animations. For roughly 75 percent of the test, the device processor was completely idle. It was a long and hard way to achieve this result.
+
+</details>
+
+<details>
+<summary><strong>Performance Settings</strong></summary>
+
+The card has three performance presets — `low`, `default`, and `ultra` — which cover most setups. If you need more control, each setting can be changed individually. Any value set manually overrides the preset.
+
+| Option | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `perf_mode` | `string` | `default` | Performance preset. `low` disables effects and lowers resolution for weak devices. `default` is balanced. `ultra` raises the frame rate and cloud detail to maximum. |
+| `perf_fps` | `number` | `30` | Animation frame rate. `30` saves battery, `60` is smoother. |
+| `perf_cloud_quality` | `number` | `1.5` | Cloud detail level. Controls how many puffs each cloud shape gets. `0.5` = low, `1` = medium, `1.5` = high, `2` = ultra. |
+| `perf_effects` | `number` | `1` | Weather effects intensity. `0` disables birds, planes, shooting stars, aurora, and wind vapor. `1` enables them at default rates. `2` increases spawn rates for all effects. |
+| `perf_dpr` | `number` | `2` | Canvas sharpness. Controls the device pixel ratio used for rendering. `0.5` = low, `1` = medium, `1.5` = high, `2` = full retina. Lower values reduce GPU load on high-DPI screens. |
 
 </details>
 
