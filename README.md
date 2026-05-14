@@ -851,10 +851,10 @@ These variables only apply when `chip_style` is set to `stacked` or `vertical`.
 
 ## Color Mode
 
-The card's look is controlled by two things: your **`sun_entity`**, which handles the sun, moon, and stars in the sky, and your **`card_color_mode`**, which decides whether the card looks light or dark.
+The card's appearance depends on your **`sun_entity`** (sun or moon) and your **`card_color_mode`** (light or dark).
 
 <details>
-<summary><strong>Here are the ways you can set this up</strong></summary>
+<summary><strong>How to set this up</strong></summary>
 
 <br>
 
