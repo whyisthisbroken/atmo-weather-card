@@ -1054,10 +1054,11 @@ The screenshots throughout this README use the **Montserrat** font, which you ca
 
 <br>
 
-You can replace the default MDI icons inside a chip with your own animated SVG files. The examples use the set from [basmilius/weather-icons](https://github.com/basmilius/weather-icons).
+You can replace the default MDI icons inside a chip with your own animated SVG files. The examples use [these](https://github.com/basmilius/weather-icons).
 
-1. Download the SVG files and place them in a folder under `config/www/`, for example `config/www/weather-icons/`.
-2. In your chip config, set `icon` to `weather` and point `icon_path` to that folder:
+1. Download the SVG icons and name them after the weather conditions (such as `sunny.svg` or `rainy.svg`).
+2. Put the files into a folder like `config/www/weather-icons/`.
+3. In your chip config, set `icon` to `weather` and add the folder path to `icon_path`:
 
 ```yaml
 chips:
