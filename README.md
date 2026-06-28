@@ -7,7 +7,9 @@ A detail-oriented weather and forecast card.
 
 <img width="400" alt="Image" src="https://github.com/user-attachments/assets/9388ef57-7c32-433e-a99a-e15d49f52706" />
 
-> **Heads up:** The animated background runs on GLSL shaders. They are light, but old GPUs and wall tablets may still struggle. If yours does, there are alternatives like [weather images](#performance) and [simple backgrounds](#simple-backgrounds).
+
+> [!NOTE]
+> **Device compatibility:** The animated backgrounds use GLSL shaders. They are lightweight but can still slow down lower-end hardware or older devices. If your device struggles, try using the [weather images](#performance) or [simple backgrounds](#simple-backgrounds) as an alternative.
 
 <br>
 
@@ -211,8 +213,7 @@ button_areas:
 <br>
 
 
-<img width="400" alt="Image" src="https://github.com/user-attachments/assets/3a2589e5-aad4-4e01-bc21-6f47948fcc30" />
-
+<img width="400" alt="Image" src="https://github.com/user-attachments/assets/4d96cc3b-b6d5-497a-bd07-f12ffa70d176" />
 <details>
 <summary><b>Big Forecast Card</b></summary>
 
