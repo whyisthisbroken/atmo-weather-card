@@ -3,7 +3,7 @@
 
 ---
 
-## Atmospheric Weather Card
+## Atmo Weather Card
 <img width="1774" height="887" alt="image" src="https://github.com/user-attachments/assets/69421bef-3952-4f06-bdc8-dc141be82f33" />
 
 This README combines the current card documentation with selected context from the older README, so setup, examples, and repository history stay in one place.
