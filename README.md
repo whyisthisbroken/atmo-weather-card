@@ -40,7 +40,7 @@ A detail-oriented weather and forecast card.
 
 <br>
 
-> [!NOTE]
+> [!AI NOTE]
 > I'm using it to speed up what would have taken years manually. I hope the
 > card's quality speaks for itself and shows the experience behind it.
 
