@@ -48,10 +48,8 @@ A detail-oriented weather and forecast card.
 
 ## 📦 Installation
 
-<details>
-<summary><b>Manual Import</b></summary>
 
-<br>
+<b>Manual Import</b>
 
 [Open your Home Assistant instance and navigate to your lovelace resources.](https://my.home-assistant.io/redirect/lovelace_resources/)
 
@@ -64,8 +62,6 @@ A detail-oriented weather and forecast card.
     * **URL:** `/local/atmo-weather-card/atmo-weather-card.js`
     * **Type:** JavaScript Module
 5. Hard-refresh your browser.
-
-</details>
 
 <br>
 
