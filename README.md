@@ -171,6 +171,8 @@ The card is meant to be pretty flexible. You can customize these examples howeve
 
 <details>
 <summary><b>Forecast Slider</b></summary>
+<img width="498" height="162" alt="image" src="https://github.com/user-attachments/assets/0614684d-0cf6-4bc5-8c15-9c68ff010f2d" />
+
 
 ```yaml
 type: custom:atmo-weather-card
@@ -316,6 +318,8 @@ grid_options:
 
 <details>
 <summary><b>Forecast & Mini-graph</b></summary>
+<img width="511" height="132" alt="image" src="https://github.com/user-attachments/assets/2baa2417-01ae-4c5d-a18b-79ec1c3d1cf9" />
+
 
 This example embeds a mini-graph-card with a bit of card-mod styling. For extra drama, the large header text is layered behind the weather elements.
 
@@ -478,6 +482,8 @@ custom_cards:
 
 <details>
 <summary><b>Forecast & Ring Chip</b></summary>
+<img width="513" height="186" alt="image" src="https://github.com/user-attachments/assets/fb9589da-5cf1-4c6f-a474-606f52d63df8" />
+
 
 ```yaml
 type: custom:atmo-weather-card
