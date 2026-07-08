@@ -1,6 +1,6 @@
 <div align="center">
 
-<img width="1774" height="887" alt="image" src="https://github.com/user-attachments/assets/69421bef-3952-4f06-bdc8-dc141be82f33" />
+<img src="https://github.com/user-attachments/assets/69421bef-3952-4f06-bdc8-dc141be82f33" width="700" />
 
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Lovelace%20Card-41BDF5.svg)](https://www.home-assistant.io/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/whyisthisbroken/atmo-weather-card/blob/main/LICENSE)
