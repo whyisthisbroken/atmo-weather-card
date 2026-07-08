@@ -1204,7 +1204,7 @@ The card has three performance presets — `low`, `default`, and `ultra` — whi
 | `perf_dpr` | `number` | `2` | Canvas sharpness. Controls the device pixel ratio used for rendering. `0.5` = low, `1` = medium, `1.5` = high, `2` = full retina. Lower values reduce GPU load on high-DPI screens. |
 | `fauna_bird_density` | `number` | `1.0` | Bird spawn rate multiplier. Range `0.5` to `2.0`. Scales how often bird flocks appear. `0.5` = sparse, `1.0` = default, `2.0` = frequent. Only works with `perf_fauna: 1` or `2`. |
 | `fauna_plane_density` | `number` | `1.0` | Plane spawn rate multiplier. Range `0.5` to `2.0`. Scales how often planes appear. `0.5` = sparse, `1.0` = default, `2.0` = frequent. Only works with `perf_fauna: 2`. |
-| `fauna_bird_flock_size` | `number` | `8` | Average birds per flock. Range `1` to `20`. Controls the formation size when bird flocks spawn. |
+| `fauna_bird_flock_size` | `number` | `8` | Target average birds per flock. Range `1` to `20`. Actual flock size is randomized around this value (about ±2) and occasional single-bird passes can still occur. |
 
 </details>
 
@@ -1216,7 +1216,7 @@ weather_entity: weather.your_weather_entity
 perf_fauna: 2  # Enable both birds and planes
 fauna_bird_density: 1.5  # 50% more bird flocks
 fauna_plane_density: 0.7  # 30% fewer planes
-fauna_bird_flock_size: 10  # Larger flocks (default is 8)
+fauna_bird_flock_size: 10  # Higher average flock size (actual spawn count still varies)
 ```
 
 <br>
