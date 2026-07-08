@@ -1,9 +1,5 @@
-> [!IMPORTANT]
-> **This is a personal fork.** The original author (`shpongledsummer`) deleted their repository and account. This started as a preserved copy for reference, but as of **Version 6**, active development has resumed on a personal basis — mainly for my own use, shared here for anyone who wants it. There is **no official support offered**, no HACS distribution (manual installation only), and no guaranteed response to issues or requests. All previous versions (including v5) remain available in the repo for anyone who prefers them. If `shpongledsummer` ever wants to return to the project, that's entirely welcome — see [MAINTENANCE.md](MAINTENANCE.md) for details.
+<div align="center">
 
----
-
-## Atmo Weather Card
 <img width="1774" height="887" alt="image" src="https://github.com/user-attachments/assets/69421bef-3952-4f06-bdc8-dc141be82f33" />
 
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Lovelace%20Card-41BDF5.svg)](https://www.home-assistant.io/)
@@ -11,16 +7,21 @@
 [![GitHub release](https://img.shields.io/github/v/release/whyisthisbroken/atmo-weather-card)](https://github.com/whyisthisbroken/atmo-weather-card/releases)
 [![GitHub last commit](https://img.shields.io/github/last-commit/whyisthisbroken/atmo-weather-card)](https://github.com/whyisthisbroken/atmo-weather-card/commits/main)
 
+</div>
+<h1>Animated weather card for Home Assistant Lovelace dashboards.</h1>
+
+### Features
+- Animated weather display
+- Current conditions
+- Forecast support
+- Dashboard-friendly layout
+
+> [!IMPORTANT]
+> **This is a personal fork.** The original author (`shpongledsummer`) deleted their repository and account. This started as a preserved copy for reference, but as of **Version 6**, active development has resumed on a personal basis — mainly for my own use, shared here for anyone who wants it. There is **no official support offered**, no HACS distribution (manual installation only), and no guaranteed response to issues or requests. All previous versions (including v5) remain available in the repo for anyone who prefers them. If `shpongledsummer` ever wants to return to the project, that's entirely welcome — see [MAINTENANCE.md](MAINTENANCE.md) for details.
+
+---
+
 This README combines the current card documentation with selected context from the older README, so setup, examples, and repository history stay in one place.
-
-
-> **At a glance**
-> - Manual import only
-> - Archived repository, kept for reference and critical fixes
-> - Core setup: `weather_entity`, `sun_entity`, optional `moon_phase_entity`
-
-
-A detail-oriented weather and forecast card.
 
 <br>
 
