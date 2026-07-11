@@ -911,7 +911,11 @@ export function drawStars(card, ctx, w, h, dpr) {
   }
   for (let i = 0; i < len; i++) {
     const s = card._stars[i];
-    s.phase += s.rate * card._animationSpeed * (card._frameScale || 1);
+    s.phase +=
+      s.rate *
+      card._animationSpeed *
+      card._starAnimationSpeed *
+      (card._frameScale || 1);
     const twinkle =
       Math.sin(s.phase) +
       Math.sin(s.phase * 3) * 0.5 +

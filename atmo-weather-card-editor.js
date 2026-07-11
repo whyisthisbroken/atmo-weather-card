@@ -255,6 +255,7 @@ const LABELS = Object.freeze({
   perf_dpr: "Sharpness",
   animation_speed: "Animation Speed",
   bird_animation_speed: "Bird Animation Speed",
+  star_animation_speed: "Star Twinkle Speed",
   fauna_birds_at_night: "Birds At Night",
 });
 const HELPERS = Object.freeze({
@@ -295,6 +296,7 @@ const HELPERS = Object.freeze({
   animation_speed: "Global animation speed multiplier for all motion.",
   bird_animation_speed:
     "Bird-only speed multiplier applied on top of animation speed.",
+  star_animation_speed: "Twinkle speed multiplier for night stars.",
   fauna_birds_at_night: "Disable this to let birds fly only during daytime.",
 });
 const CHIP_LABELS = Object.freeze({
@@ -399,6 +401,7 @@ const KEY_ORDER = Object.freeze([
   "perf_fps",
   "animation_speed",
   "bird_animation_speed",
+  "star_animation_speed",
   "perf_cloud_quality",
   "perf_effects",
   "perf_fauna",
@@ -434,6 +437,7 @@ const TOP_LEVEL_NUMBER_FIELDS = Object.freeze([
   "perf_fps",
   "animation_speed",
   "bird_animation_speed",
+  "star_animation_speed",
   "perf_cloud_quality",
   "perf_effects",
   "perf_fauna",
@@ -4754,6 +4758,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
         perf_dpr: 1.0,
         animation_speed: 1.0,
         bird_animation_speed: 1.0,
+        star_animation_speed: 1.0,
         fauna_bird_density: 0.5,
         fauna_plane_density: 0.5,
         fauna_bird_flock_size: 4,
@@ -4767,6 +4772,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
         perf_dpr: 2.0,
         animation_speed: 1.0,
         bird_animation_speed: 1.0,
+        star_animation_speed: 1.0,
         fauna_bird_density: 1.0,
         fauna_plane_density: 1.0,
         fauna_bird_flock_size: 8,
@@ -4780,6 +4786,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
         perf_dpr: 2.0,
         animation_speed: 1.0,
         bird_animation_speed: 1.0,
+        star_animation_speed: 1.0,
         fauna_bird_density: 1.5,
         fauna_plane_density: 1.5,
         fauna_bird_flock_size: 12,
@@ -4790,6 +4797,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
       "perf_fps",
       "animation_speed",
       "bird_animation_speed",
+      "star_animation_speed",
       "perf_cloud_quality",
       "perf_effects",
       "perf_fauna",
@@ -4912,6 +4920,13 @@ class AtmosphericWeatherCardEditor extends LitElement {
             LABELS.bird_animation_speed,
             0.0,
             3.0,
+            0.1,
+          )}
+          ${this._renderSlider(
+            "star_animation_speed",
+            LABELS.star_animation_speed,
+            0.0,
+            2.0,
             0.1,
           )}
           ${perfButtons("perf_cloud_quality", LABELS.perf_cloud_quality, [
