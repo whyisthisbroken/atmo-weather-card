@@ -13,22 +13,19 @@
 - Animated weather display
 - Current conditions
 - Forecast support
-- Dashboard-friendly layout
+- Dashboard-friendly layout / editor
 
-> [!IMPORTANT]
 > This is a personal, community-maintained fork. For details on maintenance, support, and history, see **[Maintenance & Archive Info](MAINTENANCE.md)**.
+>
+> This README combines the current card documentation with selected context from the older README, so setup, examples, and repository history stay in one place..
 
 ---
-
-This README combines the current card documentation with selected context from the older README, so setup, examples, and repository history stay in one place.
 
 <br>
 
 ## 📋 Contents
 
 **Getting Started** · [Installation](#-installation) · [Setup](#-setup) · [Examples](#-examples)
-
-**Project** · [History](#-archive-context)
 
 **Customization** · [Appearance](#-appearance) · [CSS Variables](#-css-variables)
 
@@ -118,40 +115,7 @@ For manual installation without HACS. [Download the latest files from the releas
 
 <br>
 
-## ⬆️ Upgrading from v4.5.x
-
-Version 6 continues directly from **v4.5** — all chip options, config
-parameters, and behavior remain the same. The only change is the card's
-internal name, renamed from `atmospheric-weather-card` to `atmo-weather-card`.
-
-**What to update in your dashboard YAML:**
-
-```
-type: custom:atmospheric-weather-card    # old (v4.5.x)
-type: custom:atmo-weather-card           # new (v6+)
-```
-
-You'll also need to update your Lovelace resource URL and local file folder
-to match the new name, as shown in the [Installation](#-installation) section
-above.
-
-Everything else in your existing configuration — chips, colors, layout
-options — keeps working unchanged after this rename.
-
-**Note on v5.0–v5.x:** These versions were a from-scratch rewrite by the
-original author and are not compatible with v4.5 or v6 configurations. They
-are kept, unmaintained, under [`legacy/v5`](./legacy/v5) for anyone who
-specifically wants that version.
-
-<br>
-
-## 📜 Archive Context
-
-The older Atmospheric Weather Card README described the original repository as archived after the upstream author stepped away. This merged README keeps that context while presenting the current card documentation in one place.
-
-<br>
-
-## ⚙️ Setup
+## ⚙️ Basic-Setup-Information
 
 | Option               | Type     | Default | Description                                                                                                                                                                                                                             |
 | :------------------- | :------- | :------ | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -159,16 +123,8 @@ The older Atmospheric Weather Card README described the original repository as a
 | **`sun_entity`**     | `string` | —       | **Required.** Tracks the sun to auto-switch between day and night. Without this, the card will default to permanent day. See [Troubleshooting: No night effects (stars/comets) are visible](#no-night-effects-starscomets-are-visible). |
 | `moon_phase_entity`  | `string` | —       | _Recommended._ Displays the correct moon phase (e.g., `sensor.moon_phase`).                                                                                                                                                             |
 
-> [!IMPORTANT]
+> [!NOTE]
 > The `sun_entity` controls the timing of the sun and moon. Without it, the card defaults to permanent day. Additionally, card colors change based on your [configuration](#-color-mode).
-
-> [!IMPORTANT]
-> **ATMO test build config rules (stable):**
->
-> - Use `type: custom:atmo-weather-card`
-> - Add only the main JS file as a dashboard resource. The editor file is loaded automatically.
-> - `card_height` supports numeric values (e.g. `160`), `auto`, or explicit CSS units (e.g. `160px`).
-> - Chip `width` and `height` are normalized to **px**. Use values like `40px` (or just `40`, which becomes `40px`).
 
 <br>
 
@@ -1193,11 +1149,13 @@ This explains how to create an image for your own home and use it in the card.
 
 ## ⚡ Performance
 
-> **Note:** Performance handling was significantly overhauled compared to the original Atmospheric Weather Card (v4.5).
+> [!NOTE]
+> Performance handling was significantly overhauled compared to the original Atmospheric Weather Card (v4.5).
+>
 > The new `perf_fps` option lets you control the animation frame rate directly (previously fixed at ~30fps),
 > all performance values (`perf_fps`, `perf_cloud_quality`, `perf_dpr`) are now automatically validated and clamped to safe ranges,
-> and chip rendering uses incremental DOM patching instead of a full rebuild on every update — reducing unnecessary re-renders
-> and improving overall smoothness, especially on weaker devices or setups with many chips.
+> and chip rendering uses incremental DOM patching instead of a full rebuild on every update,
+> this reducing unnecessary re-renders and improving overall smoothness, especially on weaker devices or setups with many chips.
 
 Fast performance and impressive animations are basically natural enemies when building a card for Home Assistant. Changing even a tiny detail, like how the clouds or stars work, can instantly slow the dashboard down. There were so many times I got an effect looking absolutely perfect, only to realize it was too heavy and had to replace it with a simpler version.
 
@@ -1207,6 +1165,8 @@ Even with all this effort, older setups might still struggle, and the birds may 
 
 <details>
 <summary><strong>Performance Settings</strong></summary>
+
+<br>
 
 The card has three performance presets — `low`, `default`, and `ultra` — which cover most setups. If you need more control, each setting can be changed individually. Any value set manually overrides the preset.
 
