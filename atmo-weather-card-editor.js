@@ -145,6 +145,7 @@ const CHIP_LABELS = Object.freeze({
 const CHIP_HELPERS = Object.freeze({
   name_sensor: "Use a sensor value as the label instead.",
   width: "e.g. 200px or 60%. Constrains the chip width.",
+  label_overflow: "How label text behaves when it is too long.",
   icon: "MDI icon, or type 'weather' for a dynamic icon.",
   icon_path: "e.g. /local/weather-icons/",
   forecast_offset: "0 = today/now, 1 = tomorrow/next hour, etc.",
