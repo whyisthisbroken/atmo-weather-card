@@ -1,6 +1,6 @@
 /**
  * ATMO WEATHER CARD
- * Version: 6.6.2
+ * Version: 6.6.3
  */
 import {
   advanceWindAndPulse,
@@ -41,7 +41,7 @@ try {
   });
 } catch (_) {}
 // CONSTANTS & CONFIGURATION
-const EDITOR_IMPORT_VERSION = "6.6.2";
+const EDITOR_IMPORT_VERSION = "6.6.3";
 const NIGHT_MODES = Object.freeze([
   "dark",
   "night",
@@ -3695,6 +3695,18 @@ class AtmosphericWeatherCard extends HTMLElement {
         mainHaFormatted,
       );
       unit = resolved.unit;
+      const hasManualValuePrecision =
+        chip.value_precision !== undefined && chip.value_precision !== null;
+      if (hasManualValuePrecision && mainHaFormatted && !unit) {
+        const unitSensor = hass.states[chip.entity];
+        if (unitSensor) {
+          unit = chip.attribute
+            ? unitSensor.attributes[`${chip.attribute}_unit`] ||
+              unitSensor.attributes.unit_of_measurement ||
+              ""
+            : unitSensor.attributes.unit_of_measurement || "";
+        }
+      }
       const sensor = hass.states[chip.entity];
       if (sensor) {
         if (chip.attribute)
@@ -3916,8 +3928,12 @@ class AtmosphericWeatherCard extends HTMLElement {
         !isNaN(parseFloat(rawTempCandidate)) &&
         isFinite(rawTempCandidate);
       const rawTemp = rawTempIsNumeric ? rawTempCandidate : null;
+      const attrUnitKey = chip.attribute ? `${chip.attribute}_unit` : null;
       const rawUnit = isWeather
-        ? sensor.attributes.temperature_unit || ""
+        ? sensor.attributes.temperature_unit ||
+          (attrUnitKey && sensor.attributes[attrUnitKey]) ||
+          sensor.attributes.unit_of_measurement ||
+          ""
         : (sensor &&
             sensor.attributes &&
             sensor.attributes.unit_of_measurement) ||
@@ -3946,7 +3962,7 @@ class AtmosphericWeatherCard extends HTMLElement {
           : "";
       const fancyUnitStr = hasUnitFormat
         ? unit
-        : rawUnit || (hasManualPrecision && isWeather ? systemTempUnit : "");
+        : rawUnit || (hasManualPrecision ? systemTempUnit : "");
       inner = `${escapeHtml(fancyVal)}<span class="fancy-unit">${escapeHtml(fancyUnitStr)}</span>`;
     } else {
       inner = hasUnitFormat
