@@ -83,6 +83,7 @@ For manual installation without HACS. [Download the latest files from the releas
    - `atmo-weather-card.js`
    - `atmo-weather-card-editor.js`
    - `atmo-weather-animations.js`
+   - `atmo-weather-config.js`
    - `atmo-weather-fauna.js`
 
 2. **Place files** in your Home Assistant config folder:
@@ -92,6 +93,7 @@ For manual installation without HACS. [Download the latest files from the releas
    ├── atmo-weather-card.js
     ├── atmo-weather-card-editor.js
     ├── atmo-weather-animations.js
+    ├── atmo-weather-config.js
     └── atmo-weather-fauna.js
    ```
 

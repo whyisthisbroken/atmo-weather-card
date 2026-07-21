@@ -27,7 +27,7 @@ personally maintained project.
 
 - Active feature development is ongoing, driven by personal use.
 - **All versions up to and including v5.x remain available** under
-  [Releases](../../releases) for anyone who prefers the original.
+  [Releases](https://github.com/whyisthisbroken/atmo-weather-card/releases) for anyone who prefers the original.
   These versions are not maintained and provided as-is.
 - Version 6 introduced a complete rename from `atmospheric-weather-card` to
   `atmo-weather-card` for clarity and fresh development.
