@@ -6399,3 +6399,4 @@ if (!customElements.get(CARD_NAME)) {
       "Animated weather effects with rain, snow, clouds, stars and more",
   });
 }
+
