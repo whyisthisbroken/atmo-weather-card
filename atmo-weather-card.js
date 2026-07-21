@@ -3730,8 +3730,12 @@ class AtmosphericWeatherCard extends HTMLElement {
             : configIcon;
       }
     }
-    const hasUnitFormat = chip.unit_format !== undefined;
-    if (hasUnitFormat) unit = chip.unit_format;
+    const resolvedUnitFormat =
+      chip.unit_format !== undefined && chip.unit_format !== null
+        ? String(chip.unit_format).trim()
+        : "";
+    const hasUnitFormat = resolvedUnitFormat !== "";
+    if (hasUnitFormat) unit = resolvedUnitFormat;
     const overflowRaw = (chip.overflow || "ellipsis")
       .toString()
       .toLowerCase()
