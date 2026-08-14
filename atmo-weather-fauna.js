@@ -184,6 +184,7 @@ export function drawPlanes(
       ctx.lineJoin = "round";
       const trailBaseW = 2.5 * plane.scale;
       const trailSegs = histLen - 1;
+      const maxTrailLen = Math.min(histLen, Math.max(2, trailCapPlane * 0.8));
       for (let oi = 0; oi < 2; oi++) {
         const offset = contrailOffsets[oi];
         const oX = sinA * offset * plane.scale * dir;
@@ -204,10 +205,13 @@ export function drawPlanes(
           let drawing = false;
           let segPts = 0;
           for (let k = kStart; k <= kEnd; k++) {
+            if (k > maxTrailLen) break;
             const ridx =
               (((plane.histHead - 1 - k) % trailCapPlane) + trailCapPlane) %
               trailCapPlane;
             const gap = plane.histBuf[ridx * 3 + 2];
+            const ageRatio = k / maxTrailLen;
+            const ageFade = Math.max(0, 1 - Math.pow(ageRatio, 0.5));
             if (gap > 0.5) {
               if (drawing && segPts < 2) ctx.beginPath();
               drawing = false;
@@ -215,6 +219,7 @@ export function drawPlanes(
             } else {
               const px = plane.histBuf[ridx * 3] + oX;
               const py = plane.histBuf[ridx * 3 + 1] + oY;
+              ctx.globalAlpha = bandAlpha * ageFade;
               if (!drawing) {
                 ctx.moveTo(px, py);
                 drawing = true;
