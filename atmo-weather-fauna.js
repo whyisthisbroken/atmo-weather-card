@@ -46,7 +46,7 @@ export function drawBirds(card, ctx, w, h) {
       vy: (Math.random() - 0.5) * 0.1,
       flapPhase: Math.random() * Math.PI * 2,
       flapSpeed: 0.15 + Math.random() * 0.05,
-      size: (2.0 + Math.random() * 0.8) * leadDepthScale,
+      size: (1.8 + Math.random() * 0.6) * leadDepthScale,
     });
     if (!isSingle) {
       const formation = Math.floor(Math.random() * 3);
@@ -57,23 +57,27 @@ export function drawBirds(card, ctx, w, h) {
         if (formation === 0) {
           const row = Math.floor((i + 1) / 2);
           const side = i % 2 === 0 ? 1 : -1;
-          offX = -15 * row;
-          offY = 8 * row * side;
+          offX = -15 * row * depthScale;
+          offY = 8 * row * side * depthScale;
         } else if (formation === 1) {
-          offX = -18 * i;
-          offY = 10 * i * ySlope;
+          offX = -18 * i * depthScale;
+          offY = 10 * i * ySlope * depthScale;
         } else {
-          offX = -15 * i + (Math.random() - 0.5) * 20;
-          offY = (Math.random() - 0.5) * 40;
+          offX = (-15 * i + (Math.random() - 0.5) * 20) * depthScale;
+          offY = (Math.random() - 0.5) * 40 * depthScale;
         }
-        const scaledOffX = offX * depthScale;
-        const scaledOffY = offY * depthScale;
-        // Flock birds: slight individual speed variation (±3%)
-        const flocSpeedVar = (0.97 + Math.random() * 0.06) * depthScale * dir;
+        const scaledOffX = offX;
+        const scaledOffY = offY;
+        // Ordered formations stay synchronized; chaotic adds speed variation
+        let flocVx = finalSpeed;
+        if (formation === 2) {
+          const flocSpeedVar = 0.97 + Math.random() * 0.06;
+          flocVx = finalSpeed * flocSpeedVar;
+        }
         card._birds.push({
           x: startX + scaledOffX * dir,
           y: startY + scaledOffY,
-          vx: finalSpeed * flocSpeedVar,
+          vx: flocVx,
           vy: (Math.random() - 0.5) * 0.05,
           flapPhase: i * 0.4 + Math.random() * Math.PI,
           flapSpeed: 0.15 + Math.random() * 0.05,
@@ -93,7 +97,8 @@ export function drawBirds(card, ctx, w, h) {
   ctx.lineCap = "round";
   const widthBuckets = new Map();
   const len = card._birds.length;
-  
+  let minLineWidth = Infinity;
+
   // Collect line segments by width, plus head/tail data
   for (let i = 0; i < len; i++) {
     const b = card._birds[i];
@@ -102,6 +107,7 @@ export function drawBirds(card, ctx, w, h) {
     const dir = b.vx > 0 ? 1 : -1;
     const lw = Math.max(0.8, b.size * 0.5);
     const qw = Math.round(lw * 4) / 4;
+    if (qw < minLineWidth) minLineWidth = qw;
     let bucket = widthBuckets.get(qw);
     if (!bucket) {
       bucket = [];
@@ -127,7 +133,7 @@ export function drawBirds(card, ctx, w, h) {
       b.y + halfSpan * 0.7,
     );
   }
-  
+
   // Draw body + wings by width
   for (const [lw, pts] of widthBuckets) {
     ctx.lineWidth = lw;
@@ -140,10 +146,10 @@ export function drawBirds(card, ctx, w, h) {
     }
     ctx.stroke();
   }
-  
+
   // Draw heads (small circles)
-  const headLw = Math.max(0.8, widthBuckets.size > 0 ? 
-    Math.min(...widthBuckets.keys()) * 0.5 : 1);
+  const headLw =
+    minLineWidth < Infinity ? Math.max(0.8, minLineWidth * 0.5) : 1;
   ctx.lineWidth = headLw;
   for (const [lw, pts] of widthBuckets) {
     for (let j = 6; j < pts.length; j += 13) {
@@ -155,10 +161,11 @@ export function drawBirds(card, ctx, w, h) {
       ctx.fill();
     }
   }
-  
+
   // Draw tails (fan shape)
-  ctx.lineWidth = Math.max(0.6, widthBuckets.size > 0 ? 
-    Math.min(...widthBuckets.keys()) * 0.4 : 0.8);
+  const tailLw =
+    minLineWidth < Infinity ? Math.max(0.6, minLineWidth * 0.4) : 0.8;
+  ctx.lineWidth = tailLw;
   for (const [lw, pts] of widthBuckets) {
     for (let j = 9; j < pts.length; j += 13) {
       const tx1 = pts[j];
@@ -173,7 +180,7 @@ export function drawBirds(card, ctx, w, h) {
       ctx.stroke();
     }
   }
-  
+
   ctx.restore();
 }
 
@@ -186,6 +193,7 @@ export function drawPlanes(
   planePath,
   trailCapPlane,
 ) {
+  ctx.save();
   const dpr = card._cachedDimensions.dpr;
   const frameScale = card._frameScale || 1;
   const animSpeed = card._animationSpeed * frameScale;
@@ -289,7 +297,6 @@ export function drawPlanes(
         }
       }
       ctx.globalAlpha = 1;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
     ctx.translate(plane.x, plane.y);
     ctx.scale(plane.scale, plane.scale);
@@ -326,7 +333,5 @@ export function drawPlanes(
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     if (plane.x < -450 || plane.x > w + 450) card._planes.splice(i, 1);
   }
-  ctx.globalAlpha = 1;
-  ctx.lineCap = "butt";
-  ctx.lineJoin = "miter";
+  ctx.restore();
 }
