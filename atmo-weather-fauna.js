@@ -302,9 +302,18 @@ export function drawPlanes(
     ctx.scale(plane.scale, plane.scale);
     if (plane.climbAngle > 0) ctx.rotate(-plane.climbAngle * dir);
     ctx.globalAlpha = 0.9;
-    ctx.strokeStyle = card._isThemeDark
-      ? "rgb(125, 135, 145)"
-      : "rgb(105, 110, 120)";
+    // Weather-adaptive plane color: darker for daytime, lighter for night, adjusts for severe weather
+    let planeColor;
+    if (card._isThemeDark) {
+      planeColor = card._renderState.isSevereWeather
+        ? "rgb(220, 220, 220)"
+        : "rgb(125, 135, 145)";
+    } else {
+      planeColor = card._renderState.isSevereWeather
+        ? "rgb(60, 80, 120)"
+        : "rgb(40, 60, 100)";
+    }
+    ctx.strokeStyle = planeColor;
     ctx.lineWidth = 1.5;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
