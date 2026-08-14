@@ -6229,7 +6229,8 @@ class AtmosphericWeatherCard extends HTMLElement {
           sunBaseR * 5.8 * (glow.auraSizeMul || 1),
           sizeCap,
         ),
-        auraSize = Math.ceil(auraR * 2),
+        textureR = auraR * 1.5,
+        auraSize = Math.ceil(textureR * 2),
         colorKey = `${gR}_${gG}_${gB}`;
       if (
         !this._sunAuraCache ||
@@ -6252,7 +6253,7 @@ class AtmosphericWeatherCard extends HTMLElement {
           [2.16, 0.78, 0.12, 0.11],
           [2.78, 0.52, 0.18, 0.08],
         ];
-        const coronaCenter = auraSize / 2;
+        const coronaCenter = textureR;
         for (const [angle, lengthRatio, widthRatio, alpha] of coronaSpecs) {
           const length = auraR * lengthRatio,
             width = auraR * widthRatio,
@@ -6291,10 +6292,10 @@ class AtmosphericWeatherCard extends HTMLElement {
       );
       ctx.drawImage(
         this._sunAuraCache.canvas,
-        -auraR * auraScale + auraX,
-        -auraR * auraScale + auraY,
-        auraR * 2 * auraScale,
-        auraR * 2 * auraScale,
+        -textureR * auraScale + auraX,
+        -textureR * auraScale + auraY,
+        textureR * 2 * auraScale,
+        textureR * 2 * auraScale,
       );
       if (!this._sunDiscGrad || this._sunDiscGradR !== sunBaseR) {
         const g = ctx.createRadialGradient(0, 0, 0, 0, 0, sunBaseR * 3.0);
