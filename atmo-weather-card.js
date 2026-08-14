@@ -2715,7 +2715,7 @@ class AtmosphericWeatherCard extends HTMLElement {
     return `
             :host {
               --awc-font-family: 'Figtree', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-              display: block; width: 100%; position: relative; background: transparent !important; min-height: 200px; font-family: var(--awc-font-family);
+              display: block; width: 100%; position: relative; background: transparent !important; min-height: 200px; font-family: var(--awc-font-family); letter-spacing: -0.015em; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
             }
             #card-root { position: relative; width: 100%; height: 100%; container-type: size; z-index: var(--awc-stack-order, 1); overflow: hidden; background: transparent; display: block; transform: translateZ(0); will-change: transform, opacity; opacity: 0; }
             #card-root.clickable { cursor: pointer; }
@@ -2798,7 +2798,7 @@ class AtmosphericWeatherCard extends HTMLElement {
             #text-wrapper > .pos-bottom-left { bottom: var(--_awc-pad-v, var(--awc-card-padding, 16px)); left: var(--_awc-pad-h, var(--awc-card-padding, 16px)); }
             #text-wrapper > .pos-bottom-center { bottom: var(--_awc-pad-v, var(--awc-card-padding, 16px)); left: 50%; transform: translateX(-50%); }
             #text-wrapper > .pos-bottom-right { bottom: var(--_awc-pad-v, var(--awc-card-padding, 16px)); right: var(--_awc-pad-h, var(--awc-card-padding, 16px)); }
-            #chips-group { position: absolute; pointer-events: none; font-family: var(--awc-font-family, var(--ha-font-family, var(--paper-font-body1_-_font-family, sans-serif))); transition: color 0.3s ease, text-shadow 0.3s ease; min-width: 0; max-width: calc(100% - var(--_awc-pad-h, var(--awc-card-padding, 16px)) * 2); box-sizing: border-box; }
+            #chips-group { position: absolute; pointer-events: none; font-family: var(--awc-font-family, var(--ha-font-family, var(--paper-font-body1_-_font-family, sans-serif))); letter-spacing: -0.01em; transition: color 0.3s ease, text-shadow 0.3s ease; min-width: 0; max-width: calc(100% - var(--_awc-pad-h, var(--awc-card-padding, 16px)) * 2); box-sizing: border-box; }
             #chips-row,
             .chip-free { color: var(--awc-text-color); }
             .chip-sub { display: block; font-size: var(--awc-sub-size, 0.78em); opacity: 0.65; font-weight: var(--awc-sub-weight, 500); line-height: 1.2; white-space: var(--awc-sub-wrap, nowrap); overflow: var(--awc-sub-visible, hidden); text-overflow: var(--awc-sub-overflow, ellipsis); }
@@ -2923,7 +2923,7 @@ class AtmosphericWeatherCard extends HTMLElement {
             .chip .chip-icon ha-icon,
             .chip .chip-icon ha-state-icon { --mdc-icon-size: var(--awc-icon-size, 1.1em); opacity: 0.9; }
             .chip .chip-icon img.custom-bottom-icon { display: block; height: var(--awc-icon-size, 1.1em); width: var(--awc-icon-size, 1.1em); object-fit: contain; }
-            .chip .chip-name { font-size: var(--awc-chip-name-font-size, inherit); font-weight: var(--awc-chip-name-weight, 500); opacity: var(--awc-chip-name-opacity, 0.7); color: var(--awc-chip-name-color, inherit); flex: 0 0 auto; margin-right: var(--awc-chip-text-gap, 0.35em); }
+            .chip .chip-name { font-size: var(--awc-chip-name-font-size, inherit); font-weight: var(--awc-chip-name-weight, 600); opacity: var(--awc-chip-name-opacity, 0.7); color: var(--awc-chip-name-color, inherit); flex: 0 0 auto; margin-right: var(--awc-chip-text-gap, 0.35em); }
             .chip .chip-val { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; display: inline-block; font-weight: var(--awc-chip-value-weight, 700); }
             .chip.no-name:not(.format-stacked):not(.format-vertical) .chip-val { font-weight: var(--awc-chip-value-weight, 700); }
             .chip .chip-val,
@@ -3007,7 +3007,7 @@ class AtmosphericWeatherCard extends HTMLElement {
             .chip.has-icon-bg.with-bg.frosted .chip-icon { border: var(--_stacked-icon-border, none); }
             .chip.has-icon-bg.with-bg.contrast .chip-icon { box-shadow: var(--awc-icon-bg-shadow, var(--_stacked-icon-shadow, 0 2px 6px rgba(0,0,0,0.18), 0 1px 2px rgba(0,0,0,0.12))); }
             .chip.has-icon-bg.with-bg.theme .chip-icon { border: var(--ha-card-border-width, 1px) solid var(--ha-card-border-color, var(--divider-color)); }
-            .chip-free { position: absolute; pointer-events: auto; z-index: 99; font-family: var(--awc-font-family, var(--ha-font-family, var(--paper-font-body1_-_font-family, sans-serif))); font-size: var(--awc-bottom-font-size, clamp(15px, 5cqmin, 26px)); font-weight: var(--awc-bottom-font-weight, 500); max-width: calc(100% - var(--_awc-pad-h, var(--awc-card-padding, 16px)) * 2); box-sizing: border-box; text-shadow: var(--awc-text-shadow-active); }
+            .chip-free { position: absolute; pointer-events: auto; z-index: 99; font-family: var(--awc-font-family, var(--ha-font-family, var(--paper-font-body1_-_font-family, sans-serif))); letter-spacing: -0.01em; font-size: var(--awc-bottom-font-size, clamp(15px, 5cqmin, 26px)); font-weight: var(--awc-bottom-font-weight, 500); max-width: calc(100% - var(--_awc-pad-h, var(--awc-card-padding, 16px)) * 2); box-sizing: border-box; text-shadow: var(--awc-text-shadow-active); }
             .chip-free.behind { z-index: -1; }
             .chip.behind { position: relative; z-index: -1; }
             .chip.chip-round.with-bg { border-radius: 999px; }
