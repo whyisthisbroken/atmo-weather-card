@@ -6243,19 +6243,22 @@ class AtmosphericWeatherCard extends HTMLElement {
       ];
       const auraPhase = this._sunPulsePhase / glow.breathPeriodMul;
       const auraX =
-          Math.sin(auraPhase * 1.1) * sunBaseR * 0.04 +
-          Math.sin(auraPhase * 2.0 + 1.2) * sunBaseR * 0.018,
+          Math.sin(auraPhase * 1.55) * sunBaseR * 0.065 +
+          Math.sin(auraPhase * 2.8 + 1.2) * sunBaseR * 0.028,
         auraY =
-          Math.cos(auraPhase * 0.85 + 0.8) * sunBaseR * 0.028,
-        auraScale = 1 + Math.sin(auraPhase * 1.35 + 2.1) * 0.018;
+          Math.cos(auraPhase * 1.2 + 0.8) * sunBaseR * 0.045,
+        auraScale = 1 + Math.sin(auraPhase * 1.9 + 2.1) * 0.028;
       ctx.globalAlpha = fadeOpacity * Math.min(
         1,
         glow.intensity * 0.82 * (glow.auraOpacityMul || 1),
       );
       for (const [angle, lengthRatio, widthRatio, alpha] of coronaSpecs) {
-        const length = auraR * lengthRatio * auraScale,
-          width = auraR * widthRatio * auraScale,
-          centerOffset = auraR * (0.2 + lengthRatio * 0.28) * auraScale,
+        const tonguePhase = auraPhase * 1.35 + angle * 1.7;
+        const tongueScale = 1 + Math.sin(tonguePhase) * 0.075;
+        const length = auraR * lengthRatio * auraScale * tongueScale,
+          width = auraR * widthRatio * auraScale * (1 + Math.cos(tonguePhase) * 0.04),
+          centerOffset =
+            auraR * (0.2 + lengthRatio * 0.28) * auraScale * tongueScale,
           gradient = ctx.createLinearGradient(-length, 0, length, 0);
         gradient.addColorStop(0, `rgba(${gR},${gG},${gB},0)`);
         gradient.addColorStop(0.28, `rgba(${gR},${gG},${gB},${alpha * 0.7})`);
