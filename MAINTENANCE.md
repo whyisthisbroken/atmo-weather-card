@@ -7,7 +7,7 @@
 
 **Maintenance:** Actively maintained with new features and fixes added on a best-effort basis.
 
-**Availability:** Available via [HACS](https://www.hacs.xyz/) for easy installation and updates.
+**Availability:** Available on [HACS](README.md#installation) for easy installation and updates. See the [Installation Guide](README.md#installation) for setup instructions.
 
 ## Project History
 
