@@ -14,9 +14,9 @@
 - Forecast support
 - Dashboard-friendly layout / editor
 
-> This is a personal, community-maintained fork. For details on maintenance, support, and history, see **[Maintenance & Archive Info](MAINTENANCE.md)**.
+> **Atmo Weather Card** is an independent, actively maintained Lovelace card project. For details on maintenance status and historical background, see **[Maintenance & Archive Info](MAINTENANCE.md)**.
 >
-> This README combines the current card documentation with selected context from the older README, so setup, examples, and repository history stay in one place..
+> This README contains the current card documentation with relevant setup, examples, and configuration information.
 
 ---
 

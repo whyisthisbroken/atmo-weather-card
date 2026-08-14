@@ -23,12 +23,13 @@ repository began as a preserved copy of that work. Starting with Version 6,
 it was renamed to `atmo-weather-card` and now continues as an independent,
 personally maintained project.
 
+- **Users who prefer the original V5 experience:** The original author has resumed development with their own repository
+  under a new name. Check out [Origami Weather](https://github.com/hazymorning/origami_weather) for continued V5
+  development and enhancements.
+
 ## 📝 Notes
 
 - Active feature development is ongoing, driven by personal use.
-- **All versions up to and including v5.x remain available** under
-  [Releases](https://github.com/whyisthisbroken/atmo-weather-card/releases) for anyone who prefers the original.
-  These versions are not maintained and provided as-is.
 - Version 6 introduced a complete rename from `atmospheric-weather-card` to
   `atmo-weather-card` for clarity and fresh development.
 - This project is not affiliated with or endorsed by `shpongledsummer`.
