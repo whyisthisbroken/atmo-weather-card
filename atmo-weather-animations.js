@@ -496,25 +496,47 @@ export function drawClouds(card, ctx, cloudList, w, h, effectiveWind) {
   if (fadeOpacity <= 0) return;
   if (!card._renderState) return;
   const animSpeed = card._animationSpeed * (card._frameScale || 1);
-  const yLift = h * 0.06;
-  ctx.globalAlpha = fadeOpacity;
   for (let i = 0; i < cloudList.length; i++) {
     const cloud = cloudList[i];
-    const depthFactor = 1 + cloud.layer * 0.2;
-    cloud.x += cloud.speed * effectiveWind * depthFactor * animSpeed;
-    if (cloud.x > w + 280) cloud.x = -280;
-    if (cloud.x < -280) cloud.x = w + 280;
-    cloud.breathPhase += cloud.breathSpeed * animSpeed;
+    const layer = cloud.layer || 0;
+    const softCloud = ["stratus", "scud", "cirrus"].includes(cloud.cloudType);
+    const depthFactor = 0.7 + layer * 0.35;
+    const baseSpeed = cloud.speed || 0.02;
+    const layerPhase = (cloud.breathPhase || 0) + (cloud.seed || 0) * 0.0007;
+    const microDrift =
+      Math.sin(layerPhase * (1.8 + layer * 0.7)) * (7 + layer * 10) * 0.02;
+    const driftWave =
+      Math.sin(layerPhase * 2.5 + (cloud.seed || 0) * 0.001) *
+      (2 + layer * 2.5);
+    const effectiveSpeed = baseSpeed * effectiveWind * depthFactor * animSpeed;
+    cloud.x += effectiveSpeed + microDrift * animSpeed;
+    if (cloud.x > w + 320) {
+      cloud.x = -320 - ((cloud.seed || 0) % 140);
+    }
+    if (cloud.x < -320) {
+      cloud.x = w + 120 + ((cloud.seed || 0) % 180);
+    }
+    cloud.breathPhase =
+      (cloud.breathPhase || 0) + (cloud.breathSpeed || 0.002) * animSpeed;
     if (!cloud._bakedCanvas) continue;
-    const breathScale = 1 + Math.sin(cloud.breathPhase) * 0.022;
-    const drawScale = cloud.scale * breathScale;
-    const yDrift = Math.sin(cloud.breathPhase * 2.4) * 3.5;
+    const breathScale =
+      1 +
+      Math.sin(cloud.breathPhase) * (softCloud ? 0.014 : 0.018 + layer * 0.01);
+    const drawScale = (cloud.scale || 1) * breathScale;
+    const yLift = h * (0.03 + layer * 0.015);
+    const yDrift = driftWave * (softCloud ? 0.65 : 1);
     const destX = cloud.x + cloud._bakeOffX * drawScale;
     const destY = cloud.y - yLift + yDrift + cloud._bakeOffY * drawScale;
     const destW = cloud._bakeLogicalW * drawScale;
     const destH = cloud._bakeLogicalH * drawScale;
     if (destX + destW < 0 || destX > w || destY + destH < 0 || destY > h)
       continue;
+    const baseAlpha = fadeOpacity * (0.72 + (cloud.opacity || 1) * 0.28);
+    const hazeBoost = layer < 2 ? 0.12 : 0;
+    const mistAlpha = softCloud ? 0.76 : 1;
+    const layerAlpha =
+      (softCloud ? baseAlpha * 0.82 : baseAlpha) * mistAlpha + hazeBoost;
+    ctx.globalAlpha = Math.min(1, layerAlpha);
     ctx.drawImage(
       cloud._bakedCanvas,
       cloud._atlasX,
