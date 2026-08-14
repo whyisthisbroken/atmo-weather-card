@@ -1,5 +1,5 @@
 > [!IMPORTANT]
-> **This is a personal project, actively developed by `whyisthisbroken`.**
+> **Atmo Weather Card is an independent, actively maintained project, developed by `whyisthisbroken`.**
 > It originated as a preserved copy of `atmospheric-weather-card` after the
 > original author (`shpongledsummer`) deleted their repository and account.
 > As of Version 6, this project has been renamed to `atmo-weather-card` and
