@@ -6243,11 +6243,11 @@ class AtmosphericWeatherCard extends HTMLElement {
       ];
       const auraPhase = this._sunPulsePhase / glow.breathPeriodMul;
       const auraX =
-          Math.sin(auraPhase * 0.7) * sunBaseR * 0.025 +
-          Math.sin(auraPhase * 1.4 + 1.2) * sunBaseR * 0.012,
+          Math.sin(auraPhase * 1.1) * sunBaseR * 0.04 +
+          Math.sin(auraPhase * 2.0 + 1.2) * sunBaseR * 0.018,
         auraY =
-          Math.cos(auraPhase * 0.55 + 0.8) * sunBaseR * 0.018,
-        auraScale = 1 + Math.sin(auraPhase * 0.9 + 2.1) * 0.012;
+          Math.cos(auraPhase * 0.85 + 0.8) * sunBaseR * 0.028,
+        auraScale = 1 + Math.sin(auraPhase * 1.35 + 2.1) * 0.018;
       ctx.globalAlpha = fadeOpacity * Math.min(
         1,
         glow.intensity * 0.82 * (glow.auraOpacityMul || 1),
