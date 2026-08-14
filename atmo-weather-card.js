@@ -2478,7 +2478,9 @@ class AtmosphericWeatherCard extends HTMLElement {
     const breathAmp = prof[4];
     const breathPeriodMul = prof[5];
     let sizeMul = prof[6],
-      glowBoost = 1.0;
+      glowBoost = 1.0,
+      auraSizeMul = 1.0,
+      auraOpacityMul = 1.0;
     if (isDarkDayImmersive) {
       color = [225, 200, 150];
       intensity *= 0.7;
@@ -2493,6 +2495,14 @@ class AtmosphericWeatherCard extends HTMLElement {
     } else if (!isStandalone && !showDisc) {
       intensity *= 1.4;
     }
+    if (atm === "mist" || atm === "fog" || (p && p.foggy)) {
+      auraSizeMul = 1.25;
+      auraOpacityMul = 0.62;
+    } else if (atm === "overcast" || atm === "cloudy") {
+      auraSizeMul = 1.12;
+      auraOpacityMul = 0.78;
+    }
+    auraOpacityMul *= isStandalone ? 1.08 : 0.78;
     const compOp = showDisc ? null : isDark ? "screen" : "source-over";
     const cacheKey = showDisc
       ? null
@@ -2510,6 +2520,8 @@ class AtmosphericWeatherCard extends HTMLElement {
       compOp,
       cacheKey,
       glowBoost,
+      auraSizeMul,
+      auraOpacityMul,
     };
   }
   _computeCloudPalette(isDark, isNight, isLight, p, type, atm, isStandalone) {
@@ -6213,7 +6225,10 @@ class AtmosphericWeatherCard extends HTMLElement {
     if (glow.compOp) ctx.globalCompositeOperation = glow.compOp;
     ctx.translate(cx, cy);
     if (glow.showDisc) {
-      const auraR = Math.min(sunBaseR * 5.8, sizeCap),
+      const auraR = Math.min(
+          sunBaseR * 5.8 * (glow.auraSizeMul || 1),
+          sizeCap,
+        ),
         auraSize = Math.ceil(auraR * 2),
         colorKey = `${gR}_${gG}_${gB}`;
       if (
@@ -6270,7 +6285,10 @@ class AtmosphericWeatherCard extends HTMLElement {
         auraY =
           Math.cos(auraPhase * 0.55 + 0.8) * sunBaseR * 0.018,
         auraScale = 1 + Math.sin(auraPhase * 0.9 + 2.1) * 0.012;
-      ctx.globalAlpha = fadeOpacity * Math.min(1, glow.intensity * 0.82);
+      ctx.globalAlpha = fadeOpacity * Math.min(
+        1,
+        glow.intensity * 0.82 * (glow.auraOpacityMul || 1),
+      );
       ctx.drawImage(
         this._sunAuraCache.canvas,
         -auraR * auraScale + auraX,
@@ -6307,7 +6325,10 @@ class AtmosphericWeatherCard extends HTMLElement {
     } else {
       // ---- DIFFUSE MODE (sun-behind-clouds backlight) ----
       const csGlowScale = sunBaseR / 26,
-        outerR = Math.min(92 * csGlowScale * glow.sizeMul, sizeCap);
+        outerR = Math.min(
+          92 * csGlowScale * glow.sizeMul * (glow.auraSizeMul || 1),
+          sizeCap,
+        );
       const coreR = Math.min(42 * csGlowScale * glow.sizeMul, sizeCap * 0.45);
       if (
         !this._diffuseGlowCache ||
@@ -6335,7 +6356,10 @@ class AtmosphericWeatherCard extends HTMLElement {
       // Subtle opacity breath — slow pulse matches heavy atmosphere
       const breathMod = 1.0 + (t - 0.5) * 0.2 * glow.breathAmp,
         dc = this._diffuseGlowCache;
-      ctx.globalAlpha = Math.min(1.0, fadeOpacity * glow.intensity * breathMod);
+      ctx.globalAlpha = Math.min(
+        1.0,
+        fadeOpacity * glow.intensity * breathMod * (glow.auraOpacityMul || 1),
+      );
       ctx.fillStyle = dc.outer;
       fillCircle(ctx, 0, 0, dc.outerR);
       ctx.fillStyle = dc.core;
