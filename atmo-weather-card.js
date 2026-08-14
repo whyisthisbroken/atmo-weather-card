@@ -1293,13 +1293,14 @@ class AtmosphericWeatherCard extends HTMLElement {
   }
   // HOME ASSISTANT LIFECYCLE
   connectedCallback() {
-    // Load Figtree font from Google Fonts
-    if (!window._figtreeLoaded) {
-      const link = document.createElement('link');
-      link.href = 'https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap';
-      link.rel = 'stylesheet';
+    // Load Montserrat font from Google Fonts
+    if (!window._montserratLoaded) {
+      const link = document.createElement("link");
+      link.href =
+        "https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap";
+      link.rel = "stylesheet";
       document.head.appendChild(link);
-      window._figtreeLoaded = true;
+      window._montserratLoaded = true;
     }
     if (!this._resizeObserver) {
       this._resizeObserver = new ResizeObserver((entries) => {
@@ -2712,7 +2713,7 @@ class AtmosphericWeatherCard extends HTMLElement {
   // DOM & STYLES
   static _buildStyles() {
     return `
-            :host { display: block; width: 100%; position: relative; background: transparent !important; min-height: 200px; font-family: 'Figtree', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; }
+            :host { display: block; width: 100%; position: relative; background: transparent !important; min-height: 200px; font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; }
             #card-root { position: relative; width: 100%; height: 100%; container-type: size; z-index: var(--awc-stack-order, 1); overflow: hidden; background: transparent; display: block; transform: translateZ(0); will-change: transform, opacity; opacity: 0; }
             #card-root.clickable { cursor: pointer; }
             #card-root.clickable:active { transform: scale(0.98); transition: scale 0.3s ease-in-out; }
