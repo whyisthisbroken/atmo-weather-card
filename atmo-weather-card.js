@@ -6226,59 +6226,21 @@ class AtmosphericWeatherCard extends HTMLElement {
     ctx.translate(cx, cy);
     if (glow.showDisc) {
       const auraR = Math.min(
-          sunBaseR * 5.8 * (glow.auraSizeMul || 1),
-          sizeCap,
-        ),
-        textureR = auraR * 1.5,
-        auraSize = Math.ceil(textureR * 2),
-        colorKey = `${gR}_${gG}_${gB}`;
-      if (
-        !this._sunAuraCache ||
-        this._sunAuraCache.r !== auraR ||
-        this._sunAuraCache.colorKey !== colorKey
-      ) {
-        const auraCanvas = document.createElement("canvas");
-        auraCanvas.width = auraSize;
-        auraCanvas.height = auraSize;
-        const auraCtx = auraCanvas.getContext("2d");
-        const coronaSpecs = [
-          [-2.82, 0.82, 0.12, 0.14],
-          [-2.25, 0.58, 0.16, 0.1],
-          [-1.72, 0.92, 0.1, 0.12],
-          [-1.08, 0.66, 0.14, 0.09],
-          [-0.42, 0.8, 0.12, 0.13],
-          [0.18, 0.56, 0.17, 0.1],
-          [0.82, 0.88, 0.11, 0.12],
-          [1.46, 0.64, 0.15, 0.09],
-          [2.16, 0.78, 0.12, 0.11],
-          [2.78, 0.52, 0.18, 0.08],
-        ];
-        const coronaCenter = textureR;
-        for (const [angle, lengthRatio, widthRatio, alpha] of coronaSpecs) {
-          const length = auraR * lengthRatio,
-            width = auraR * widthRatio,
-            centerOffset = auraR * (0.2 + lengthRatio * 0.28),
-            gradient = auraCtx.createLinearGradient(-length, 0, length, 0);
-          gradient.addColorStop(0, `rgba(${gR},${gG},${gB},0)`);
-          gradient.addColorStop(0.28, `rgba(${gR},${gG},${gB},${alpha * 0.7})`);
-          gradient.addColorStop(0.58, `rgba(${gR},${gG},${gB},${alpha})`);
-          gradient.addColorStop(1, `rgba(${gR},${gG},${gB},0)`);
-          auraCtx.save();
-          auraCtx.translate(
-            coronaCenter + Math.cos(angle) * centerOffset,
-            coronaCenter + Math.sin(angle) * centerOffset,
-          );
-          auraCtx.rotate(angle);
-          auraCtx.filter = `blur(${Math.max(2, auraR * 0.06)}px)`;
-          auraCtx.fillStyle = gradient;
-          auraCtx.beginPath();
-          auraCtx.ellipse(0, 0, length, width, 0, 0, TWO_PI);
-          auraCtx.fill();
-          auraCtx.filter = "none";
-          auraCtx.restore();
-        }
-        this._sunAuraCache = { canvas: auraCanvas, r: auraR, colorKey };
-      }
+        sunBaseR * 5.8 * (glow.auraSizeMul || 1),
+        sizeCap,
+      );
+      const coronaSpecs = [
+        [-2.82, 0.82, 0.12, 0.14],
+        [-2.25, 0.58, 0.16, 0.1],
+        [-1.72, 0.92, 0.1, 0.12],
+        [-1.08, 0.66, 0.14, 0.09],
+        [-0.42, 0.8, 0.12, 0.13],
+        [0.18, 0.56, 0.17, 0.1],
+        [0.82, 0.88, 0.11, 0.12],
+        [1.46, 0.64, 0.15, 0.09],
+        [2.16, 0.78, 0.12, 0.11],
+        [2.78, 0.52, 0.18, 0.08],
+      ];
       const auraPhase = this._sunPulsePhase / glow.breathPeriodMul;
       const auraX =
           Math.sin(auraPhase * 0.7) * sunBaseR * 0.025 +
@@ -6290,13 +6252,29 @@ class AtmosphericWeatherCard extends HTMLElement {
         1,
         glow.intensity * 0.82 * (glow.auraOpacityMul || 1),
       );
-      ctx.drawImage(
-        this._sunAuraCache.canvas,
-        -textureR * auraScale + auraX,
-        -textureR * auraScale + auraY,
-        textureR * 2 * auraScale,
-        textureR * 2 * auraScale,
-      );
+      for (const [angle, lengthRatio, widthRatio, alpha] of coronaSpecs) {
+        const length = auraR * lengthRatio * auraScale,
+          width = auraR * widthRatio * auraScale,
+          centerOffset = auraR * (0.2 + lengthRatio * 0.28) * auraScale,
+          gradient = ctx.createLinearGradient(-length, 0, length, 0);
+        gradient.addColorStop(0, `rgba(${gR},${gG},${gB},0)`);
+        gradient.addColorStop(0.28, `rgba(${gR},${gG},${gB},${alpha * 0.7})`);
+        gradient.addColorStop(0.58, `rgba(${gR},${gG},${gB},${alpha})`);
+        gradient.addColorStop(1, `rgba(${gR},${gG},${gB},0)`);
+        ctx.save();
+        ctx.translate(
+          Math.cos(angle) * centerOffset + auraX,
+          Math.sin(angle) * centerOffset + auraY,
+        );
+        ctx.rotate(angle);
+        ctx.filter = `blur(${Math.max(2, auraR * 0.06)}px)`;
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, length, width, 0, 0, TWO_PI);
+        ctx.fill();
+        ctx.filter = "none";
+        ctx.restore();
+      }
       if (!this._sunDiscGrad || this._sunDiscGradR !== sunBaseR) {
         const g = ctx.createRadialGradient(0, 0, 0, 0, 0, sunBaseR * 3.0);
         if (this._isLightBackground) {
