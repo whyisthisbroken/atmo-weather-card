@@ -2420,6 +2420,7 @@ class AtmosphericWeatherCard extends HTMLElement {
     else celestialCloudPalette = p && p.sunCloudWarm ? "warm" : "cool";
     this._sunDiscGrad = this._sunDiscGradR = null;
     this._haloGrad = this._haloGradR = this._haloGradColor = null;
+    this._sunAuraCache = null;
     this._diffuseGlowCache = null;
     this._breathGlowCache = null;
     this._moonCache = this._rainGrad = null;
@@ -6207,56 +6208,76 @@ class AtmosphericWeatherCard extends HTMLElement {
     const { x: cx, y: cy } = this._getCelestialPosition(w, h);
     const sunBaseR = this._celestialSize ? this._celestialSize / 2 : 31,
       sizeCap = Math.min(w, h) * 0.9;
-    const t =
-      (Math.sin((this._sunPulsePhase * 2.8) / glow.breathPeriodMul) + 1) / 2;
     const [gR, gG, gB] = glow.color;
     ctx.save();
     if (glow.compOp) ctx.globalCompositeOperation = glow.compOp;
     ctx.translate(cx, cy);
     if (glow.showDisc) {
-      const edgeLimit = Math.min(cx, cy, w - cx, h - cy);
-      const ringFull = sunBaseR * 5.8,
-        ringScale = Math.min(1, edgeLimit / ringFull),
-        ringOk = glow.showHalo && ringScale >= 0.75;
-      const breathBoost = glow.showHalo && !ringOk ? 1.8 : 1.0,
-        gb = glow.glowBoost || 1.0;
-      const breathOuterR = Math.min(
-        sunBaseR * (1.5 + t * 0.9 * glow.breathAmp),
-        sizeCap,
-      );
-      const bodyStop = Math.min(sunBaseR / breathOuterR, 0.72),
-        peakStop = bodyStop + (1 - bodyStop) * 0.45;
-      const peakAlpha = Math.min(
-        0.62,
-        (0.15 + t * 0.27 * glow.breathAmp) * gb,
-      ).toFixed(3);
-      const boostedPeakAlpha = Math.min(
-        0.62,
-        (0.15 + t * 0.27 * glow.breathAmp) * breathBoost * gb,
-      ).toFixed(3);
-      const usedPeakAlpha = breathBoost === 1.0 ? peakAlpha : boostedPeakAlpha;
-      const roundedR = Math.round(breathOuterR);
+      const auraR = Math.min(sunBaseR * 5.8, sizeCap),
+        auraSize = Math.ceil(auraR * 2),
+        colorKey = `${gR}_${gG}_${gB}`;
       if (
-        !this._breathGlowCache ||
-        this._breathGlowCache.r !== roundedR ||
-        this._breathGlowCache.pa !== usedPeakAlpha ||
-        this._breathGlowCache.colorKey !== `${gR}_${gG}_${gB}`
+        !this._sunAuraCache ||
+        this._sunAuraCache.r !== auraR ||
+        this._sunAuraCache.colorKey !== colorKey
       ) {
-        const bg = ctx.createRadialGradient(0, 0, 0, 0, 0, breathOuterR);
-        bg.addColorStop(0, `rgba(${gR},${gG},${gB},0)`);
-        bg.addColorStop(bodyStop, `rgba(${gR},${gG},${gB},0)`);
-        bg.addColorStop(peakStop, `rgba(${gR},${gG},${gB},${usedPeakAlpha})`);
-        bg.addColorStop(1, `rgba(${gR},${gG},${gB},0)`);
-        this._breathGlowCache = {
-          grad: bg,
-          r: roundedR,
-          pa: usedPeakAlpha,
-          colorKey: `${gR}_${gG}_${gB}`,
-        };
+        const auraCanvas = document.createElement("canvas");
+        auraCanvas.width = auraSize;
+        auraCanvas.height = auraSize;
+        const auraCtx = auraCanvas.getContext("2d");
+        const coronaSpecs = [
+          [-2.82, 0.82, 0.12, 0.14],
+          [-2.25, 0.58, 0.16, 0.1],
+          [-1.72, 0.92, 0.1, 0.12],
+          [-1.08, 0.66, 0.14, 0.09],
+          [-0.42, 0.8, 0.12, 0.13],
+          [0.18, 0.56, 0.17, 0.1],
+          [0.82, 0.88, 0.11, 0.12],
+          [1.46, 0.64, 0.15, 0.09],
+          [2.16, 0.78, 0.12, 0.11],
+          [2.78, 0.52, 0.18, 0.08],
+        ];
+        const coronaCenter = auraSize / 2;
+        for (const [angle, lengthRatio, widthRatio, alpha] of coronaSpecs) {
+          const length = auraR * lengthRatio,
+            width = auraR * widthRatio,
+            centerOffset = auraR * (0.2 + lengthRatio * 0.28),
+            gradient = auraCtx.createLinearGradient(-length, 0, length, 0);
+          gradient.addColorStop(0, `rgba(${gR},${gG},${gB},0)`);
+          gradient.addColorStop(0.28, `rgba(${gR},${gG},${gB},${alpha * 0.7})`);
+          gradient.addColorStop(0.58, `rgba(${gR},${gG},${gB},${alpha})`);
+          gradient.addColorStop(1, `rgba(${gR},${gG},${gB},0)`);
+          auraCtx.save();
+          auraCtx.translate(
+            coronaCenter + Math.cos(angle) * centerOffset,
+            coronaCenter + Math.sin(angle) * centerOffset,
+          );
+          auraCtx.rotate(angle);
+          auraCtx.filter = `blur(${Math.max(2, auraR * 0.06)}px)`;
+          auraCtx.fillStyle = gradient;
+          auraCtx.beginPath();
+          auraCtx.ellipse(0, 0, length, width, 0, 0, TWO_PI);
+          auraCtx.fill();
+          auraCtx.filter = "none";
+          auraCtx.restore();
+        }
+        this._sunAuraCache = { canvas: auraCanvas, r: auraR, colorKey };
       }
-      ctx.globalAlpha = fadeOpacity;
-      ctx.fillStyle = this._breathGlowCache.grad;
-      fillCircle(ctx, 0, 0, breathOuterR);
+      const auraPhase = this._sunPulsePhase / glow.breathPeriodMul;
+      const auraX =
+          Math.sin(auraPhase * 0.7) * sunBaseR * 0.025 +
+          Math.sin(auraPhase * 1.4 + 1.2) * sunBaseR * 0.012,
+        auraY =
+          Math.cos(auraPhase * 0.55 + 0.8) * sunBaseR * 0.018,
+        auraScale = 1 + Math.sin(auraPhase * 0.9 + 2.1) * 0.012;
+      ctx.globalAlpha = fadeOpacity * Math.min(1, glow.intensity * 0.82);
+      ctx.drawImage(
+        this._sunAuraCache.canvas,
+        -auraR * auraScale + auraX,
+        -auraR * auraScale + auraY,
+        auraR * 2 * auraScale,
+        auraR * 2 * auraScale,
+      );
       if (!this._sunDiscGrad || this._sunDiscGradR !== sunBaseR) {
         const g = ctx.createRadialGradient(0, 0, 0, 0, 0, sunBaseR * 3.0);
         if (this._isLightBackground) {
@@ -6283,40 +6304,6 @@ class AtmosphericWeatherCard extends HTMLElement {
       }
       ctx.fillStyle = this._sunDiscGrad;
       fillCircle(ctx, 0, 0, sunBaseR * 3.0);
-      // ---- HALO RINGS (same glow.color as annulus; skipped when rings can't fit) ----
-      if (ringOk) {
-        const r1Inner = sunBaseR * 2.0 * ringScale,
-          r1Outer = sunBaseR * 3.6 * ringScale,
-          r2Inner = sunBaseR * 3.8 * ringScale;
-        const r2Outer = sunBaseR * 5.8 * ringScale;
-        const colorKey = `${gR}_${gG}_${gB}`;
-        if (
-          !this._haloGrad ||
-          this._haloGradR !== r2Outer ||
-          this._haloGradColor !== colorKey
-        ) {
-          const g1 = ctx.createRadialGradient(0, 0, r1Inner, 0, 0, r1Outer);
-          g1.addColorStop(0, `rgba(${gR},${gG},${gB},0)`);
-          g1.addColorStop(0.25, `rgba(${gR},${gG},${gB},0.10)`);
-          g1.addColorStop(0.45, `rgba(${gR},${gG},${gB},0.18)`);
-          g1.addColorStop(0.65, `rgba(${gR},${gG},${gB},0.11)`);
-          g1.addColorStop(1, `rgba(${gR},${gG},${gB},0)`);
-          const g2 = ctx.createRadialGradient(0, 0, r2Inner, 0, 0, r2Outer);
-          g2.addColorStop(0, `rgba(${gR},${gG},${gB},0)`);
-          g2.addColorStop(0.3, `rgba(${gR},${gG},${gB},0.06)`);
-          g2.addColorStop(0.5, `rgba(${gR},${gG},${gB},0.10)`);
-          g2.addColorStop(0.7, `rgba(${gR},${gG},${gB},0.055)`);
-          g2.addColorStop(1, `rgba(${gR},${gG},${gB},0)`);
-          this._haloGrad = { g1, g2, r1: r1Outer, r2: r2Outer };
-          this._haloGradR = r2Outer;
-          this._haloGradColor = colorKey;
-        }
-        ctx.globalAlpha = fadeOpacity * Math.min(1.0, (0.45 + t * 0.65) * gb);
-        ctx.fillStyle = this._haloGrad.g1;
-        fillCircle(ctx, 0, 0, this._haloGrad.r1);
-        ctx.fillStyle = this._haloGrad.g2;
-        fillCircle(ctx, 0, 0, this._haloGrad.r2);
-      }
     } else {
       // ---- DIFFUSE MODE (sun-behind-clouds backlight) ----
       const csGlowScale = sunBaseR / 26,
