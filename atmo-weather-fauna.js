@@ -36,14 +36,17 @@ export function drawBirds(card, ctx, w, h) {
           Math.round(card._faunaBirdFlockSize + (Math.random() - 0.5) * 4),
         );
     const startY = h * 0.2 + Math.random() * (h * 0.47);
+    // Lead bird with randomization
+    const leadDepthScale = 0.85 + Math.random() * 0.65;
+    const leadSpeed = (0.9 + Math.random() * 0.5) * leadDepthScale * dir;
     card._birds.push({
       x: startX,
       y: startY,
-      vx: finalSpeed,
+      vx: leadSpeed,
       vy: (Math.random() - 0.5) * 0.1,
-      flapPhase: 0,
+      flapPhase: Math.random() * Math.PI * 2,
       flapSpeed: 0.15 + Math.random() * 0.05,
-      size: 2.4 * depthScale,
+      size: (2.0 + Math.random() * 0.8) * leadDepthScale,
     });
     if (!isSingle) {
       const formation = Math.floor(Math.random() * 3);
@@ -65,12 +68,14 @@ export function drawBirds(card, ctx, w, h) {
         }
         const scaledOffX = offX * depthScale;
         const scaledOffY = offY * depthScale;
+        // Flock birds: slight individual speed variation (±3%)
+        const flocSpeedVar = (0.97 + Math.random() * 0.06) * depthScale * dir;
         card._birds.push({
           x: startX + scaledOffX * dir,
           y: startY + scaledOffY,
-          vx: finalSpeed,
+          vx: finalSpeed * flocSpeedVar,
           vy: (Math.random() - 0.5) * 0.05,
-          flapPhase: i + Math.random(),
+          flapPhase: i * 0.4 + Math.random() * Math.PI,
           flapSpeed: 0.15 + Math.random() * 0.05,
           size: (1.8 + Math.random() * 0.6) * depthScale,
         });
@@ -83,10 +88,13 @@ export function drawBirds(card, ctx, w, h) {
     : "rgba(195, 203, 212, 0.55)";
   ctx.save();
   ctx.strokeStyle = birdColor;
+  ctx.fillStyle = birdColor;
   ctx.lineJoin = "round";
   ctx.lineCap = "round";
   const widthBuckets = new Map();
   const len = card._birds.length;
+  
+  // Collect line segments by width, plus head/tail data
   for (let i = 0; i < len; i++) {
     const b = card._birds[i];
     const envelope = Math.sin(b.flapPhase * 0.35);
@@ -100,6 +108,7 @@ export function drawBirds(card, ctx, w, h) {
       widthBuckets.set(qw, bucket);
     }
     const halfSpan = b.size / 2.4;
+    // Body + wings
     bucket.push(
       b.x - b.size * dir,
       b.y + wingOffset - halfSpan,
@@ -107,18 +116,64 @@ export function drawBirds(card, ctx, w, h) {
       b.y,
       b.x - b.size * dir,
       b.y + wingOffset + halfSpan,
+      // Head position (x, y, headRadius)
+      b.x + b.size * 0.15 * dir,
+      b.y,
+      b.size * 0.25,
+      // Tail positions (back-left, back-right, mid-y offset for fan)
+      b.x - b.size * 0.35 * dir,
+      b.y - halfSpan * 0.7,
+      b.x - b.size * 0.3 * dir,
+      b.y + halfSpan * 0.7,
     );
   }
+  
+  // Draw body + wings by width
   for (const [lw, pts] of widthBuckets) {
     ctx.lineWidth = lw;
     ctx.beginPath();
-    for (let j = 0; j < pts.length; j += 6) {
+    for (let j = 0; j < pts.length; j += 13) {
+      // Body + wings (6 numbers)
       ctx.moveTo(pts[j], pts[j + 1]);
       ctx.lineTo(pts[j + 2], pts[j + 3]);
       ctx.lineTo(pts[j + 4], pts[j + 5]);
     }
     ctx.stroke();
   }
+  
+  // Draw heads (small circles)
+  const headLw = Math.max(0.8, widthBuckets.size > 0 ? 
+    Math.min(...widthBuckets.keys()) * 0.5 : 1);
+  ctx.lineWidth = headLw;
+  for (const [lw, pts] of widthBuckets) {
+    for (let j = 6; j < pts.length; j += 13) {
+      const hx = pts[j];
+      const hy = pts[j + 1];
+      const hr = pts[j + 2];
+      ctx.beginPath();
+      ctx.arc(hx, hy, hr, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  
+  // Draw tails (fan shape)
+  ctx.lineWidth = Math.max(0.6, widthBuckets.size > 0 ? 
+    Math.min(...widthBuckets.keys()) * 0.4 : 0.8);
+  for (const [lw, pts] of widthBuckets) {
+    for (let j = 9; j < pts.length; j += 13) {
+      const tx1 = pts[j];
+      const ty1 = pts[j + 1];
+      const tx2 = pts[j + 2];
+      const ty2 = pts[j + 3];
+      ctx.beginPath();
+      ctx.moveTo(tx1, ty1);
+      ctx.lineTo(tx1 - (tx1 - tx2) * 0.3, ty1);
+      ctx.moveTo(tx2, ty2);
+      ctx.lineTo(tx2 - (tx2 - tx1) * 0.3, ty2);
+      ctx.stroke();
+    }
+  }
+  
   ctx.restore();
 }
 
