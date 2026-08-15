@@ -87,7 +87,7 @@ const WEATHER_MAP = Object.freeze({
   cloudy: Object.freeze({
     type: "cloud",
     count: 0,
-    cloud: 24,
+    cloud: 32,
     wind: 0.3,
     dark: false,
     sunCloudWarm: false,
