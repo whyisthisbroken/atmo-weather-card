@@ -1232,9 +1232,8 @@ class AtmosphericWeatherCard extends HTMLElement {
     this._gustPhase = 0;
     this._windSpeed = 0.1;
     this._animationSpeed = 1.0;
-    this._birdAnimationSpeed = 1.0;
-    this._starAnimationSpeed = 1.0;
-    this._cloudDriftSpeed = 1.0;
+    this._birdAnimationSpeed = 0.3;
+    this._starAnimationSpeed = 0.5;
     this._windKmh = 0;
     this._microGustPhase = 0;
     this._layerFadeProgress = {
@@ -1591,24 +1590,17 @@ class AtmosphericWeatherCard extends HTMLElement {
     const rawBirdAnimSpeed =
       config.bird_animation_speed != null
         ? parseFloat(config.bird_animation_speed)
-        : 1.0;
+        : 0.3;
     this._birdAnimationSpeed = Number.isFinite(rawBirdAnimSpeed)
       ? Math.max(0, Math.min(3.0, rawBirdAnimSpeed))
-      : 1.0;
+      : 0.3;
     const rawStarAnimSpeed =
       config.star_animation_speed != null
         ? parseFloat(config.star_animation_speed)
-        : 1.0;
+        : 0.5;
     this._starAnimationSpeed = Number.isFinite(rawStarAnimSpeed)
       ? Math.max(0, Math.min(2.0, rawStarAnimSpeed))
-      : 1.0;
-    const rawCloudDriftSpeed =
-      config.cloud_drift_speed != null
-        ? parseFloat(config.cloud_drift_speed)
-        : 1.0;
-    this._cloudDriftSpeed = Number.isFinite(rawCloudDriftSpeed)
-      ? Math.max(0.25, Math.min(3.0, rawCloudDriftSpeed))
-      : 1.0;
+      : 0.5;
     // Fauna density controls (Option C)
     const rawBirdDensity =
       config.fauna_bird_density != null

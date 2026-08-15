@@ -479,10 +479,11 @@ export function shouldSkipFrame(card, timestamp) {
 
 // Cloud drift model — deliberately simple & predictable, tuned in px/second
 // instead of a chain of multiplied unknowns:
-//   pxPerSecond = CLOUD_BASE_SPEED_PX_S * relativeSpeed(cloud) * windMul(wind) * cloud_drift_speed
+//   pxPerSecond = CLOUD_BASE_SPEED_PX_S * relativeSpeed(cloud) * windMul(wind)
 // `windMul` is bounded (no runaway multiplication) and derived from the
 // stable weather-preset wind value, NOT the volatile gust value — gusts only
 // affect the small wobble/sway below, never the steady cross-screen speed.
+// Not user-configurable on purpose, to avoid stacking unpredictable multipliers.
 const CLOUD_BASE_SPEED_PX_S = 14;
 const CLOUD_WIND_MIN_MUL = 0.5;
 const CLOUD_WIND_MAX_MUL = 2.0;
@@ -516,7 +517,6 @@ export function drawClouds(card, ctx, cloudList, w, h, effectiveWind) {
   if (fadeOpacity <= 0) return;
   if (!card._renderState) return;
   const animSpeed = card._animationSpeed * (card._frameScale || 1);
-  const cloudDriftMul = card._cloudDriftSpeed || 1;
   const windRatio = Math.max(
     0,
     Math.min(
@@ -540,10 +540,11 @@ export function drawClouds(card, ctx, cloudList, w, h, effectiveWind) {
     const driftWave =
       Math.sin(layerPhase * 2.5 + (cloud.seed || 0) * 0.001) *
       (2 + layer * 2.5);
-    const relativeSpeed =
-      (baseSpeed * depthFactor) / CLOUD_REFERENCE_SPEED_PRODUCT;
-    const pxPerSecond =
-      CLOUD_BASE_SPEED_PX_S * relativeSpeed * windMul * cloudDriftMul;
+    const relativeSpeed = Math.max(
+      0.3,
+      Math.min(2.5, (baseSpeed * depthFactor) / CLOUD_REFERENCE_SPEED_PRODUCT),
+    );
+    const pxPerSecond = CLOUD_BASE_SPEED_PX_S * relativeSpeed * windMul;
     const effectiveSpeed = (pxPerSecond / CLOUD_REFERENCE_FPS) * animSpeed;
     cloud.x += effectiveSpeed + microDrift * animSpeed;
     if (cloud.x > w + 320) {
