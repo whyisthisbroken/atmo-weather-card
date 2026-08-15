@@ -6352,7 +6352,9 @@ class AtmosphericWeatherCard extends HTMLElement {
         };
       }
       // Subtle opacity breath — slow pulse matches heavy atmosphere
-      const breathMod = 1.0 + (t - 0.5) * 0.2 * glow.breathAmp,
+      const breathPhase = this._sunPulsePhase / glow.breathPeriodMul,
+        t = (Math.sin(breathPhase) + 1) / 2,
+        breathMod = 1.0 + (t - 0.5) * 0.2 * glow.breathAmp,
         dc = this._diffuseGlowCache;
       ctx.globalAlpha = Math.min(
         1.0,

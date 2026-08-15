@@ -478,9 +478,9 @@ export function shouldSkipFrame(card, timestamp) {
 }
 
 // Tuned so normal wind presets produce clearly visible cross-screen drift.
-const CLOUD_DRIFT_SCALE = 7;
+const CLOUD_DRIFT_SCALE = 45;
 // Upper bound (px/frame at animSpeed=1) for the wind-driven part of drift.
-const CLOUD_DRIFT_MAX = 3;
+const CLOUD_DRIFT_MAX = 6;
 
 export function advanceWindAndPulse(card) {
   const p = card._params;
