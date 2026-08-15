@@ -932,7 +932,7 @@ custom_cards:
 | `--awc-bottom-bg-color`    | _auto_                                     | Background color when `chip_area_background` is enabled. Defaults to the active background style. |
 | `--awc-bottom-bg-radius`   | _card radius_                              | Border radius for the chip background.                                                            |
 | `--awc-bottom-bg-filter`   | `blur(10px)`                               | Backdrop filter for the chip background (only used by the `frosted` style).                       |
-| `--awc-bg-shadow`          | _auto_                                     | Overrides the shadow used by the `pill` background style.                                         |
+| `--awc-bg-shadow`          | _auto_                                     | Overrides the shadow used by `frosted` and `contrast` chip backgrounds.                           |
 | `--awc-bg-border`          | `1px solid …`                              | Overrides the border used by the `frosted` background style.                                      |
 | `--awc-icon-size`          | `1.1em`                                    | Size of the chip icon.                                                                            |
 | `--awc-icon-drop-shadow`   | `drop-shadow(0px 3px 6px rgba(0,0,0,0.3))` | Drop shadow filter applied to custom image icons set via `icon_path`.                             |
