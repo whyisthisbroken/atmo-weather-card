@@ -477,14 +477,17 @@ export function shouldSkipFrame(card, timestamp) {
   return false;
 }
 
-// Cloud drift model — deliberately simple & predictable, tuned in px/second
-// instead of a chain of multiplied unknowns:
-//   pxPerSecond = CLOUD_BASE_SPEED_PX_S * relativeSpeed(cloud) * windMul(wind)
+// Cloud drift model — deliberately simple & predictable, tuned as a crossing
+// time relative to the actual card width (not a fixed px/second value, which
+// made small cards look like clouds were racing and wide cards look static):
+//   pxPerSecond = (w / CLOUD_CROSS_SECONDS) * relativeSpeed(cloud) * windMul(wind)
 // `windMul` is bounded (no runaway multiplication) and derived from the
 // stable weather-preset wind value, NOT the volatile gust value — gusts only
 // affect the small wobble/sway below, never the steady cross-screen speed.
 // Not user-configurable on purpose, to avoid stacking unpredictable multipliers.
-const CLOUD_BASE_SPEED_PX_S = 14;
+// Seconds for a "typical" main cloud (layer 1) to cross the full card width
+// at default wind.
+const CLOUD_CROSS_SECONDS = 40;
 const CLOUD_WIND_MIN_MUL = 0.5;
 const CLOUD_WIND_MAX_MUL = 2.0;
 const CLOUD_WIND_REF_MIN = 0.1;
@@ -544,7 +547,7 @@ export function drawClouds(card, ctx, cloudList, w, h, effectiveWind) {
       0.3,
       Math.min(2.5, (baseSpeed * depthFactor) / CLOUD_REFERENCE_SPEED_PRODUCT),
     );
-    const pxPerSecond = CLOUD_BASE_SPEED_PX_S * relativeSpeed * windMul;
+    const pxPerSecond = (w / CLOUD_CROSS_SECONDS) * relativeSpeed * windMul;
     const effectiveSpeed = (pxPerSecond / CLOUD_REFERENCE_FPS) * animSpeed;
     cloud.x += effectiveSpeed + microDrift * animSpeed;
     if (cloud.x > w + 320) {
