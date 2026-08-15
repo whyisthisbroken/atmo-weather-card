@@ -73,7 +73,6 @@ const LABELS = Object.freeze({
   animation_speed: "Animation Speed",
   bird_animation_speed: "Bird Animation Speed",
   star_animation_speed: "Star Twinkle Speed",
-  cloud_drift_speed: "Cloud Drift Speed",
   fauna_birds_at_night: "Birds At Night",
 });
 const HELPERS = Object.freeze({
@@ -115,7 +114,6 @@ const HELPERS = Object.freeze({
   bird_animation_speed:
     "Bird-only speed multiplier applied on top of animation speed.",
   star_animation_speed: "Twinkle speed multiplier for night stars.",
-  cloud_drift_speed: "How fast clouds drift across the sky, on top of wind.",
   fauna_birds_at_night: "Disable this to let birds fly only during daytime.",
 });
 const CHIP_LABELS = Object.freeze({
@@ -222,7 +220,6 @@ const KEY_ORDER = Object.freeze([
   "animation_speed",
   "bird_animation_speed",
   "star_animation_speed",
-  "cloud_drift_speed",
   "perf_cloud_quality",
   "perf_effects",
   "perf_fauna",
@@ -281,7 +278,6 @@ const TOP_LEVEL_NUMBER_FIELDS = Object.freeze([
   "animation_speed",
   "bird_animation_speed",
   "star_animation_speed",
-  "cloud_drift_speed",
   "perf_cloud_quality",
   "perf_effects",
   "perf_fauna",
@@ -4864,7 +4860,6 @@ class AtmosphericWeatherCardEditor extends LitElement {
         animation_speed: 1.0,
         bird_animation_speed: 1.0,
         star_animation_speed: 1.0,
-        cloud_drift_speed: 1.0,
         fauna_bird_density: 0.5,
         fauna_plane_density: 0.5,
         fauna_bird_flock_size: 4,
@@ -4879,7 +4874,6 @@ class AtmosphericWeatherCardEditor extends LitElement {
         animation_speed: 1.0,
         bird_animation_speed: 1.0,
         star_animation_speed: 1.0,
-        cloud_drift_speed: 1.0,
         fauna_bird_density: 1.0,
         fauna_plane_density: 1.0,
         fauna_bird_flock_size: 8,
@@ -4894,7 +4888,6 @@ class AtmosphericWeatherCardEditor extends LitElement {
         animation_speed: 1.0,
         bird_animation_speed: 1.0,
         star_animation_speed: 1.0,
-        cloud_drift_speed: 1.0,
         fauna_bird_density: 1.5,
         fauna_plane_density: 1.5,
         fauna_bird_flock_size: 12,
@@ -4906,7 +4899,6 @@ class AtmosphericWeatherCardEditor extends LitElement {
       "animation_speed",
       "bird_animation_speed",
       "star_animation_speed",
-      "cloud_drift_speed",
       "perf_cloud_quality",
       "perf_effects",
       "perf_fauna",
@@ -5039,13 +5031,6 @@ class AtmosphericWeatherCardEditor extends LitElement {
             LABELS.star_animation_speed,
             0.0,
             2.0,
-            0.1,
-          )}
-          ${this._renderSlider(
-            "cloud_drift_speed",
-            LABELS.cloud_drift_speed,
-            0.25,
-            3.0,
             0.1,
           )}
           ${perfButtons("perf_cloud_quality", LABELS.perf_cloud_quality, [

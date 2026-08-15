@@ -477,10 +477,21 @@ export function shouldSkipFrame(card, timestamp) {
   return false;
 }
 
-// Tuned so normal wind presets produce clearly visible cross-screen drift.
-const CLOUD_DRIFT_SCALE = 10;
-// Upper bound (px/frame at animSpeed=1) for the wind-driven part of drift.
-const CLOUD_DRIFT_MAX = 3;
+// Cloud drift model — deliberately simple & predictable, tuned in px/second
+// instead of a chain of multiplied unknowns:
+//   pxPerSecond = CLOUD_BASE_SPEED_PX_S * relativeSpeed(cloud) * windMul(wind) * cloud_drift_speed
+// `windMul` is bounded (no runaway multiplication) and derived from the
+// stable weather-preset wind value, NOT the volatile gust value — gusts only
+// affect the small wobble/sway below, never the steady cross-screen speed.
+const CLOUD_BASE_SPEED_PX_S = 14;
+const CLOUD_WIND_MIN_MUL = 0.5;
+const CLOUD_WIND_MAX_MUL = 2.0;
+const CLOUD_WIND_REF_MIN = 0.1;
+const CLOUD_WIND_REF_MAX = 2.4;
+// baseSpeed*depthFactor for a "typical" main cloud (layer 1) — the yardstick
+// every other cloud type's relative speed is measured against.
+const CLOUD_REFERENCE_SPEED_PRODUCT = 0.05;
+const CLOUD_REFERENCE_FPS = 30;
 
 export function advanceWindAndPulse(card) {
   const p = card._params;
@@ -506,6 +517,16 @@ export function drawClouds(card, ctx, cloudList, w, h, effectiveWind) {
   if (!card._renderState) return;
   const animSpeed = card._animationSpeed * (card._frameScale || 1);
   const cloudDriftMul = card._cloudDriftSpeed || 1;
+  const windRatio = Math.max(
+    0,
+    Math.min(
+      1,
+      ((card._params.wind || 0.1) - CLOUD_WIND_REF_MIN) /
+        (CLOUD_WIND_REF_MAX - CLOUD_WIND_REF_MIN),
+    ),
+  );
+  const windMul =
+    CLOUD_WIND_MIN_MUL + windRatio * (CLOUD_WIND_MAX_MUL - CLOUD_WIND_MIN_MUL);
   for (let i = 0; i < cloudList.length; i++) {
     const cloud = cloudList[i];
     const layer = cloud.layer || 0;
@@ -513,23 +534,17 @@ export function drawClouds(card, ctx, cloudList, w, h, effectiveWind) {
     const depthFactor = 0.7 + layer * 0.35;
     const baseSpeed = cloud.speed || 0.02;
     const layerPhase = (cloud.breathPhase || 0) + (cloud.seed || 0) * 0.0007;
-    // Wobble amplitude kept small relative to CLOUD_DRIFT_SCALE so steady drift dominates.
+    // Wobble amplitude kept small so the steady drift always dominates.
     const microDrift =
       Math.sin(layerPhase * (1.8 + layer * 0.7)) * (7 + layer * 10) * 0.004;
     const driftWave =
       Math.sin(layerPhase * 2.5 + (cloud.seed || 0) * 0.001) *
       (2 + layer * 2.5);
-    const windDrivenSpeed =
-      baseSpeed *
-      effectiveWind *
-      depthFactor *
-      CLOUD_DRIFT_SCALE *
-      cloudDriftMul;
-    // Cap the wind-driven component so storms can't fling clouds unrealistically
-    // fast; animation_speed still applies after, since that's an explicit user choice.
-    const driftCap = CLOUD_DRIFT_MAX * cloudDriftMul;
-    const effectiveSpeed =
-      Math.max(-driftCap, Math.min(driftCap, windDrivenSpeed)) * animSpeed;
+    const relativeSpeed =
+      (baseSpeed * depthFactor) / CLOUD_REFERENCE_SPEED_PRODUCT;
+    const pxPerSecond =
+      CLOUD_BASE_SPEED_PX_S * relativeSpeed * windMul * cloudDriftMul;
+    const effectiveSpeed = (pxPerSecond / CLOUD_REFERENCE_FPS) * animSpeed;
     cloud.x += effectiveSpeed + microDrift * animSpeed;
     if (cloud.x > w + 320) {
       cloud.x = -320 - ((cloud.seed || 0) % 140);
