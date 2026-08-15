@@ -24,7 +24,7 @@
 
 **Guides** · [Chips](#chips) · [Layout & Layering](#layout-layering) · [Icons](#weather-icons)
 
-**Reference** · [Color Mode](#color-mode) · [Performance](#performance) · [Performance Tuning](#performance-tuning)
+**Reference** · [Color Mode](#color-mode) · [Performance](#performance)
 
 **Help** · [Troubleshooting](#troubleshooting)
 
