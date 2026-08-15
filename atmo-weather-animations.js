@@ -519,8 +519,7 @@ export function drawClouds(card, ctx, cloudList, w, h, effectiveWind) {
     const microDrift =
       Math.sin(layerPhase * (1.8 + layer * 0.7)) * (7 + layer * 10) * 0.001;
     const driftWave =
-      Math.sin(layerPhase * 1.25 + (cloud.seed || 0) * 0.001) *
-      (2 + layer * 2.5);
+      Math.sin(layerPhase + (cloud.seed || 0) * 0.001) * (1 + layer * 1.25);
     const effectiveSpeed =
       baseSpeed * effectiveWind * depthFactor * animSpeed * CLOUD_SPEED_SCALE;
     let fadePhase = cloud._fadePhase || "drift";
