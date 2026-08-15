@@ -510,6 +510,9 @@ class AtmosphericWeatherCardEditor extends LitElement {
     return this._hass;
   }
   updated() {
+    this._emitCurrentSimulationPreview();
+  }
+  _emitCurrentSimulationPreview() {
     this._emitSimulationPreview({
       weather: this._simulationWeather,
       isNight: this._simulationNight,
@@ -2002,9 +2005,11 @@ class AtmosphericWeatherCardEditor extends LitElement {
   }
   _onSimulationWeatherChange(event) {
     this._simulationWeather = event.target.value;
+    this._emitCurrentSimulationPreview();
   }
   _setSimulationNight(isNight) {
     this._simulationNight = isNight;
+    this._emitCurrentSimulationPreview();
   }
   _renderSimulationPreview() {
     return html`<ha-expansion-panel

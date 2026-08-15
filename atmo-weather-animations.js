@@ -496,6 +496,8 @@ export function drawClouds(card, ctx, cloudList, w, h, effectiveWind) {
   if (fadeOpacity <= 0) return;
   if (!card._renderState) return;
   const animSpeed = card._animationSpeed * (card._frameScale || 1);
+  const previewMotionScale = card._previewOverride ? 0.35 : 1;
+  const previewBreathScale = card._previewOverride ? 0.55 : 1;
   for (let i = 0; i < cloudList.length; i++) {
     const cloud = cloudList[i];
     const layer = cloud.layer || 0;
@@ -508,8 +510,9 @@ export function drawClouds(card, ctx, cloudList, w, h, effectiveWind) {
     const driftWave =
       Math.sin(layerPhase * 2.5 + (cloud.seed || 0) * 0.001) *
       (2 + layer * 2.5);
-    const effectiveSpeed = baseSpeed * effectiveWind * depthFactor * animSpeed;
-    cloud.x += effectiveSpeed + microDrift * animSpeed;
+    const effectiveSpeed =
+      baseSpeed * effectiveWind * depthFactor * animSpeed * previewMotionScale;
+    cloud.x += effectiveSpeed + microDrift * animSpeed * previewMotionScale;
     if (cloud.x > w + 320) {
       cloud.x = -320 - ((cloud.seed || 0) % 140);
     }
@@ -517,14 +520,15 @@ export function drawClouds(card, ctx, cloudList, w, h, effectiveWind) {
       cloud.x = w + 120 + ((cloud.seed || 0) % 180);
     }
     cloud.breathPhase =
-      (cloud.breathPhase || 0) + (cloud.breathSpeed || 0.002) * animSpeed;
+      (cloud.breathPhase || 0) +
+      (cloud.breathSpeed || 0.002) * animSpeed * previewBreathScale;
     if (!cloud._bakedCanvas) continue;
     const breathScale =
       1 +
       Math.sin(cloud.breathPhase) * (softCloud ? 0.014 : 0.018 + layer * 0.01);
     const drawScale = (cloud.scale || 1) * breathScale;
     const yLift = h * (0.03 + layer * 0.015);
-    const yDrift = driftWave * (softCloud ? 0.65 : 1);
+    const yDrift = driftWave * (softCloud ? 0.65 : 1) * previewMotionScale;
     const destX = cloud.x + cloud._bakeOffX * drawScale;
     const destY = cloud.y - yLift + yDrift + cloud._bakeOffY * drawScale;
     const destW = cloud._bakeLogicalW * drawScale;
