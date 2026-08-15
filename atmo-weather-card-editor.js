@@ -456,6 +456,18 @@ const PREPARED_POSITION_GRIDS = Object.freeze(
     }),
   ),
 );
+// data-mode values consumed by _onChipToggleChange / _onChipSegmentedSelect.
+const TOGGLE_MODE = Object.freeze({
+  TRUE_DELETE: "true-delete",
+  FALSE_DELETE: "false-delete",
+  TRUE_FALSE_IF_DEFINED: "true-false-if-defined",
+});
+const SEGMENT_MODE = Object.freeze({
+  SET_OR_DELETE_EMPTY: "set-or-delete-empty",
+  TOGGLE_DELETE_IF_SAME: "toggle-delete-if-same",
+  BESIDE_OR_DELETE: "beside-or-delete",
+  SOLID_OR_DELETE: "solid-or-delete",
+});
 class AtmosphericWeatherCardEditor extends LitElement {
   static get properties() {
     return {
@@ -1961,6 +1973,10 @@ class AtmosphericWeatherCardEditor extends LitElement {
     if (chips.every((s) => s && typeof s === "object")) return chips;
     return chips.map((s) => (s && typeof s === "object" ? s : {}));
   }
+  _getCustomCards() {
+    const cards = this._config && this._config.custom_cards;
+    return Array.isArray(cards) ? cards : [];
+  }
   _imageStatusSchema() {
     const c = this._formData,
       hasStatus = !!c.status_entity;
@@ -2235,12 +2251,14 @@ class AtmosphericWeatherCardEditor extends LitElement {
     </div>`;
   }
   _onClearFieldClick(e) {
-    const field =
-      e.currentTarget && e.currentTarget.dataset
-        ? e.currentTarget.dataset.field
-        : "";
+    const field = this._ds(e, "field");
     if (!field) return;
     this._updateField(field, "");
+  }
+  _ds(e, key) {
+    return e.currentTarget && e.currentTarget.dataset
+      ? e.currentTarget.dataset[key]
+      : "";
   }
   _renderDisclosure(label, content) {
     const isAdvanced = label === "Advanced options";
@@ -2266,16 +2284,9 @@ class AtmosphericWeatherCardEditor extends LitElement {
   }
   _renderPositionGrid(field, gridDef) {
     const prepared = PREPARED_POSITION_GRIDS[field];
-    const valueMap = prepared ? prepared.valueMap : gridDef.valueMap || {};
-    const reverseMap = prepared
-      ? prepared.reverseMap
-      : Object.fromEntries(Object.entries(valueMap).map(([k, v]) => [v, k]));
+    const { valueMap, reverseMap, cellsFlat: cells, disabledSet } = prepared;
     const stored = this._formData[field] || "",
       value = reverseMap[stored] || stored,
-      cells = prepared ? prepared.cellsFlat : gridDef.cells.flat();
-    const disabledSet = prepared
-        ? prepared.disabledSet
-        : new Set(gridDef.disabled || []),
       helper = HELPERS[field],
       labelText = LABELS[field] || field;
     return html`<div class="grid-picker">
@@ -2371,44 +2382,31 @@ class AtmosphericWeatherCardEditor extends LitElement {
     else if (this._openPanel === id) this._openPanel = null;
   }
   _onPanelExpandedChanged(e) {
-    const panel =
-      e.currentTarget && e.currentTarget.dataset
-        ? e.currentTarget.dataset.panel
-        : "";
+    const panel = this._ds(e, "panel");
     if (!panel) return;
     this._onPanelToggle(panel, !!(e.detail && e.detail.expanded));
   }
   _onTrimmedFieldChange(e) {
-    const field =
-      e.currentTarget && e.currentTarget.dataset
-        ? e.currentTarget.dataset.field
-        : "";
+    const field = this._ds(e, "field");
     if (!field) return;
     this._updateField(field, (e.target.value || "").trim());
   }
   _onRawFieldChange(e) {
-    const field =
-      e.currentTarget && e.currentTarget.dataset
-        ? e.currentTarget.dataset.field
-        : "";
+    const field = this._ds(e, "field");
     if (!field) return;
     this._updateField(field, e.target.value || "");
   }
   _onOffsetPartChange(e) {
-    const indexRaw =
-      e.currentTarget && e.currentTarget.dataset
-        ? e.currentTarget.dataset.offsetIndex
-        : "";
+    const indexRaw = this._ds(e, "offsetIndex");
     const index = Number(indexRaw);
     if (!Number.isInteger(index)) return;
     this._setOffsetPart(index, e.target.value);
   }
   _onSegmentedFieldSelect(e) {
-    const t = e.currentTarget;
-    const field = t && t.dataset ? t.dataset.field : "";
+    const field = this._ds(e, "field");
     if (!field) return;
-    const value = t && t.dataset ? t.dataset.value : "";
-    const valueType = t && t.dataset ? t.dataset.valueType : "string";
+    const value = this._ds(e, "value");
+    const valueType = this._ds(e, "valueType") || "string";
     if (valueType === "number") {
       const n = Number(value);
       if (!Number.isFinite(n)) return;
@@ -2426,10 +2424,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
     this._updateField(field, value);
   }
   _onChipAreaBackgroundModeSelect(e) {
-    const mode =
-      e.currentTarget && e.currentTarget.dataset
-        ? e.currentTarget.dataset.bgMode
-        : "";
+    const mode = this._ds(e, "bgMode");
     if (!mode) return;
     if (mode === "off") {
       this._updateField("chip_area_background", false);
@@ -2475,39 +2470,36 @@ class AtmosphericWeatherCardEditor extends LitElement {
     </div>`;
   }
   _onCardStyleSelect(e) {
-    const value =
-      e.currentTarget && e.currentTarget.dataset
-        ? e.currentTarget.dataset.value
-        : "";
+    const value = this._ds(e, "value");
     if (!value) return;
     this._setCardStyle(value);
   }
   _renderCelestialOffsetPicker() {
-    const c = this._formData;
     return html`<div class="composite">
       <div class="composite-label">Offset from edge</div>
-      <div class="composite-row" style="flex-wrap:nowrap">
-        <span class="composite-unit">X</span>
-        <input
-          type="text"
-          class="composite-number"
-          placeholder="0"
-          style="flex:1;min-width:0"
-          data-field="celestial_x"
-          .value=${String(c.celestial_x || "")}
-          @change=${this._onTrimmedFieldChange}
-        />
-        <span class="composite-unit">Y</span>
-        <input
-          type="text"
-          class="composite-number"
-          placeholder="0"
-          style="flex:1;min-width:0"
-          data-field="celestial_y"
-          .value=${String(c.celestial_y || "")}
-          @change=${this._onTrimmedFieldChange}
-        />
-      </div>
+      ${this._renderOffsetXYRow(
+        "celestial_x",
+        "celestial_y",
+        (field, val) =>
+          html`<input
+            type="text"
+            class="composite-number"
+            placeholder="0"
+            style="flex:1;min-width:0"
+            data-field=${field}
+            .value=${String(val || "")}
+            @change=${this._onTrimmedFieldChange}
+          />`,
+      )}
+    </div>`;
+  }
+  _renderOffsetXYRow(xField, yField, renderInput) {
+    const c = this._formData;
+    return html`<div class="composite-row" style="flex-wrap:nowrap">
+      <span class="composite-unit">X</span>
+      ${renderInput(xField, c[xField])}
+      <span class="composite-unit">Y</span>
+      ${renderInput(yField, c[yField])}
     </div>`;
   }
   _parseOffset(raw) {
@@ -2543,26 +2535,19 @@ class AtmosphericWeatherCardEditor extends LitElement {
     if (!c.image_day && !c.image_night) return "";
     return html`<div class="composite">
       <div class="composite-label">Image Offset</div>
-      <div class="composite-row" style="flex-wrap:nowrap">
-        <span class="composite-unit">X</span>
-        <ha-textfield
-          class="composite-textfield"
-          placeholder="0"
-          style="flex:1;min-width:0"
-          data-field="image_x"
-          .value=${String(c.image_x || "")}
-          @change=${this._onTrimmedFieldChange}
-        ></ha-textfield>
-        <span class="composite-unit">Y</span>
-        <ha-textfield
-          class="composite-textfield"
-          placeholder="0"
-          style="flex:1;min-width:0"
-          data-field="image_y"
-          .value=${String(c.image_y || "")}
-          @change=${this._onTrimmedFieldChange}
-        ></ha-textfield>
-      </div>
+      ${this._renderOffsetXYRow(
+        "image_x",
+        "image_y",
+        (field, val) =>
+          html`<ha-textfield
+            class="composite-textfield"
+            placeholder="0"
+            style="flex:1;min-width:0"
+            data-field=${field}
+            .value=${String(val || "")}
+            @change=${this._onTrimmedFieldChange}
+          ></ha-textfield>`,
+      )}
       <div class="composite-helper">
         Fine-tune image position. Pixels or CSS values, e.g. -20 or 10%.
       </div>
@@ -2593,9 +2578,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
     </div>`;
   }
   _renderCustomCardsEditor() {
-    const cards = Array.isArray(this._config && this._config.custom_cards)
-      ? this._config.custom_cards
-      : [];
+    const cards = this._getCustomCards();
     return html`${cards.length === 0
         ? html`<div class="cards-empty">No cards yet.</div>`
         : cards.map((card, idx) =>
@@ -2662,11 +2645,10 @@ class AtmosphericWeatherCardEditor extends LitElement {
     e.stopPropagation();
   }
   _onCustomCardSizeChange(e) {
-    const t = e.currentTarget;
-    const idx = Number(t && t.dataset ? t.dataset.cardIdx : NaN);
-    const key = t && t.dataset ? t.dataset.cardKey : "";
-    if (!Number.isInteger(idx) || idx < 0 || !key) return;
-    const cards = [...((this._config && this._config.custom_cards) || [])];
+    const idx = Number(this._ds(e, "cardIdx") || NaN);
+    const key = this._ds(e, "cardKey");
+    if (this._badIdx(idx) || !key) return;
+    const cards = this._getCustomCards();
     const card = cards[idx] && typeof cards[idx] === "object" ? cards[idx] : {};
     const next = { ...card };
     const v = (e.target.value || "").trim();
@@ -2676,12 +2658,8 @@ class AtmosphericWeatherCardEditor extends LitElement {
   }
   _onCustomCardFormValueChanged(e) {
     e.stopPropagation();
-    const idx = Number(
-      e.currentTarget && e.currentTarget.dataset
-        ? e.currentTarget.dataset.cardIdx
-        : NaN,
-    );
-    if (!Number.isInteger(idx) || idx < 0) return;
+    const idx = Number(this._ds(e, "cardIdx") || NaN);
+    if (this._badIdx(idx)) return;
     this._updateCardAt(
       idx,
       (e.detail && e.detail.value && e.detail.value._card) || {},
@@ -2739,7 +2717,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
     this._expandedCard = this._expandedCard === idx ? null : idx;
   }
   _moveCard(idx, delta) {
-    const cards = [...((this._config && this._config.custom_cards) || [])];
+    const cards = this._getCustomCards();
     const target = idx + delta;
     if (target < 0 || target >= cards.length) return;
     [cards[idx], cards[target]] = [cards[target], cards[idx]];
@@ -2748,7 +2726,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
     this._updateField("custom_cards", cards);
   }
   _removeCard(idx) {
-    const cards = [...((this._config && this._config.custom_cards) || [])];
+    const cards = this._getCustomCards();
     cards.splice(idx, 1);
     if (this._expandedCard === idx) this._expandedCard = null;
     else if (
@@ -2760,13 +2738,13 @@ class AtmosphericWeatherCardEditor extends LitElement {
     this._updateField("custom_cards", cards);
   }
   _updateCardAt(idx, newCard) {
-    const cards = [...((this._config && this._config.custom_cards) || [])];
+    const cards = this._getCustomCards();
     cards[idx] = newCard;
     this._updateField("custom_cards", cards);
   }
   _addBlankCard = () => {
     const cards = [
-      ...((this._config && this._config.custom_cards) || []),
+      ...this._getCustomCards(),
       { type: "entity", entity: "", custom_width: "100%" },
     ];
     this._expandedCard = cards.length - 1;
@@ -2906,25 +2884,26 @@ class AtmosphericWeatherCardEditor extends LitElement {
   }
   _getChipByIndex(idx) {
     const i = Number(idx);
-    if (!Number.isInteger(i) || i < 0) return null;
+    if (this._badIdx(i)) return null;
     const list = this._getChips();
     return list[i] && typeof list[i] === "object" ? list[i] : null;
   }
+  _badIdx(n) {
+    return !Number.isInteger(n) || n < 0;
+  }
   _onChipAccordionToggle(e) {
-    const t = e.currentTarget;
-    const idx = Number(t && t.dataset ? t.dataset.chipIdx : NaN);
-    const key = t && t.dataset ? t.dataset.accKey : "";
-    const kind = t && t.dataset ? t.dataset.accKind : "main";
-    if (!Number.isInteger(idx) || idx < 0 || !key) return;
+    const idx = Number(this._ds(e, "chipIdx") || NaN);
+    const key = this._ds(e, "accKey");
+    const kind = this._ds(e, "accKind") || "main";
+    if (this._badIdx(idx) || !key) return;
     const prop = kind === "text" ? `_text_acc_${idx}` : `_acc_open_${idx}`;
     this[prop] = this[prop] === key ? null : key;
     this.requestUpdate();
   }
   _onChipTypeModeSelect(e) {
-    const t = e.currentTarget;
-    const idx = Number(t && t.dataset ? t.dataset.chipIdx : NaN);
-    const mode = t && t.dataset ? t.dataset.mode : "";
-    if (!Number.isInteger(idx) || idx < 0 || !mode) return;
+    const idx = Number(this._ds(e, "chipIdx") || NaN);
+    const mode = this._ds(e, "mode");
+    if (this._badIdx(idx) || !mode) return;
     const chip = this._getChipByIndex(idx);
     if (!chip) return;
     if (mode === "sensor") {
@@ -2952,10 +2931,9 @@ class AtmosphericWeatherCardEditor extends LitElement {
     }
   }
   _onChipForecastTypeSelect(e) {
-    const t = e.currentTarget;
-    const idx = Number(t && t.dataset ? t.dataset.chipIdx : NaN);
-    const forecast = t && t.dataset ? t.dataset.forecastType : "";
-    if (!Number.isInteger(idx) || idx < 0 || !forecast) return;
+    const idx = Number(this._ds(e, "chipIdx") || NaN);
+    const forecast = this._ds(e, "forecastType");
+    if (this._badIdx(idx) || !forecast) return;
     const chip = this._getChipByIndex(idx);
     if (!chip) return;
     this._updateChipAt(idx, {
@@ -2965,31 +2943,29 @@ class AtmosphericWeatherCardEditor extends LitElement {
     });
   }
   _onChipAnchorSelect(e) {
-    const t = e.currentTarget;
-    const idx = Number(t && t.dataset ? t.dataset.chipIdx : NaN);
-    const anchor = t && t.dataset ? t.dataset.anchor : "";
-    if (!Number.isInteger(idx) || idx < 0 || !anchor) return;
+    const idx = Number(this._ds(e, "chipIdx") || NaN);
+    const anchor = this._ds(e, "anchor");
+    if (this._badIdx(idx) || !anchor) return;
     const chip = this._getChipByIndex(idx);
     if (!chip) return;
     this._updateChipAt(idx, { ...chip, position_anchor: anchor });
   }
   _onChipToggleChange(e) {
-    const t = e.currentTarget;
-    const idx = Number(t && t.dataset ? t.dataset.chipIdx : NaN);
-    const key = t && t.dataset ? t.dataset.key : "";
-    const mode = t && t.dataset ? t.dataset.mode : "true-delete";
-    if (!Number.isInteger(idx) || idx < 0 || !key) return;
+    const idx = Number(this._ds(e, "chipIdx") || NaN);
+    const key = this._ds(e, "key");
+    const mode = this._ds(e, "mode") || TOGGLE_MODE.TRUE_DELETE;
+    if (this._badIdx(idx) || !key) return;
     const chip = this._getChipByIndex(idx);
     if (!chip) return;
     const next = { ...chip };
     const checked = e.target && e.target.checked === true;
-    if (mode === "true-delete") {
+    if (mode === TOGGLE_MODE.TRUE_DELETE) {
       if (checked) next[key] = true;
       else delete next[key];
-    } else if (mode === "false-delete") {
+    } else if (mode === TOGGLE_MODE.FALSE_DELETE) {
       if (!checked) next[key] = false;
       else delete next[key];
-    } else if (mode === "true-false-if-defined") {
+    } else if (mode === TOGGLE_MODE.TRUE_FALSE_IF_DEFINED) {
       if (checked) next[key] = true;
       else {
         if (chip[key] !== undefined) next[key] = false;
@@ -2999,10 +2975,9 @@ class AtmosphericWeatherCardEditor extends LitElement {
     this._updateChipAt(idx, next);
   }
   _onChipActionClick(e) {
-    const t = e.currentTarget;
-    const idx = Number(t && t.dataset ? t.dataset.chipIdx : NaN);
-    const action = t && t.dataset ? t.dataset.action : "";
-    if (!Number.isInteger(idx) || idx < 0 || !action) return;
+    const idx = Number(this._ds(e, "chipIdx") || NaN);
+    const action = this._ds(e, "action");
+    if (this._badIdx(idx) || !action) return;
     const chip = this._getChipByIndex(idx);
     if (!chip) return;
     const next = { ...chip };
@@ -3020,13 +2995,12 @@ class AtmosphericWeatherCardEditor extends LitElement {
     this._updateChipAt(idx, next);
   }
   _onChipSegmentedSelect(e) {
-    const t = e.currentTarget;
-    const idx = Number(t && t.dataset ? t.dataset.chipIdx : NaN);
-    const key = t && t.dataset ? t.dataset.key : "";
-    const mode = t && t.dataset ? t.dataset.mode : "set";
-    const valueType = t && t.dataset ? t.dataset.valueType : "string";
-    const raw = t && t.dataset ? t.dataset.value : "";
-    if (!Number.isInteger(idx) || idx < 0 || !key) return;
+    const idx = Number(this._ds(e, "chipIdx") || NaN);
+    const key = this._ds(e, "key");
+    const mode = this._ds(e, "mode") || "set";
+    const valueType = this._ds(e, "valueType") || "string";
+    const raw = this._ds(e, "value");
+    if (this._badIdx(idx) || !key) return;
     const chip = this._getChipByIndex(idx);
     if (!chip) return;
     const next = { ...chip };
@@ -3038,16 +3012,16 @@ class AtmosphericWeatherCardEditor extends LitElement {
     } else if (valueType === "boolean") {
       value = raw === "true";
     }
-    if (mode === "set-or-delete-empty") {
+    if (mode === SEGMENT_MODE.SET_OR_DELETE_EMPTY) {
       if (value === "") delete next[key];
       else next[key] = value;
-    } else if (mode === "toggle-delete-if-same") {
+    } else if (mode === SEGMENT_MODE.TOGGLE_DELETE_IF_SAME) {
       if (chip[key] === value) delete next[key];
       else next[key] = value;
-    } else if (mode === "beside-or-delete") {
+    } else if (mode === SEGMENT_MODE.BESIDE_OR_DELETE) {
       if (value === "beside") next[key] = "beside";
       else delete next[key];
-    } else if (mode === "solid-or-delete") {
+    } else if (mode === SEGMENT_MODE.SOLID_OR_DELETE) {
       if (value === "solid") delete next[key];
       else next[key] = value;
     } else {
@@ -3244,7 +3218,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
           <ha-switch
             data-chip-idx=${idx}
             data-key="hide_icon"
-            data-mode="true-delete"
+            data-mode=${TOGGLE_MODE.TRUE_DELETE}
             .checked=${chip.hide_icon === true}
             @change=${this._onChipToggleChange}
           ></ha-switch
@@ -3329,7 +3303,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
                 <ha-switch
                   data-chip-idx=${idx}
                   data-key="icon_background"
-                  data-mode="true-false-if-defined"
+                  data-mode=${TOGGLE_MODE.TRUE_FALSE_IF_DEFINED}
                   .checked=${chip.icon_background === true}
                   @change=${this._onChipToggleChange}
                 ></ha-switch
@@ -3378,7 +3352,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
           <ha-switch
             data-chip-idx=${idx}
             data-key="hide_label"
-            data-mode="true-delete"
+            data-mode=${TOGGLE_MODE.TRUE_DELETE}
             .checked=${chip.hide_label === true}
             @change=${this._onChipToggleChange}
           ></ha-switch
@@ -3443,7 +3417,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
                       : ""}
                     data-chip-idx=${idx}
                     data-key="label_weight"
-                    data-mode="set-or-delete-empty"
+                    data-mode=${SEGMENT_MODE.SET_OR_DELETE_EMPTY}
                     data-value=${o.value}
                     @click=${this._onChipSegmentedSelect}
                   >
@@ -3466,7 +3440,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
           <ha-switch
             data-chip-idx=${idx}
             data-key="hide_value"
-            data-mode="true-delete"
+            data-mode=${TOGGLE_MODE.TRUE_DELETE}
             .checked=${chip.hide_value === true}
             @change=${this._onChipToggleChange}
           ></ha-switch
@@ -3485,7 +3459,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
               <ha-switch
                 data-chip-idx=${idx}
                 data-key="fancy_unit"
-                data-mode="true-delete"
+                data-mode=${TOGGLE_MODE.TRUE_DELETE}
                 .checked=${chip.fancy_unit === true}
                 @change=${this._onChipToggleChange}
               ></ha-switch
@@ -3617,7 +3591,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
                       : ""}
                     data-chip-idx=${idx}
                     data-key="value_weight"
-                    data-mode="set-or-delete-empty"
+                    data-mode=${SEGMENT_MODE.SET_OR_DELETE_EMPTY}
                     data-value=${o.value}
                     @click=${this._onChipSegmentedSelect}
                   >
@@ -3640,7 +3614,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
           <ha-switch
             data-chip-idx=${idx}
             data-key="hide_sub_value"
-            data-mode="true-delete"
+            data-mode=${TOGGLE_MODE.TRUE_DELETE}
             .checked=${chip.hide_sub_value === true}
             @change=${this._onChipToggleChange}
           ></ha-switch
@@ -3710,7 +3684,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
                           : ""}
                         data-chip-idx=${idx}
                         data-key="sub_value_weight"
-                        data-mode="set-or-delete-empty"
+                        data-mode=${SEGMENT_MODE.SET_OR_DELETE_EMPTY}
                         data-value=${o.value}
                         @click=${this._onChipSegmentedSelect}
                       >
@@ -3731,7 +3705,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
                       class=${cur === o.value ? "active" : ""}
                       data-chip-idx=${idx}
                       data-key="sub_value_position"
-                      data-mode="beside-or-delete"
+                      data-mode=${SEGMENT_MODE.BESIDE_OR_DELETE}
                       data-value=${o.value}
                       @click=${this._onChipSegmentedSelect}
                     >
@@ -3759,7 +3733,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
                 <ha-switch
                   data-chip-idx=${idx}
                   data-key="marquee_rtl"
-                  data-mode="true-delete"
+                  data-mode=${TOGGLE_MODE.TRUE_DELETE}
                   .checked=${chip.marquee_rtl === true}
                   @change=${this._onChipToggleChange}
                 ></ha-switch
@@ -3804,7 +3778,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
               class=${chip.style === o.value ? "active" : ""}
               data-chip-idx=${idx}
               data-key="style"
-              data-mode="toggle-delete-if-same"
+              data-mode=${SEGMENT_MODE.TOGGLE_DELETE_IF_SAME}
               data-value=${o.value}
               @click=${this._onChipSegmentedSelect}
             >
@@ -3826,7 +3800,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
               class=${chip.align === o.value ? "active" : ""}
               data-chip-idx=${idx}
               data-key="align"
-              data-mode="toggle-delete-if-same"
+              data-mode=${SEGMENT_MODE.TOGGLE_DELETE_IF_SAME}
               data-value=${o.value}
               @click=${this._onChipSegmentedSelect}
             >
@@ -3840,7 +3814,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
           <ha-switch
             data-chip-idx=${idx}
             data-key="chip_round"
-            data-mode="true-delete"
+            data-mode=${TOGGLE_MODE.TRUE_DELETE}
             .checked=${chip.chip_round === true}
             @change=${this._onChipToggleChange}
           ></ha-switch
@@ -3850,7 +3824,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
           <ha-switch
             data-chip-idx=${idx}
             data-key="background"
-            data-mode="false-delete"
+            data-mode=${TOGGLE_MODE.FALSE_DELETE}
             .checked=${chip.background !== false}
             @change=${this._onChipToggleChange}
           ></ha-switch
@@ -3995,7 +3969,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
                       : ""}
                     data-chip-idx=${idx}
                     data-key=${p + "threshold_mode"}
-                    data-mode="solid-or-delete"
+                    data-mode=${SEGMENT_MODE.SOLID_OR_DELETE}
                     data-value=${o.value}
                     @click=${this._onChipSegmentedSelect}
                   >
@@ -4438,55 +4412,28 @@ class AtmosphericWeatherCardEditor extends LitElement {
           this._formData[field] != null ? this._formData[field] : min,
         ) || min,
       pct = Math.round(((val - min) / (max - min)) * 100);
-    const onRange = (e) => {
-      const v = parseFloat(e.target.value),
-        p = Math.round(((v - min) / (max - min)) * 100);
-      e.target.style.setProperty("--awc-slider-pct", p + "%");
-      const numInput = e.target
-        .closest(".awc-slider")
-        .querySelector(".awc-slider-num");
-      if (numInput) numInput.value = v;
-    };
-    const onCommit = (e) =>
-      this._updateField(field, parseFloat(e.target.value));
-    const onNumInput = (e) => {
-      const v = Math.min(max, Math.max(min, parseFloat(e.target.value) || min));
-      const range = e.target
-        .closest(".awc-slider")
-        .querySelector(".awc-slider-range");
-      if (range) {
-        range.value = v;
-        const p = Math.round(((v - min) / (max - min)) * 100);
-        range.style.setProperty("--awc-slider-pct", p + "%");
-      }
-      this._updateField(field, v);
-    };
-    return html`<div class="awc-slider">
-      <div class="awc-slider-head">
-        <span class="awc-slider-label">${label}</span>
-        <input
-          type="number"
-          class="awc-slider-num"
-          min=${min}
-          max=${max}
-          step=${step}
-          .value=${String(val)}
-          @change=${onNumInput}
-        />
-      </div>
-      <input
-        type="range"
-        class="awc-slider-range"
-        min=${min}
-        max=${max}
-        step=${step}
-        .value=${String(val)}
-        style="--awc-slider-pct:${pct}%"
-        @input=${onRange}
-        @change=${onCommit}
-      />
-      ${helper ? html`<div class="awc-slider-helper">${helper}</div>` : ""}
-    </div>`;
+    return this._renderSliderMarkup({
+      label,
+      min,
+      max,
+      step,
+      val,
+      pct,
+      helper,
+      onNumChange: (e) => {
+        const v = Math.min(
+          max,
+          Math.max(min, parseFloat(e.target.value) || min),
+        );
+        this._syncSliderRange(e, v, min, max);
+        this._updateField(field, v);
+      },
+      onRangeInput: (e) => {
+        this._syncSliderNum(e, parseFloat(e.target.value), min, max);
+      },
+      onRangeChange: (e) =>
+        this._updateField(field, parseFloat(e.target.value)),
+    });
   }
   /* Shared range-slider markup for per-chip numeric fields (e.g. marquee
    * speed, forecast offset/precision). `val` and `fallback` are computed by
@@ -4504,6 +4451,63 @@ class AtmosphericWeatherCardEditor extends LitElement {
     helper,
   ) {
     const pct = Math.round(((val - min) / (max - min)) * 100);
+    return this._renderSliderMarkup({
+      label,
+      min,
+      max,
+      step,
+      val,
+      pct,
+      helper,
+      onNumChange: (e) => {
+        const v = Math.min(
+          max,
+          Math.max(min, parseInt(e.target.value, 10) || fallback),
+        );
+        this._syncSliderRange(e, v, min, max);
+        update({ ...chip, [field]: v });
+      },
+      onRangeInput: (e) => {
+        this._syncSliderNum(e, parseInt(e.target.value, 10), min, max);
+      },
+      onRangeChange: (e) =>
+        update({ ...chip, [field]: parseInt(e.target.value, 10) }),
+    });
+  }
+  _syncSliderRange(e, v, min, max) {
+    const range = e.target
+      .closest(".awc-slider")
+      .querySelector(".awc-slider-range");
+    if (range) {
+      range.value = v;
+      range.style.setProperty(
+        "--awc-slider-pct",
+        Math.round(((v - min) / (max - min)) * 100) + "%",
+      );
+    }
+  }
+  _syncSliderNum(e, v, min, max) {
+    e.target.style.setProperty(
+      "--awc-slider-pct",
+      Math.round(((v - min) / (max - min)) * 100) + "%",
+    );
+    const numInput = e.target
+      .closest(".awc-slider")
+      .querySelector(".awc-slider-num");
+    if (numInput) numInput.value = v;
+  }
+  _renderSliderMarkup({
+    label,
+    min,
+    max,
+    step,
+    val,
+    pct,
+    onNumChange,
+    onRangeInput,
+    onRangeChange,
+    helper,
+  }) {
     return html`<div class="awc-slider">
       <div class="awc-slider-head">
         <span class="awc-slider-label">${label}</span>
@@ -4514,23 +4518,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
           max=${max}
           step=${step}
           .value=${String(val)}
-          @change=${(e) => {
-            const v = Math.min(
-              max,
-              Math.max(min, parseInt(e.target.value, 10) || fallback),
-            );
-            const range = e.target
-              .closest(".awc-slider")
-              .querySelector(".awc-slider-range");
-            if (range) {
-              range.value = v;
-              range.style.setProperty(
-                "--awc-slider-pct",
-                Math.round(((v - min) / (max - min)) * 100) + "%",
-              );
-            }
-            update({ ...chip, [field]: v });
-          }}
+          @change=${onNumChange}
         />
       </div>
       <input
@@ -4541,17 +4529,8 @@ class AtmosphericWeatherCardEditor extends LitElement {
         step=${step}
         .value=${String(val)}
         style="--awc-slider-pct:${pct}%"
-        @input=${(e) => {
-          const v = parseInt(e.target.value, 10);
-          const p = Math.round(((v - min) / (max - min)) * 100);
-          e.target.style.setProperty("--awc-slider-pct", p + "%");
-          const n = e.target
-            .closest(".awc-slider")
-            .querySelector(".awc-slider-num");
-          if (n) n.value = v;
-        }}
-        @change=${(e) =>
-          update({ ...chip, [field]: parseInt(e.target.value, 10) })}
+        @input=${onRangeInput}
+        @change=${onRangeChange}
       />
       ${helper ? html`<div class="awc-slider-helper">${helper}</div>` : ""}
     </div>`;

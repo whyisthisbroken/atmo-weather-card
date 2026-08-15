@@ -44,14 +44,14 @@ Easiest way to install and manage updates. HACS handles everything for you.
 <details>
 <summary>Installation Steps</summary>
 
-1. Open **HACS** in Home Assistant.
-2. Navigate to **Settings** → **Custom repositories**.
-3. Add the repository URL: `https://github.com/whyisthisbroken/atmo-weather-card`
-4. Select category: **Dashboard**
-5. Click **Create**.
-6. Go to **Dashboard** section and search for **Atmo Weather Card**.
-7. Click **Download**.
-8. Reload your dashboard.
+1. Open HACS in Home Assistant.
+2. Click the three-dot menu (top right) → Custom repositories.
+3. Add the repository URL: https://github.com/whyisthisbroken/atmo-weather-card
+4. Select category: Dashboard
+5. Click Add.
+6. HACS will scan the repository and redirect you to it automatically. If not, go to HACS and search for Atmo Weather Card.
+7. Click Download.
+8. Reload your dashboard (clear browser cache if the card doesn't appear).
 
 </details>
 

@@ -4,6 +4,19 @@ function fillCircle(ctx, x, y, r) {
   ctx.fill();
 }
 
+function circularIndex(head, offset, cap) {
+  return (((head - offset) % cap) + cap) % cap;
+}
+
+const PLANE_COLORS = {
+  dark: { normal: "rgb(125, 135, 145)", severe: "rgb(220, 220, 220)" },
+  light: { normal: "rgb(40, 60, 100)", severe: "rgb(60, 80, 120)" },
+};
+const BLINK_COLORS = {
+  dark: { forward: "rgb(90, 255, 130)", backward: "rgb(255, 100, 100)" },
+  light: { forward: "rgb(50, 255, 80)", backward: "rgb(255, 50, 50)" },
+};
+
 export function drawBirds(card, ctx, w, h) {
   const birdAnimSpeed =
     card._animationSpeed * card._birdAnimationSpeed * (card._frameScale || 1);
@@ -194,7 +207,7 @@ export function drawPlanes(
   trailCapPlane,
 ) {
   ctx.save();
-  const dpr = card._cachedDimensions.dpr;
+  const dpr = card._cachedDimensions ? card._cachedDimensions.dpr : 1;
   const frameScale = card._frameScale || 1;
   const animSpeed = card._animationSpeed * frameScale;
   if (
@@ -230,9 +243,7 @@ export function drawPlanes(
     }
     const windShift = (card._windSpeed || 0) * 0.15;
     for (let j = 1; j < plane.histLen; j++) {
-      const ridx =
-        (((plane.histHead - 1 - j) % trailCapPlane) + trailCapPlane) %
-        trailCapPlane;
+      const ridx = circularIndex(plane.histHead, 1 + j, trailCapPlane);
       plane.histBuf[ridx * 3] += windShift;
       plane.histBuf[ridx * 3 + 1] += 0.02;
     }
@@ -269,9 +280,7 @@ export function drawPlanes(
           let segPts = 0;
           for (let k = kStart; k <= kEnd; k++) {
             if (k > maxTrailLen) break;
-            const ridx =
-              (((plane.histHead - 1 - k) % trailCapPlane) + trailCapPlane) %
-              trailCapPlane;
+            const ridx = circularIndex(plane.histHead, 1 + k, trailCapPlane);
             const gap = plane.histBuf[ridx * 3 + 2];
             const ageRatio = k / maxTrailLen;
             const ageFade = Math.max(0, 1 - Math.pow(ageRatio, 0.5));
@@ -303,17 +312,11 @@ export function drawPlanes(
     if (plane.climbAngle > 0) ctx.rotate(-plane.climbAngle * dir);
     ctx.globalAlpha = 0.9;
     // Weather-adaptive plane color: darker for daytime, lighter for night, adjusts for severe weather
-    let planeColor;
-    if (card._isThemeDark) {
-      planeColor = card._renderState.isSevereWeather
-        ? "rgb(220, 220, 220)"
-        : "rgb(125, 135, 145)";
-    } else {
-      planeColor = card._renderState.isSevereWeather
-        ? "rgb(60, 80, 120)"
-        : "rgb(40, 60, 100)";
-    }
-    ctx.strokeStyle = planeColor;
+    const planeThemeKey = card._isThemeDark ? "dark" : "light",
+      planeSeverityKey = card._renderState.isSevereWeather
+        ? "severe"
+        : "normal";
+    ctx.strokeStyle = PLANE_COLORS[planeThemeKey][planeSeverityKey];
     ctx.lineWidth = 1.5;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
@@ -328,14 +331,9 @@ export function drawPlanes(
     plane.blinkPhase += 0.12 * animSpeed;
     if (Math.sin(plane.blinkPhase) > 0.75) {
       ctx.globalAlpha = 1.0;
+      const blinkThemeKey = card._isThemeDark ? "dark" : "light";
       ctx.fillStyle =
-        plane.vx > 0
-          ? card._isThemeDark
-            ? "rgb(90, 255, 130)"
-            : "rgb(50, 255, 80)"
-          : card._isThemeDark
-            ? "rgb(255, 100, 100)"
-            : "rgb(255, 50, 50)";
+        BLINK_COLORS[blinkThemeKey][plane.vx > 0 ? "forward" : "backward"];
       fillCircle(ctx, 0, 1, card._isThemeDark ? 1.5 : 1.8);
       ctx.globalAlpha = 1;
     }

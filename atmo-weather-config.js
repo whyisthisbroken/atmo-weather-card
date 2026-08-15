@@ -1,11 +1,18 @@
+function renameKey(obj, oldKey, newKey) {
+  if (obj[oldKey] !== undefined && obj[newKey] === undefined) {
+    obj[newKey] = obj[oldKey];
+  }
+  delete obj[oldKey];
+}
+
+function toIntOrZero(str) {
+  const n = parseInt(str, 10);
+  return Number.isNaN(n) ? 0 : n;
+}
+
 export function migrateConfig(raw) {
   const c = { ...raw };
-  const rename = (oldKey, newKey) => {
-    if (c[oldKey] !== undefined && c[newKey] === undefined) {
-      c[newKey] = c[oldKey];
-    }
-    delete c[oldKey];
-  };
+  const rename = (oldKey, newKey) => renameKey(c, oldKey, newKey);
   rename("offset", "card_offset");
   rename("square", "card_square");
   rename("stack_order", "card_stack_order");
@@ -35,8 +42,8 @@ export function migrateConfig(raw) {
           .toLowerCase(),
         xIsCenter = xStr === "center";
       const yIsCenter = yStr === "center",
-        xVal = xIsCenter ? 0 : parseInt(xStr, 10) || 0,
-        yVal = yIsCenter ? 0 : parseInt(yStr, 10) || 0;
+        xVal = xIsCenter ? 0 : toIntOrZero(xStr),
+        yVal = yIsCenter ? 0 : toIntOrZero(yStr);
       const hSide = xIsCenter ? "center" : xVal < 0 ? "right" : "left",
         vSide = yIsCenter ? "center" : yVal < 0 ? "bottom" : "top";
       if (hSide === "center" && vSide === "center") {
@@ -147,10 +154,7 @@ export function migrateConfig(raw) {
     c.chips = c.chips.map((chip) => {
       if (!chip || typeof chip !== "object") return chip;
       const s = { ...chip };
-      const r = (o, n) => {
-        if (s[o] !== undefined && s[n] === undefined) s[n] = s[o];
-        delete s[o];
-      };
+      const r = (o, n) => renameKey(s, o, n);
       r("chip_format", "style");
       r("chip_align", "align");
       r("chip_background", "background");

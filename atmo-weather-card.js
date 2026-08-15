@@ -5809,14 +5809,21 @@ class AtmosphericWeatherCard extends HTMLElement {
         px = p.offsetX * hStretch,
         py = p.offsetY * vCompress,
         sq = p.squash !== undefined ? p.squash : 1.0;
-      const radH = p.rad * hStretch * maxRadMul,
-        radV = p.rad * sq * vCompress * maxRadMul;
+      const a = p.rad * hStretch * maxRadMul,
+        b = p.rad * sq * vCompress * maxRadMul,
+        theta = p.rotation || 0,
+        cosT = Math.cos(theta),
+        sinT = Math.sin(theta);
+      // Rotated-ellipse AABB — must include rotation or the bake box undershoots
+      // and later crops the puff (or bleeds into the neighboring atlas cell).
+      const radH = Math.sqrt((a * cosT) ** 2 + (b * sinT) ** 2),
+        radV = Math.sqrt((a * sinT) ** 2 + (b * cosT) ** 2);
       if (px - radH < minX) minX = px - radH;
       if (px + radH > maxX) maxX = px + radH;
       if (py - radV < minY) minY = py - radV;
       if (py + radV > maxY) maxY = py + radV;
     }
-    const margin = 6;
+    const margin = 8;
     minX -= margin;
     minY -= margin;
     maxX += margin;
@@ -5827,9 +5834,10 @@ class AtmosphericWeatherCard extends HTMLElement {
     const physW = Math.ceil(bakeW * dpr);
     const physH = Math.ceil(bakeH * dpr);
     if (physW > this._perfCloudRes || physH > this._perfCloudRes) return;
-    if (packer.x + physW + 2 > this._perfCloudRes) {
+    const cellGap = Math.max(2, Math.ceil(2 * dpr));
+    if (packer.x + physW + cellGap > this._perfCloudRes) {
       packer.x = 0;
-      packer.y += packer.rowHeight + 2;
+      packer.y += packer.rowHeight + cellGap;
       packer.rowHeight = 0;
     }
     if (packer.y + physH > this._perfCloudRes) {
@@ -5837,12 +5845,16 @@ class AtmosphericWeatherCard extends HTMLElement {
     }
     const atlasX = packer.x,
       atlasY = packer.y;
-    packer.x += physW + 2;
+    packer.x += physW + cellGap;
     if (physH > packer.rowHeight) packer.rowHeight = physH;
     const oc = packer.ctx;
     oc.save();
     oc.translate(atlasX, atlasY);
     oc.scale(dpr, dpr);
+    // Hard confinement so any future estimation error can't bleed into neighbor cells.
+    oc.beginPath();
+    oc.rect(0, 0, bakeW, bakeH);
+    oc.clip();
     const t = spec.tint;
     const litR = cp.litR + t[0],
       litG = cp.litG + t[1],
@@ -6037,13 +6049,21 @@ class AtmosphericWeatherCard extends HTMLElement {
       maxY = -Infinity;
     for (let j = 0; j < puffs.length; j++) {
       const p = puffs[j],
-        r = p.rad * 1.08;
-      if (p.offsetX - r < minX) minX = p.offsetX - r;
-      if (p.offsetX + r > maxX) maxX = p.offsetX + r;
-      if (p.offsetY - r < minY) minY = p.offsetY - r;
-      if (p.offsetY + r > maxY) maxY = p.offsetY + r;
+        a = p.rad * 1.08,
+        b = a * (p.squash !== undefined ? p.squash : 1.0),
+        theta = p.rotation || 0,
+        cosT = Math.cos(theta),
+        sinT = Math.sin(theta);
+      // Rotated-ellipse AABB — matches the rotate()+scale(1,squash) applied below,
+      // otherwise the puff gets hard-clipped at this canvas's own edge.
+      const radH = Math.sqrt((a * cosT) ** 2 + (b * sinT) ** 2),
+        radV = Math.sqrt((a * sinT) ** 2 + (b * cosT) ** 2);
+      if (p.offsetX - radH < minX) minX = p.offsetX - radH;
+      if (p.offsetX + radH > maxX) maxX = p.offsetX + radH;
+      if (p.offsetY - radV < minY) minY = p.offsetY - radV;
+      if (p.offsetY + radV > maxY) maxY = p.offsetY + radV;
     }
-    const pad = 5;
+    const pad = 6;
     minX -= pad;
     minY -= pad;
     maxX += pad;

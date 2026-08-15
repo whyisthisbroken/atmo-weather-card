@@ -477,6 +477,11 @@ export function shouldSkipFrame(card, timestamp) {
   return false;
 }
 
+// Tuned so normal wind presets produce clearly visible cross-screen drift.
+const CLOUD_DRIFT_SCALE = 7;
+// Upper bound (px/frame at animSpeed=1) for the wind-driven part of drift.
+const CLOUD_DRIFT_MAX = 3;
+
 export function advanceWindAndPulse(card) {
   const p = card._params;
   const animSpeed = card._animationSpeed * (card._frameScale || 1);
@@ -487,7 +492,11 @@ export function advanceWindAndPulse(card) {
     Math.sin(card._gustPhase * 2.1) * 0.15 +
     Math.sin(card._microGustPhase) * 0.08;
   card._sunPulsePhase += 0.008 * animSpeed;
-  return ((p.wind || 0.1) + card._windGust) * (1 + card._windSpeed);
+  const baseWind = p.wind || 0.1,
+    gustWind = baseWind + card._windGust,
+    // Gusts may slow the wind down but must not reverse its direction.
+    minWind = baseWind * 0.15;
+  return Math.max(minWind, gustWind) * (1 + card._windSpeed);
 }
 
 export function drawClouds(card, ctx, cloudList, w, h, effectiveWind) {
@@ -503,12 +512,19 @@ export function drawClouds(card, ctx, cloudList, w, h, effectiveWind) {
     const depthFactor = 0.7 + layer * 0.35;
     const baseSpeed = cloud.speed || 0.02;
     const layerPhase = (cloud.breathPhase || 0) + (cloud.seed || 0) * 0.0007;
+    // Wobble amplitude kept small relative to CLOUD_DRIFT_SCALE so steady drift dominates.
     const microDrift =
-      Math.sin(layerPhase * (1.8 + layer * 0.7)) * (7 + layer * 10) * 0.02;
+      Math.sin(layerPhase * (1.8 + layer * 0.7)) * (7 + layer * 10) * 0.004;
     const driftWave =
       Math.sin(layerPhase * 2.5 + (cloud.seed || 0) * 0.001) *
       (2 + layer * 2.5);
-    const effectiveSpeed = baseSpeed * effectiveWind * depthFactor * animSpeed;
+    const windDrivenSpeed =
+      baseSpeed * effectiveWind * depthFactor * CLOUD_DRIFT_SCALE;
+    // Cap the wind-driven component so storms can't fling clouds unrealistically
+    // fast; animation_speed still applies after, since that's an explicit user choice.
+    const effectiveSpeed =
+      Math.max(-CLOUD_DRIFT_MAX, Math.min(CLOUD_DRIFT_MAX, windDrivenSpeed)) *
+      animSpeed;
     cloud.x += effectiveSpeed + microDrift * animSpeed;
     if (cloud.x > w + 320) {
       cloud.x = -320 - ((cloud.seed || 0) % 140);
