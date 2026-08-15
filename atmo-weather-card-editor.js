@@ -510,16 +510,22 @@ class AtmosphericWeatherCardEditor extends LitElement {
     return this._hass;
   }
   updated() {
-    const preview = this.renderRoot.querySelector("atmo-weather-card");
-    if (!preview || !this._config || !this.hass) return;
-    preview.setConfig(this._config);
-    preview.hass = this.hass;
-    preview.setPreviewOverride({
+    this._emitSimulationPreview({
       weather: this._simulationWeather,
       isNight: this._simulationNight,
     });
   }
+  _emitSimulationPreview(preview) {
+    const weatherEntity = this._config && this._config.weather_entity;
+    if (!weatherEntity || typeof window === "undefined") return;
+    window.dispatchEvent(
+      new CustomEvent("atmo-weather-card-preview", {
+        detail: { weatherEntity, preview },
+      }),
+    );
+  }
   disconnectedCallback() {
+    this._emitSimulationPreview(null);
     super.disconnectedCallback();
     if (this._hassThrottleTimer) {
       clearTimeout(this._hassThrottleTimer);
@@ -1432,14 +1438,6 @@ class AtmosphericWeatherCardEditor extends LitElement {
         color: var(--primary-text-color);
         font: inherit;
       }
-      .simulation-preview {
-        display: block;
-        width: 100%;
-        margin-top: var(--awc-e-s3);
-        overflow: hidden;
-        border: 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.12);
-        border-radius: var(--awc-e-r-box);
-      }
       /* ── Chip accordions ── */
       .chip-accordion {
         border: 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.09);
@@ -2005,11 +2003,17 @@ class AtmosphericWeatherCardEditor extends LitElement {
   _onSimulationWeatherChange(event) {
     this._simulationWeather = event.target.value;
   }
-  _onSimulationNightChange(event) {
-    this._simulationNight = event.target.checked === true;
+  _setSimulationNight(isNight) {
+    this._simulationNight = isNight;
   }
   _renderSimulationPreview() {
-    return html`<ha-expansion-panel outlined expanded>
+    return html`<ha-expansion-panel
+      outlined
+      data-panel="simulation"
+      .expanded=${this._openPanel === "simulation"}
+      @expanded-changed=${(event) =>
+        this._onPanelToggle("simulation", event.detail.expanded)}
+    >
       <div slot="header" class="panel-header">
         <ha-icon icon="mdi:weather-partly-cloudy"></ha-icon>
         <span>Simulation Preview</span>
@@ -2026,17 +2030,30 @@ class AtmosphericWeatherCardEditor extends LitElement {
               html`<option value=${value}>${label}</option>`,
           )}
         </select>
-        <div class="toggle-group">
-          <label class="toggle-row">
-            <span>Night</span>
-            <ha-switch
-              .checked=${this._simulationNight}
-              @change=${this._onSimulationNightChange}
-            ></ha-switch>
-          </label>
+        <div class="settings-group">
+          <div class="field-group-label">Time of day</div>
+          <div class="segmented segmented-2col" role="radiogroup">
+            <button
+              type="button"
+              role="radio"
+              class=${this._simulationNight ? "" : "active"}
+              aria-checked=${String(!this._simulationNight)}
+              @click=${() => this._setSimulationNight(false)}
+            >
+              Day
+            </button>
+            <button
+              type="button"
+              role="radio"
+              class=${this._simulationNight ? "active" : ""}
+              aria-checked=${String(this._simulationNight)}
+              @click=${() => this._setSimulationNight(true)}
+            >
+              Night
+            </button>
+          </div>
         </div>
       </div>
-      <atmo-weather-card class="simulation-preview"></atmo-weather-card>
     </ha-expansion-panel>`;
   }
   _onToggleGroupChange(e) {

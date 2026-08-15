@@ -1275,6 +1275,7 @@ class AtmosphericWeatherCard extends HTMLElement {
     this._prevCustomCssClasses = null;
     this._boundVisibilityChange = this._handleVisibilityChange.bind(this);
     this._boundTap = this._handleTap.bind(this);
+    this._boundPreviewOverride = this._handlePreviewOverride.bind(this);
     this._fcData = new Map(_fcCache);
     this._fcSubs = new Map();
     this._precisionFmtCache = null;
@@ -1293,6 +1294,10 @@ class AtmosphericWeatherCard extends HTMLElement {
   }
   // HOME ASSISTANT LIFECYCLE
   connectedCallback() {
+    window.addEventListener(
+      "atmo-weather-card-preview",
+      this._boundPreviewOverride,
+    );
     // Load Figtree font from Google Fonts
     if (!window._figtreeLoaded) {
       const link = document.createElement("link");
@@ -1348,6 +1353,10 @@ class AtmosphericWeatherCard extends HTMLElement {
     }
   }
   disconnectedCallback() {
+    window.removeEventListener(
+      "atmo-weather-card-preview",
+      this._boundPreviewOverride,
+    );
     this._stopAnimation();
     if (this._resizeObserver) this._resizeObserver.disconnect();
     if (this._intersectionObserver) this._intersectionObserver.disconnect();
@@ -1661,6 +1670,16 @@ class AtmosphericWeatherCard extends HTMLElement {
     this._previewOverride = next;
     this._lastSnapshot = null;
     if (this._hass) this.hass = this._hass;
+  }
+  _handlePreviewOverride(event) {
+    const detail = event && event.detail;
+    if (
+      !detail ||
+      !this._config ||
+      detail.weatherEntity !== this._config.weather_entity
+    )
+      return;
+    this.setPreviewOverride(detail.preview || null);
   }
   set hass(hass) {
     if (!hass || !this._config) return;

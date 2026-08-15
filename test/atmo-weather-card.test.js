@@ -124,3 +124,36 @@ test("preview override temporarily replaces weather and day/night only", () => {
   assert.equal(card._isTimeNight, false);
   assert.deepEqual(card._config, config);
 });
+
+test("preview events apply only to the matching weather entity", () => {
+  const card = createSetterCard({
+    weather_entity: "weather.home",
+    sun_entity: "sun.home",
+  });
+  card.hass = {
+    states: {
+      "weather.home": { state: "cloudy", attributes: {} },
+      "sun.home": { state: "above_horizon", attributes: {} },
+    },
+    themes: { darkMode: false },
+    config: { latitude: 50 },
+    locale: { language: "de" },
+  };
+
+  card._handlePreviewOverride({
+    detail: {
+      weatherEntity: "weather.other",
+      preview: { weather: "rainy", isNight: true },
+    },
+  });
+  assert.equal(card._lastSnapshot.weather, "cloudy");
+
+  card._handlePreviewOverride({
+    detail: {
+      weatherEntity: "weather.home",
+      preview: { weather: "rainy", isNight: true },
+    },
+  });
+  assert.equal(card._lastSnapshot.weather, "rainy");
+  assert.equal(card._isTimeNight, true);
+});
