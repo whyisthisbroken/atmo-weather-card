@@ -2589,7 +2589,11 @@ class AtmosphericWeatherCard extends HTMLElement {
         // _handleVisibilityChange when the card scrolls into view.
         if (this._isVisible) {
           setTimeout(() => {
-            this._initParticles();
+            try {
+              this._initParticles();
+            } catch (e) {
+              console.error("ATMO-WEATHER-CARD: _initParticles failed", e);
+            }
             if (this._width > 0) this._lastInitWidth = this._width;
             this._startAnimation();
           }, 0);
@@ -4338,7 +4342,11 @@ class AtmosphericWeatherCard extends HTMLElement {
     if (this._isVisible && !wasVisible) {
       if (this._needsReinit) {
         this._needsReinit = false;
-        this._initParticles();
+        try {
+          this._initParticles();
+        } catch (e) {
+          console.error("ATMO-WEATHER-CARD: _initParticles failed", e);
+        }
         if (this._width > 0) this._lastInitWidth = this._width;
       }
       this._startAnimation();
@@ -4389,7 +4397,11 @@ class AtmosphericWeatherCard extends HTMLElement {
     this._lastInitWidth = w;
     requestAnimationFrame(() => {
       if (!this.isConnected) return;
-      this._initParticles(w, h);
+      try {
+        this._initParticles(w, h);
+      } catch (e) {
+        console.error("ATMO-WEATHER-CARD: _initParticles failed", e);
+      }
       this._checkRenderGate();
     });
   }
@@ -4473,7 +4485,11 @@ class AtmosphericWeatherCard extends HTMLElement {
         this._pendingResize = false;
         if (this._elements && this._elements.root)
           this._lastInitWidth = this._elements.root.clientWidth;
-        this._initParticles();
+        try {
+          this._initParticles();
+        } catch (e) {
+          console.error("ATMO-WEATHER-CARD: _initParticles failed", e);
+        }
       }
     }, PERFORMANCE_CONFIG.RESIZE_DEBOUNCE_MS);
   }
@@ -5763,15 +5779,29 @@ class AtmosphericWeatherCard extends HTMLElement {
         return true;
       },
     };
-    for (let i = 0; i < this._clouds.length; i++)
-      this._bakeCloud(this._clouds[i], packer);
-    for (let i = 0; i < this._fgClouds.length; i++)
-      this._bakeCloud(this._fgClouds[i], packer);
+    for (let i = 0; i < this._clouds.length; i++) {
+      try {
+        this._bakeCloud(this._clouds[i], packer);
+      } catch (e) {
+        console.error("ATMO-WEATHER-CARD: failed to bake cloud", e);
+      }
+    }
+    for (let i = 0; i < this._fgClouds.length; i++) {
+      try {
+        this._bakeCloud(this._fgClouds[i], packer);
+      } catch (e) {
+        console.error("ATMO-WEATHER-CARD: failed to bake fg cloud", e);
+      }
+    }
     const palette = rs.celestialCloudPalette;
     const cpCelestial =
       CELESTIAL_CLOUD_PALETTES[palette] || CELESTIAL_CLOUD_PALETTES.cool;
     for (let i = 0; i < this._celestialClouds.length; i++) {
-      this._bakeCelestialCloud(this._celestialClouds[i], cpCelestial);
+      try {
+        this._bakeCelestialCloud(this._celestialClouds[i], cpCelestial);
+      } catch (e) {
+        console.error("ATMO-WEATHER-CARD: failed to bake celestial cloud", e);
+      }
     }
   }
   _bakeCloud(cloud, packer) {
@@ -6443,7 +6473,12 @@ class AtmosphericWeatherCard extends HTMLElement {
       return;
     }
     const effectiveWind = advanceWindAndPulse(this);
-    renderAnimationFrame(this, bg, mid, fg, w, h, dpr, effectiveWind);
+    try {
+      renderAnimationFrame(this, bg, mid, fg, w, h, dpr, effectiveWind);
+    } catch (e) {
+      // A single rendering error must never permanently stop the RAF loop.
+      console.error("ATMO-WEATHER-CARD: render frame failed", e);
+    }
     this._animID = requestAnimationFrame(this._boundAnimate);
   }
   _startAnimation() {
