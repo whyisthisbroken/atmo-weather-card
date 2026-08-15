@@ -497,7 +497,9 @@ export function advanceWindAndPulse(card) {
 
 // Instead of an abrupt teleport, off-screen clouds dissolve and reappear
 // elsewhere after a smooth fade — avoids any hard "wrap" point being visible.
-const CLOUD_FADE_FRAMES = 120; // ~4s at the nominal 30fps baseline
+const CLOUD_FADE_FRAMES = 240; // ~4s at the nominal 30fps baseline
+// Single knob for overall cloud drift speed (1.0 = original v7.1.0 pace).
+const CLOUD_SPEED_SCALE = 0.5;
 
 export function drawClouds(card, ctx, cloudList, w, h, effectiveWind) {
   if (cloudList.length === 0) return;
@@ -519,7 +521,8 @@ export function drawClouds(card, ctx, cloudList, w, h, effectiveWind) {
     const driftWave =
       Math.sin(layerPhase * 2.5 + (cloud.seed || 0) * 0.001) *
       (2 + layer * 2.5);
-    const effectiveSpeed = baseSpeed * effectiveWind * depthFactor * animSpeed;
+    const effectiveSpeed =
+      baseSpeed * effectiveWind * depthFactor * animSpeed * CLOUD_SPEED_SCALE;
     let fadePhase = cloud._fadePhase || "drift";
     let fadeAlpha = cloud._fadeAlpha != null ? cloud._fadeAlpha : 1;
     if (fadePhase === "drift") {
