@@ -14,33 +14,24 @@
 - Forecast support
 - Dashboard-friendly layout / editor
 
-> **Atmo Weather Card** is an independent, actively maintained Lovelace card project. For details on maintenance status and historical background, see **[Maintenance & Archive Info](MAINTENANCE.md)**.
->
-> This README contains the current card documentation with relevant setup, examples, and configuration information.
-
 ---
-
-<br>
 
 ## Contents
 
-**Getting Started** · [Installation](#installation) · [Setup](#setup) · [Examples](#examples)
+**Getting Started** · [Installation](#installation) · [Quick Start](#quick-start) · [Setup](#setup) · [Examples](#examples)
 
 **Customization** · [Appearance](#appearance) · [CSS Variables](#css-variables)
 
-**Guides** · [Chips](#chips) · [Font](#font-family) · [Icons](#weather-icons) · [House Image](#custom-house-image)
-
-**Help** · [Troubleshooting](#troubleshooting)
+**Guides** · [Chips](#chips) · [Layout & Layering](#layout-layering) · [Icons](#weather-icons) · [Performance Tuning](#performance-tuning)
 
 **Reference** · [Color Mode](#color-mode) · [Performance](#performance)
 
-**Maintenance** · [Maintenance & Archive Info](MAINTENANCE.md)
+**Help** · [Troubleshooting](#troubleshooting)
 
-<br>
+**Maintenance** · [Maintenance & Archive Info](MAINTENANCE.md)
 
 > [!NOTE]
 > Parts of the development use AI-assisted coding to move faster than doing everything by hand would allow.
-> <br>
 
 ## Installation
 
@@ -53,8 +44,6 @@ Easiest way to install and manage updates. HACS handles everything for you.
 <details>
 <summary>Installation Steps</summary>
 
-<br>
-
 1. Open **HACS** in Home Assistant.
 2. Navigate to **Settings** → **Custom repositories**.
 3. Add the repository URL: `https://github.com/whyisthisbroken/atmo-weather-card`
@@ -66,8 +55,6 @@ Easiest way to install and manage updates. HACS handles everything for you.
 
 </details>
 
-<br>
-
 ### Method 2: Manual Import
 
 [![Open your Home Assistant instance and navigate to your lovelace resources.](https://my.home-assistant.io/badges/lovelace_resources.svg)](https://my.home-assistant.io/redirect/lovelace_resources/)
@@ -76,8 +63,6 @@ For manual installation without HACS. [Download the latest files from the releas
 
 <details>
 <summary>Installation Steps</summary>
-
-<br>
 
 1. **Download files** from the [latest release](https://github.com/whyisthisbroken/atmo-weather-card/releases):
    - `atmo-weather-card.js`
@@ -91,10 +76,10 @@ For manual installation without HACS. [Download the latest files from the releas
    ```
    config/www/atmo-weather-card/
    ├── atmo-weather-card.js
-    ├── atmo-weather-card-editor.js
-    ├── atmo-weather-animations.js
-    ├── atmo-weather-config.js
-    └── atmo-weather-fauna.js
+   ├── atmo-weather-card-editor.js
+   ├── atmo-weather-animations.js
+   ├── atmo-weather-config.js
+   └── atmo-weather-fauna.js
    ```
 
 3. **Add resource** in Home Assistant:
@@ -112,8 +97,6 @@ For manual installation without HACS. [Download the latest files from the releas
 
 </details>
 
-<br>
-
 ## Setup
 
 | Option               | Type     | Default | Description                                                                                                                                                                                                                             |
@@ -125,13 +108,29 @@ For manual installation without HACS. [Download the latest files from the releas
 > [!NOTE]
 > The `sun_entity` controls the timing of the sun and moon. Without it, the card defaults to permanent day. Additionally, card colors change based on your [configuration](#color-mode).
 
-<br>
+## Quick Start
+
+Add this card to a dashboard after installation, then replace the example entity IDs with your own:
+
+```yaml
+type: custom:atmo-weather-card
+weather_entity: weather.home
+sun_entity: sun.sun
+moon_phase_entity: sensor.moon_phase
+chips:
+  - entity: weather.home
+    attribute: temperature
+    icon: weather
+  - entity: weather.home
+    attribute: humidity
+    icon: mdi:water-percent
+```
+
+Use the visual editor to add or rearrange chips. Browse the [examples](#examples) for complete layouts, or jump to [Appearance](#appearance) for the full configuration reference.
 
 ## Examples
 
-The card is meant to be pretty flexible. You can customize these examples however you like, mix different elements, or combine them with other Home Assistant cards. If you want the exact look from the screenshots, use the guides to add the [fonts](#font-family) and [weather icons](#weather-icons).
-
-<br>
+The card is meant to be pretty flexible. You can customize these examples however you like, mix different elements, or combine them with other Home Assistant cards. If you want the exact look from the screenshots, use the [weather icons](#weather-icons) guide.
 
 <details>
 <summary><b>Forecast Slider</b></summary>
@@ -276,15 +275,11 @@ grid_options:
 
 </details>
 
-<br>
-
 <details>
 <summary><b>Forecast & Mini-graph</b></summary>
 <img width="486" height="182" alt="image" src="https://github.com/user-attachments/assets/5c7df2ef-5054-4ad8-82f5-f76342662eba" />
 
 This example embeds a mini-graph-card with a bit of card-mod styling. For extra drama, the large header text is layered behind the weather elements.
-
-<br>
 
 ```yaml
 type: custom:atmo-weather-card
@@ -439,8 +434,6 @@ custom_cards:
 
 </details>
 
-<br>
-
 <details>
 <summary><b>Forecast & Ring Chip</b></summary>
 <img width="478" height="133" alt="image" src="https://github.com/user-attachments/assets/427bfe78-0bf4-4f40-b966-64aad1eeba81" />
@@ -570,24 +563,14 @@ grid_options:
   rows: auto
 ```
 
-<br>
-
 </details>
-
-<br>
-
-<br>
 
 ## Appearance
 
 The card has a visual editor for setting up layouts. All YAML settings are listed below.
 
-<br>
-
 <details>
 <summary><strong>Where to find things in the editor</strong></summary>
-
-<br>
 
 The visual editor groups settings into collapsible panels, top to bottom:
 
@@ -608,9 +591,9 @@ Card editor
 │                        card_mask_vertical, card_mask_horizontal,
 │                        card_stack_order, card_offset
 ├─ Overlays
-│  ├─ Chips ▸ the chips list (see "Chip editor structure" below)
+│  ├─ Chips ▸ the chips list, row styles, card_background_style
 │  ├─ Image ▸ image_day, image_night, image_scale, image_alignment,
-│  │          image offset, Status Override ▸ status_entity,
+│  │          image_x, image_y, Status Override ▸ status_entity,
 │  │          status_day, status_night
 │  └─ Cards ▸ custom_cards_position, custom_cards_css_class, custom_cards
 ├─ Performance
@@ -622,54 +605,7 @@ Card editor
    └─ card_tap_action
 ```
 
-**Quick lookup by option:**
-
-| Option                        | Editor location                    |
-| :---------------------------- | :--------------------------------- |
-| `weather_entity`              | Top of editor (always visible)     |
-| `sun_entity`                  | Sun & Moon                         |
-| `moon_phase_entity`           | Sun & Moon                         |
-| `celestial_position`          | Sun & Moon → Position & Size       |
-| `celestial_alignment`         | Sun & Moon → Position & Size       |
-| `celestial_x` / `celestial_y` | Sun & Moon → Position & Size       |
-| `celestial_size`              | Sun & Moon → Position & Size       |
-| `celestial_moon_style`        | Sun & Moon → Moon Style            |
-| `card_color_mode`             | Color Mode                         |
-| `theme_entity`                | Color Mode                         |
-| `card_filter`                 | Color Mode → Advanced options      |
-| `card_style`                  | Card Style                         |
-| `card_height`                 | Card Style                         |
-| `card_padding`                | Card Style                         |
-| `card_hide_text`              | Card Style → Advanced options      |
-| `card_square`                 | Card Style → Advanced options      |
-| `card_full_width`             | Card Style → Advanced options      |
-| `card_mask_vertical`          | Card Style → Advanced options      |
-| `card_mask_horizontal`        | Card Style → Advanced options      |
-| `card_stack_order`            | Card Style → Advanced options      |
-| `card_offset`                 | Card Style → Advanced options      |
-| `chips`                       | Overlays → Chips                   |
-| `image_day` / `image_night`   | Overlays → Image                   |
-| `image_scale`                 | Overlays → Image                   |
-| `image_alignment`             | Overlays → Image                   |
-| `status_entity`               | Overlays → Image → Status Override |
-| `status_day` / `status_night` | Overlays → Image → Status Override |
-| `custom_cards`                | Overlays → Cards                   |
-| `custom_cards_position`       | Overlays → Cards                   |
-| `custom_cards_css_class`      | Overlays → Cards                   |
-| `perf_mode`                   | Performance                        |
-| `perf_fps`                    | Performance                        |
-| `perf_cloud_quality`          | Performance                        |
-| `perf_effects`                | Performance                        |
-| `perf_dpr`                    | Performance                        |
-| `perf_fauna`                  | Performance                        |
-| `fauna_bird_density`          | Performance                        |
-| `fauna_plane_density`         | Performance                        |
-| `fauna_bird_flock_size`       | Performance                        |
-| `fauna_birds_at_night`        | Performance                        |
-| `animation_speed`             | Performance                        |
-| `bird_animation_speed`        | Performance                        |
-| `star_animation_speed`        | Performance                        |
-| `card_tap_action`             | Tap Action (bottom)                |
+The sections below document every option, including type, default, and behavior.
 
 </details>
 
@@ -681,6 +617,7 @@ Card editor
 | `card_style`       | `string`            | `immersive` | Set to `standalone` for a solid background with dynamic weather visuals, or `immersive` for a transparent background.                                                                                                                                                                                                                                                           |
 | `card_height`      | `number` · `string` | `200`       | Height in pixels. Numbers are automatically treated as px (e.g., `110` becomes `110px`). **Set to `auto`** to dynamically fill the available height (for grid layouts).                                                                                                                                                                                                         |
 | `card_padding`     | `string`            | `16px`      | Inner padding around the text. Accepts any CSS padding value (e.g., `8px`, `12px 20px`).                                                                                                                                                                                                                                                                                        |
+| `card_hide_text`   | `boolean`           | `false`     | Hides all text overlays, including chips. The card's weather animations and configured chip settings remain available if you enable it again.                                                                                                                                                                                                                                   |
 | `card_square`      | `boolean`           | `false`     | Forces the card into a perfect square. Highly useful for grid layouts.                                                                                                                                                                                                                                                                                                          |
 | `card_full_width`  | `boolean`           | `false`     | Stretches the card edge-to-edge by removing side margins.                                                                                                                                                                                                                                                                                                                       |
 | `card_offset`      | `string`            | `0px`       | Shifts the card using CSS margin (e.g., `"-50px 0px 0px 0px"`). Useful when layering cards.                                                                                                                                                                                                                                                                                     |
@@ -695,7 +632,7 @@ Card editor
 | Option                 | Type      | Default   | Description                                                                                                                                                                                                                                                            |
 | :--------------------- | :-------- | :-------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `card_color_mode`      | `string`  | `auto`    | Controls the card's color scheme. By default, it follows your Home Assistant theme. Set to `entity` to follow a `theme_entity`, or `force_dark` / `force_light` to lock the look. Also accepts `night` / `day` to override the sky content. See [Colors](#color-mode). |
-| `card_filter`          | `string`  | —         | Applies a visual filter preset to the weather canvas. Options: `darken`, `vivid`, `muted`, `warm`.                                                                                                                                                                     |
+| `card_filter`          | `string`  | `none`    | Applies a visual filter preset to the weather canvas. Options: `darken`, `vivid`, `muted`, `warm`.                                                                                                                                                                     |
 | `celestial_moon_style` | `string`  | `default` | The moon's glow color. `default` follows the theme (muted blue in light mode, white in dark mode). Other options: `blue`, `yellow`, `purple`, `grey`.                                                                                                                  |
 | `card_mask_vertical`   | `boolean` | `true`    | _(Immersive only)_ Fades the top and bottom edges. Set to `false` to disable.                                                                                                                                                                                          |
 | `card_mask_horizontal` | `boolean` | `true`    | _(Immersive only)_ Fades the left and right edges. Set to `false` to disable.                                                                                                                                                                                          |
@@ -712,23 +649,18 @@ The sun and moon share a single position and the card swaps them based on your `
 | :-------------------- | :------- | :--------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `celestial_size`      | `number` | _auto_     | Overrides the sun/moon diameter in pixels.                                                                                                                                                                                                                              |
 | `celestial_position`  | `string` | `fixed`    | How the sun and moon are positioned. `fixed` uses the `celestial_alignment`, `celestial_x`, and `celestial_y` values. `dynamic_sun` animates the sun across the sky following the real solar arc (moon stays fixed). `dynamic_both` animates both the sun and the moon. |
-| `celestial_alignment` | `string` | `top-left` | Where the sun and moon anchor inside the card. Same 9-cell grid as `top_text_position` (e.g., `top-left`, `center`, `bottom-right`). Also accepts `left`, `right` as shorthand.                                                                                         |
+| `celestial_alignment` | `string` | `top-left` | Where the sun and moon anchor inside the card. Uses a 9-cell grid (e.g., `top-left`, `center`, `bottom-right`). Also accepts `left`, `right` as shorthand.                                                                                                              |
 | `celestial_x`         | `number` | `0`        | Horizontal offset in pixels from the anchored position.                                                                                                                                                                                                                 |
 | `celestial_y`         | `number` | `0`        | Vertical offset in pixels from the anchored position.                                                                                                                                                                                                                   |
 
 </details>
 
-<details>
-<summary><strong>Chips</strong></summary>
-
-Chips are the main layout element of this card. Each chip can show live entity data or forecast data, and you can add as many as you want. For a walkthrough on how to set them up, see the [Chips guide](#chips).
-
 <a name="chip-editor-structure"></a>
 
 <details>
-<summary><strong>Chip editor structure</strong></summary>
+<summary><strong>Chips: editor structure</strong></summary>
 
-<br>
+Chips are the main layout element of this card. Each chip can show live entity data or forecast data, and you can add as many as you want. For a walkthrough on how to set them up, see the [Chips guide](#chips).
 
 Each chip card in the editor is organized like this, top to bottom:
 
@@ -768,73 +700,6 @@ Chip
    └─ card_tap_action              (scoped to this chip)
 ```
 
-**Quick lookup by option:**
-
-| Option                                       | Editor location                                                 |
-| :------------------------------------------- | :-------------------------------------------------------------- |
-| `entity`                                     | Data source                                                     |
-| `attribute`                                  | Data source                                                     |
-| `forecast`                                   | Forecast box                                                    |
-| `forecast_offset`                            | Forecast box                                                    |
-| `forecast_precision`                         | Forecast box                                                    |
-| `forecast_show_min`                          | Text → Sub value _(internally: `sub_value_attribute: templow`)_ |
-| `forecast_low_position`                      | Text → Sub value _(internally: `sub_value_position`)_           |
-| `type`                                       | Type                                                            |
-| `ring_min` / `bar_min`                       | Type                                                            |
-| `ring_max` / `bar_max`                       | Type                                                            |
-| `ring_width` / `bar_height`                  | Type                                                            |
-| `ring_gap` / `bar_gap`                       | Type                                                            |
-| `ring_color` / `bar_color`                   | Type                                                            |
-| `ring_threshold_mode` / `bar_threshold_mode` | Type                                                            |
-| `ring_thresholds` / `bar_thresholds`         | Type                                                            |
-| `gauge_entity`                               | Type → Ring/Bar entity                                          |
-| `gauge_attribute`                            | Type → Ring/Bar entity                                          |
-| `style`                                      | Layout                                                          |
-| `align`                                      | Layout                                                          |
-| `chip_round`                                 | Layout                                                          |
-| `background`                                 | Layout                                                          |
-| `background_color`                           | Layout                                                          |
-| `width` / `height`                           | Layout                                                          |
-| `padding`                                    | Layout                                                          |
-| `inner_gap`                                  | Layout                                                          |
-| `text_gap`                                   | Layout                                                          |
-| `hide_label`                                 | Text → Label                                                    |
-| `name`                                       | Text → Label                                                    |
-| `name_sensor`                                | Text → Label                                                    |
-| `name_attribute`                             | Text → Label                                                    |
-| `label_size`                                 | Text → Label                                                    |
-| `label_weight`                               | Text → Label                                                    |
-| `label_overflow`                             | Text → Label                                                    |
-| `hide_value`                                 | Text → Value                                                    |
-| `fancy_unit`                                 | Text → Value                                                    |
-| `unit_format`                                | Text → Value                                                    |
-| `value_precision`                            | Text → Value                                                    |
-| `text_size`                                  | Text → Value                                                    |
-| `value_weight`                               | Text → Value                                                    |
-| `overflow`                                   | Text → Value                                                    |
-| `hide_sub_value`                             | Text → Sub value                                                |
-| `sub_value_entity`                           | Text → Sub value                                                |
-| `sub_value_attribute`                        | Text → Sub value                                                |
-| `sub_value_format`                           | Text → Sub value                                                |
-| `sub_value_size`                             | Text → Sub value                                                |
-| `sub_value_weight`                           | Text → Sub value                                                |
-| `sub_value_position`                         | Text → Sub value                                                |
-| `sub_value_overflow`                         | Text → Sub value                                                |
-| `marquee_rtl`                                | Text → Scrolling                                                |
-| `marquee_speed`                              | Text → Scrolling                                                |
-| `hide_icon`                                  | Icon                                                            |
-| `icon`                                       | Icon                                                            |
-| `icon_path`                                  | Icon                                                            |
-| `icon_size`                                  | Icon                                                            |
-| `icon_padding`                               | Icon                                                            |
-| `icon_background`                            | Icon                                                            |
-| `icon_background_color`                      | Icon                                                            |
-| `position`                                   | Position                                                        |
-| `position_anchor`                            | Position                                                        |
-| `position_x` / `position_y`                  | Position                                                        |
-| `behind_effects`                             | Position                                                        |
-| `card_tap_action`                            | Tap Action _(per chip)_                                         |
-
 > [!TIP]
 > Changing the entity in **Data source**, **Label** (`name_sensor`), **Sub value** (`sub_value_entity`), or the **Ring/Bar entity** disclosure (`gauge_entity`) automatically clears that field's attribute, since the previously selected attribute may not exist on the new entity.
 
@@ -866,6 +731,7 @@ Chip
 | `chip_icon_padding`          | `string`  | —             | Global padding around the icon for all chips.                                                                                                                                                                                                                                                         |
 | `chip_icon_background`       | `boolean` | `false`       | Adds a background behind the icon area of each chip.                                                                                                                                                                                                                                                  |
 | `chip_area_background`       | `boolean` | `false`       | Adds a styled background behind each chip (the style is controlled by `card_background_style`).                                                                                                                                                                                                       |
+| `card_background_style`      | `string`  | `frosted`     | Visual treatment used when chip backgrounds are enabled. Options: `frosted` (translucent glass), `contrast` (solid and readable), `theme` (uses Home Assistant theme colors).                                                                                                                         |
 | `chip_area_separator`        | `boolean` | `false`       | Adds a thin divider line between chips. Only visible when `chip_area_grouped` is enabled.                                                                                                                                                                                                             |
 | `chip_background_color`      | `string`  | —             | Custom background color applied to all chips. Accepts any CSS color value, including `rgba()`.                                                                                                                                                                                                        |
 | `chip_icon_background_color` | `string`  | —             | Custom background color for the icon area of all chips.                                                                                                                                                                                                                                               |
@@ -906,8 +772,14 @@ Each entry inside the `chips` list accepts the following keys.
 | `card_tap_action`       | `object`  | `more-info` | A standard Home Assistant [tap action](https://www.home-assistant.io/dashboards/actions/) scoped to this chip.                                                                                                                                                                                                                                                                                 |
 | `name_sensor`           | `string`  | —           | An entity whose state (or attribute) is used as the chip's dynamic name label. Updates in real time.                                                                                                                                                                                                                                                                                           |
 | `name_attribute`        | `string`  | —           | Reads a specific attribute from the `name_sensor` entity instead of its state.                                                                                                                                                                                                                                                                                                                 |
+| `hide_sub_value`        | `boolean` | `false`     | Hides the optional secondary value.                                                                                                                                                                                                                                                                                                                                                            |
+| `sub_value_entity`      | `string`  | —           | Entity used for the secondary value.                                                                                                                                                                                                                                                                                                                                                           |
+| `sub_value_attribute`   | `string`  | —           | Attribute read from `sub_value_entity` instead of its state.                                                                                                                                                                                                                                                                                                                                   |
+| `sub_value_format`      | `string`  | —           | Optional text format for the secondary value.                                                                                                                                                                                                                                                                                                                                                  |
+| `sub_value_position`    | `string`  | —           | Where to display the secondary value. Use `beside` or `below`.                                                                                                                                                                                                                                                                                                                                 |
+| `sub_value_overflow`    | `string`  | `ellipsis`  | How the secondary value handles overflow. Uses the same options as `overflow`.                                                                                                                                                                                                                                                                                                                 |
 | `position`              | `string`  | —           | Set to `custom` to detach this chip from the row and place it freely on the card using `position_anchor`, `position_x`, and `position_y`.                                                                                                                                                                                                                                                      |
-| `position_anchor`       | `string`  | `top-left`  | Anchor point for a free-positioned chip. Same 9-cell grid as `top_text_position`.                                                                                                                                                                                                                                                                                                              |
+| `position_anchor`       | `string`  | `top-left`  | Anchor point for a free-positioned chip. Uses a 9-cell grid (e.g., `top-left`, `center`, `bottom-right`).                                                                                                                                                                                                                                                                                      |
 | `position_x`            | `string`  | `0`         | Horizontal offset for a free-positioned chip (e.g., `20px`, `10%`).                                                                                                                                                                                                                                                                                                                            |
 | `position_y`            | `string`  | `0`         | Vertical offset for a free-positioned chip (e.g., `20px`, `10%`).                                                                                                                                                                                                                                                                                                                              |
 | `behind_effects`        | `boolean` | `false`     | Places the chip behind the weather animations. Only works on free-positioned chips.                                                                                                                                                                                                                                                                                                            |
@@ -922,12 +794,13 @@ Every chip can override the global row styles individually. This is what makes i
 
 | Option                  | Type      | Default | Description                                                                                                                                                                               |
 | :---------------------- | :-------- | :------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `chip_style`            | `string`  | —       | Overrides the global `chip_style` for this chip. Accepts `inline`, `stacked`, or `vertical`.                                                                                              |
+| `style`                 | `string`  | —       | Overrides the global `chip_style` for this chip. Accepts `inline`, `stacked`, or `vertical`.                                                                                              |
 | `background`            | `boolean` | —       | Overrides the global `chip_area_background` for this chip. Set to `false` to hide the background on a specific chip even when backgrounds are globally enabled (or the other way around). |
 | `background_color`      | `string`  | —       | Custom background color for this chip. Accepts any CSS color value, including `rgba()` for transparency.                                                                                  |
 | `padding`               | `string`  | —       | Overrides the chip padding for this chip only.                                                                                                                                            |
 | `text_size`             | `string`  | —       | Overrides the value text size for this chip.                                                                                                                                              |
 | `label_size`            | `string`  | —       | Overrides the name label text size for this chip.                                                                                                                                         |
+| `label_weight`          | `string`  | —       | Font weight of the name label (e.g., `500`, `600`, `700`).                                                                                                                                |
 | `inner_gap`             | `string`  | —       | Overrides the icon/text gap for this chip.                                                                                                                                                |
 | `icon_size`             | `string`  | —       | Overrides the icon size for this chip.                                                                                                                                                    |
 | `icon_padding`          | `string`  | —       | Overrides the icon padding for this chip.                                                                                                                                                 |
@@ -935,22 +808,30 @@ Every chip can override the global row styles individually. This is what makes i
 | `icon_background_color` | `string`  | —       | Custom background color for the icon area. Accepts any CSS color value, including `rgba()`.                                                                                               |
 | `align`                 | `string`  | —       | Content alignment within this chip. Options: `start`, `center`, `end`.                                                                                                                    |
 | `value_weight`          | `string`  | —       | Font weight of the value text (e.g., `500`, `600`, `700`).                                                                                                                                |
+| `sub_value_size`        | `string`  | —       | Overrides the secondary value text size for this chip.                                                                                                                                    |
+| `sub_value_weight`      | `string`  | —       | Font weight of the secondary value (e.g., `500`, `600`, `700`).                                                                                                                           |
 | `text_gap`              | `string`  | —       | Overrides the gap between the name label and value for this chip.                                                                                                                         |
 | `chip_round`            | `boolean` | `false` | Forces a fully rounded (pill) shape on this chip.                                                                                                                                         |
 
 </details>
 
-**Basic example**
+<details>
+<summary><strong>Ring & Bar gauge options</strong></summary>
 
-```yaml
-chips:
-  - entity: weather.your_weather_entity
-    icon: weather
-  - entity: sensor.outside_humidity
-    name: Humidity
-  - entity: sensor.wind_speed
-    icon: mdi:weather-windy
-```
+Setting `type` to `ring` or `bar` turns a chip into a circular or linear gauge instead of standard text. Works well for battery levels, humidity, CPU usage, or any numeric sensor. See the [Chips guide](#chips) for usage examples and threshold configuration.
+
+| Option                                       | Type     | Default         | Description                                                                                                                                                                |
+| :------------------------------------------- | :------- | :-------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `type`                                       | `string` | —               | Set to `ring` or `bar` to enable the gauge.                                                                                                                                |
+| `ring_min` / `bar_min`                       | `number` | `0`             | Minimum value for the gauge range.                                                                                                                                         |
+| `ring_max` / `bar_max`                       | `number` | `100`           | Maximum value for the gauge range.                                                                                                                                         |
+| `ring_width` / `bar_height`                  | `number` | `4`             | Thickness of the ring stroke, or height of the bar, in pixels.                                                                                                             |
+| `ring_gap` / `bar_gap`                       | `number` | `3`             | Gap between the gauge and the chip content in pixels.                                                                                                                      |
+| `ring_color` / `bar_color`                   | `string` | _theme primary_ | Color of the filled portion. Accepts any CSS color.                                                                                                                        |
+| `ring_threshold_mode` / `bar_threshold_mode` | `string` | —               | How thresholds are applied. `solid` fills the whole gauge with the matched color. `segments` draws each range as a separate arc/segment. `gradient` blends between colors. |
+| `ring_thresholds` / `bar_thresholds`         | `list`   | —               | A list of `{ value, color }` entries. The gauge changes color once the value passes a threshold.                                                                           |
+| `gauge_entity`                               | `string` | —               | Optional secondary entity that drives the gauge fill, independent of the chip's main `entity`/`attribute`.                                                                 |
+| `gauge_attribute`                            | `string` | —               | Reads a specific attribute from `gauge_entity` instead of its state.                                                                                                       |
 
 </details>
 
@@ -959,15 +840,17 @@ chips:
 
 You can add your own images (such as a house image) to the card. This works in both standalone and immersive modes. See the [Custom House Image](#custom-house-image) tutorial for a step-by-step guide.
 
-| Option            | Type     | Default     | Description                                                                                                                          |
-| :---------------- | :------- | :---------- | :----------------------------------------------------------------------------------------------------------------------------------- |
-| `image_day`       | `string` | —           | File path for the daytime image (e.g., `/local/house-day.png`).                                                                      |
-| `image_night`     | `string` | —           | File path for the nighttime image. Falls back to the day image if left empty.                                                        |
-| `image_scale`     | `number` | `100`       | Image size as a percentage of the total card height.                                                                                 |
-| `image_alignment` | `string` | `top-right` | Image placement. Options: `center`, `top-right`, `top-left`, `top-center`, `bottom`, `bottom-center`, `bottom-left`, `bottom-right`. |
-| `status_entity`   | `string` | —           | An entity to monitor (e.g., a door sensor). See Smart Status Entity.                                                                 |
-| `status_day`      | `string` | —           | The day image to display when the status entity becomes active.                                                                      |
-| `status_night`    | `string` | —           | The night image to display when the status entity becomes active.                                                                    |
+| Option            | Type     | Default     | Description                                                                                                                                               |
+| :---------------- | :------- | :---------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `image_day`       | `string` | —           | File path for the daytime image (e.g., `/local/house-day.png`).                                                                                           |
+| `image_night`     | `string` | —           | File path for the nighttime image. Falls back to the day image if left empty.                                                                             |
+| `image_scale`     | `number` | `100`       | Image size as a percentage of the total card height.                                                                                                      |
+| `image_alignment` | `string` | `top-right` | Image placement. Options: `top-left`, `top-center`, `top-right`, `center-left`, `center`, `center-right`, `bottom-left`, `bottom-center`, `bottom-right`. |
+| `image_x`         | `string` | `0`         | Horizontal offset from the selected image alignment. Accepts pixels or CSS values such as `-20` or `10%`.                                                 |
+| `image_y`         | `string` | `0`         | Vertical offset from the selected image alignment. Accepts pixels or CSS values such as `10` or `-5%`.                                                    |
+| `status_entity`   | `string` | —           | Entity to monitor for a status-specific image (for example a door sensor).                                                                                |
+| `status_day`      | `string` | —           | Day image to show while `status_entity` is active, open, or home.                                                                                         |
+| `status_night`    | `string` | —           | Night image to show while `status_entity` is active, open, or home.                                                                                       |
 
 </details>
 
@@ -1011,7 +894,7 @@ custom_cards:
 | `--awc-card-border-radius`     | `12px`       | Adjusts the corner radius.                                                                                |
 | `--awc-card-border-width`      | _HA theme_   | Overrides the card's border width. Inherits from the Home Assistant theme by default.                     |
 | `--awc-card-padding`           | `16px`       | Padding space around the text.                                                                            |
-| `--awc-canvas-filter`          | `none`       | Applies a custom CSS filter to the canvas (this overrides the `filter` config option).                    |
+| `--awc-canvas-filter`          | `none`       | Applies a custom CSS filter to the canvas (this overrides the `card_filter` config option).               |
 | `--awc-stack-order`            | `-1` / `1`   | Controls the stacking order (z-index) of the card. Defaults to `-1` for immersive and `1` for standalone. |
 | `--awc-custom-cards-direction` | `row`        | Flex direction of the custom cards container.                                                             |
 | `--awc-custom-cards-gap`       | `8px`        | Gap between items in the custom cards container.                                                          |
@@ -1042,7 +925,7 @@ custom_cards:
 | `--awc-chip-gap`           | `6px`                                      | Gap between the icon and text inside each chip.                                                   |
 | `--awc-chips-padding`      | `0` (`5px 10px` with background)           | Inner padding of each chip.                                                                       |
 | `--awc-row-width`          | `calc(100% - padding)`                     | Width of the chips row. Overrides the `chip_area_width` option.                                   |
-| `--awc-row-height`         | `auto`                                     | Height of the chips row. Overrides the `chips_height` option.                                     |
+| `--awc-row-height`         | `auto`                                     | Height of the chips row. Overrides the `chip_area_height` option.                                 |
 | `--awc-row-columns`        | `3`                                        | Number of columns when `chip_area_layout: grid` is active.                                        |
 | `--awc-row-fade-l`         | _auto_                                     | Left edge fade width for the scrolling chip row.                                                  |
 | `--awc-row-fade-r`         | _auto_                                     | Right edge fade width for the scrolling chip row.                                                 |
@@ -1104,28 +987,6 @@ card_mod:
 
 </details>
 
-<br>
-
-## Color Mode
-
-The card's appearance depends on your **`sun_entity`** (sun or moon) and your **`card_color_mode`** (light or dark).
-
-<details>
-<summary><strong>How to set this up</strong></summary>
-
-<br>
-
-| Mode                     | Config                                                                        | What it does                                                                                                                                                                                                                                                                                                             |
-| :----------------------- | :---------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Follow your HA theme** | `sun_entity: sun.sun`                                                         | The card shows the sun during the day and the moon at night, syncing its colors to whatever your Home Assistant theme is doing. Android and iOS can auto-toggle dark mode based on sunrise and sunset — this is exactly what the card was designed for.                                                                  |
-| **Follow the sun**       | `sun_entity: sun.sun`<br>`card_color_mode: entity`<br>`theme_entity: sun.sun` | The card switches between light and dark at the real sunrise and sunset, regardless of what your Home Assistant theme is doing. Its colors match the time of day no matter what the rest of your dashboard looks like.                                                                                                   |
-| **Force light or dark**  | `card_color_mode: force_dark`<br>or `card_color_mode: force_light`            | Locks the card's colors to one value. The sky still follows `sun_entity`, so you still get the moon and stars at night — only the card's colors are forced.                                                                                                                                                              |
-| **Custom logic**         | `card_color_mode: entity`<br>`theme_entity: sensor.my_custom_mode`            | `theme_entity` can point at any entity — a template sensor, an `input_boolean`, or anything else. The card switches to its dark look when the state is `dark`, `night`, `evening`, `on`, `true`, or `below_horizon`. Anything else counts as light. Useful for rules like "dark after 9pm" or "dark when it's overcast". |
-
-</details>
-
-<br>
-
 ## Guides
 
 <a name="chips"></a>
@@ -1133,12 +994,22 @@ The card's appearance depends on your **`sun_entity`** (sun or moon) and your **
 <details>
 <summary><b>Chips & Forecasts</b></summary>
 
-Chips are basically buttons you can optionally add to the card. You can add as many as you like and show live info, like current weather conditions or data from any Home Assistant entity, but also weather forecasts. You can leave them grouped in a row and make them all look the same (useful for building a daily forecast), or you can style and position each one individually. All available settings are listed in the [Appearance](#appearance) section.
+Chips are basically buttons you can optionally add to the card. You can add as many as you like and show live info, like current weather conditions or data from any Home Assistant entity, but also weather forecasts. You can leave them grouped in a row and make them all look the same (useful for building a daily forecast), or you can style and position each one individually. Full option references (Row options, Per-chip options, Per-chip style overrides, Ring & Bar gauge options) live in the [Appearance](#appearance) section — the walkthroughs below only cover the "how" with examples.
+
+Start with a simple chip row:
+
+```yaml
+chips:
+  - entity: weather.your_weather_entity
+    icon: weather
+  - entity: sensor.outside_humidity
+    name: Humidity
+  - entity: sensor.wind_speed
+    icon: mdi:weather-windy
+```
 
 <details>
 <summary><strong>Forecast chips</strong></summary>
-
-<br>
 
 By default, a chip reads the current state of its entity. Setting `forecast` to `daily` or `hourly` switches it to forecast mode instead. In this mode, the chip subscribes to the weather entity's forecast data and displays a specific future entry.
 
@@ -1164,44 +1035,12 @@ chips:
 
 The first chip shows tomorrow's temperature range (low – high) with a weather icon matching tomorrow's condition. The second chip shows the temperature 3 hours from now, with `°` directly after the value instead of the full unit.
 
-**Forecast-specific options at a glance:**
-
-| Option               | What it does                                                                                        |
-| :------------------- | :-------------------------------------------------------------------------------------------------- |
-| `forecast`           | `daily` or `hourly` — switches the chip to forecast mode.                                           |
-| `forecast_offset`    | Which entry to show (0 = today/now, 1 = tomorrow/+1h, etc.).                                        |
-| `forecast_precision` | Decimal places for the value (0–2).                                                                 |
-| `forecast_show_min`  | Shows the low/high range. Daily temperature only. Editor maps this to sub-value options internally. |
-| `unit_format`        | Replaces the unit string (e.g., `°`). Works on both live and forecast chips.                        |
-
-</details>
-
-<details>
-<summary><strong>Value precision</strong></summary>
-
-<br>
-
-By default (no `value_precision` set), a chip's main value uses Home Assistant's own **Display Precision** for that entity/attribute — the same rounding shown in More Info dialogs and other Lovelace cards. This is the "Auto" option in the editor.
-
-Set `value_precision` to `0`, `1`, or `2` to override this and always show an exact number of decimals, even for whole numbers (e.g. `22` becomes `22.0` at precision `1`).
-
-```yaml
-chips:
-  - entity: sensor.outside_temperature
-    value_precision: 1
-  - entity: sensor.outside_humidity
-    value_precision: 0
-```
-
-> [!NOTE]
-> `value_precision` affects a chip's main value only. Forecast chips use the separate `forecast_precision` option instead, which only limits the maximum number of decimals shown and trims trailing zeros.
+For the full list of forecast-related options (`forecast`, `forecast_offset`, `forecast_precision`, `forecast_show_min`, `forecast_low_position`, `value_precision`, `unit_format`), see **Per-chip options** in [Appearance](#appearance).
 
 </details>
 
 <details>
 <summary><strong>Per-chip styling</strong></summary>
-
-<br>
 
 Every chip can override the global row styles. This means you can mix different chip formats, backgrounds, sizes, and spacing in one card without needing separate rows or CSS hacks.
 
@@ -1225,16 +1064,12 @@ chips:
     icon_path: /local/weather-icons/
 ```
 
-The first two chips follow the global `inline` style and default background. The third chip overrides everything it needs to look different.
-
-All per-chip style overrides are listed in the [Appearance](#appearance) section under "Per-chip style overrides".
+The first two chips follow the global `inline` style and default background. The third chip overrides everything it needs to look different. All per-chip style overrides are listed under **Per-chip style overrides** in [Appearance](#appearance).
 
 </details>
 
 <details>
 <summary><strong>Free positioning</strong></summary>
-
-<br>
 
 Any chip can be pulled out of the row and placed freely on the card. Set `position: custom` and use the anchor/offset system to put it exactly where you want.
 
@@ -1255,11 +1090,9 @@ Free-positioned chips can still use all the same styling and forecast options as
 </details>
 
 <details>
-<summary><strong>Ring gauge</strong></summary>
+<summary><strong>Ring & bar gauges</strong></summary>
 
-<br>
-
-Any chip can be turned into a circular gauge by setting `type: ring`. The ring fills proportionally based on the entity's value within a min/max range. This works well for things like battery levels, humidity, CPU usage, or any numeric sensor.
+Any chip can be turned into a circular or linear gauge by setting `type: ring` or `type: bar`. The gauge fills proportionally based on the entity's value within a min/max range. This works well for things like battery levels, humidity, CPU usage, or any numeric sensor.
 
 ```yaml
 chips:
@@ -1275,7 +1108,7 @@ chips:
     icon: mdi:water-percent
 ```
 
-You can add color thresholds that change the ring color when the value passes a certain point. Threshold colors support three modes: `solid` fills the entire ring with the matching threshold color, `segments` draws each threshold range as a separate colored arc, and `gradient` blends smoothly between threshold colors.
+You can add color thresholds that change the gauge color when the value passes a certain point. Threshold colors support three modes: `solid` fills the entire gauge with the matching threshold color, `segments` draws each threshold range as a separate colored arc/segment, and `gradient` blends smoothly between threshold colors.
 
 ```yaml
 chips:
@@ -1292,35 +1125,43 @@ chips:
         color: "#f44336"
 ```
 
-**Ring-specific options:**
-
-| Option                | What it does                                                                                                                                                      |
-| :-------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `type`                | Set to `ring` to enable the ring gauge.                                                                                                                           |
-| `ring_min`            | Minimum value for the gauge range (default `0`).                                                                                                                  |
-| `ring_max`            | Maximum value for the gauge range (default `100`).                                                                                                                |
-| `ring_width`          | Thickness of the ring stroke in pixels (default `4`).                                                                                                             |
-| `ring_gap`            | Gap between the ring and the chip content in pixels (default `3`).                                                                                                |
-| `ring_color`          | Color of the filled portion. Accepts any CSS color. Defaults to your theme's primary color.                                                                       |
-| `ring_threshold_mode` | How thresholds are applied. `solid` fills the whole ring with the matched color. `segments` draws each range as a separate arc. `gradient` blends between colors. |
-| `ring_thresholds`     | A list of `{ value, color }` entries. The ring changes color when the value exceeds a threshold.                                                                  |
+Full option reference (including the `bar` equivalents and `gauge_entity`/`gauge_attribute`) is under **Ring & Bar gauge options** in [Appearance](#appearance).
 
 </details>
 
-<br>
-
 </details>
 
-<a name="font-family"></a>
+<a name="layout-layering"></a>
 
 <details>
-<summary><b>Font Family</b></summary>
+<summary><b>Layout & Layering</b></summary>
 
-<br>
+Use `standalone` when the card should have its own background. Use `immersive` when it should visually blend with neighboring cards or sit behind other dashboard content.
 
-The screenshots throughout this README use the **Montserrat** font, which you can download or embed directly from [Google Fonts](https://fonts.google.com/specimen/Montserrat). Once it's loaded into your Home Assistant frontend (for example via a custom theme), it applies to this card along with the rest of your dashboard, since the card inherits whatever font your theme sets.
+For layered layouts, position the sun or moon with its alignment and offsets, then detach individual chips from the row with `position: custom`. Use `card_offset` only when cards need to overlap, and increase `card_stack_order` in small steps when the card needs to render above another card.
 
-<br>
+```yaml
+type: custom:atmo-weather-card
+weather_entity: weather.your_weather_entity
+sun_entity: sun.sun
+card_style: immersive
+card_stack_order: 1
+celestial_alignment: top-right
+celestial_x: 16
+celestial_y: 12
+chips:
+  - entity: weather.your_weather_entity
+    attribute: temperature
+    position: custom
+    position_anchor: top-left
+    position_x: 16px
+    position_y: 16px
+    hide_icon: true
+    hide_label: true
+    background: false
+```
+
+`custom_cards` can be placed in the same card for graphs, buttons, or other Lovelace cards. If elements overlap, adjust one property at a time: first `card_stack_order`, then `card_offset`, then the position of individual chips or embedded cards. Full option details are in [Appearance](#appearance).
 
 </details>
 
@@ -1328,8 +1169,6 @@ The screenshots throughout this README use the **Montserrat** font, which you ca
 
 <details>
 <summary><b>Weather Icons</b></summary>
-
-<br>
 
 You can replace the default MDI icons inside a chip with your own animated SVG files. The examples use [these](https://github.com/basmilius/weather-icons).
 
@@ -1345,8 +1184,6 @@ chips:
 ```
 
 The card then resolves the icon by the current weather state. For example, `rainy` weather loads `/local/weather-icons/rainy.svg`.
-
-<br>
 
 </details>
 
@@ -1364,11 +1201,52 @@ This explains how to create an image for your own home and use it in the card.
 4. **Create day and night variants** by adjusting the prompt appropriately.
 5. **Upload the files** to your `config/www/images/` directory and reference them in the card config as `/local/images/my-house-day.png`.
 
-<br>
+</details>
+
+<a name="performance-tuning"></a>
+
+<details>
+<summary><b>Performance Tuning</b></summary>
+
+Start with a preset and only override individual values when you need a specific trade-off. Explicit performance values always take precedence over `perf_mode`.
+
+| Situation                                             | Recommended setting  | Result                                             |
+| :---------------------------------------------------- | :------------------- | :------------------------------------------------- |
+| Older tablet, wall panel, or battery-conscious device | `perf_mode: low`     | Reduces rendering load and disables extra effects. |
+| Most dashboards                                       | `perf_mode: default` | Balanced animation quality and resource use.       |
+| Powerful desktop or dedicated display                 | `perf_mode: ultra`   | Prioritizes frame rate and cloud detail.           |
+
+When the dashboard stutters, reduce settings in this order: `perf_dpr`, `perf_fps`, `perf_effects`, then `perf_fauna`. This usually preserves the card's layout while lowering GPU and CPU work.
+
+```yaml
+type: custom:atmo-weather-card
+weather_entity: weather.your_weather_entity
+perf_mode: default
+perf_dpr: 1
+perf_fps: 30
+perf_effects: 0
+perf_fauna: 1
+```
+
+Test one change at a time. See [Performance](#performance) for the complete reference and [Troubleshooting](#performance-is-weak-on-older-devices) for device-specific recovery steps.
 
 </details>
 
-<br>
+## Color Mode
+
+The card's appearance depends on your **`sun_entity`** (sun or moon) and your **`card_color_mode`** (light or dark).
+
+<details>
+<summary><strong>How to set this up</strong></summary>
+
+| Mode                     | Config                                                                        | What it does                                                                                                                                                                                                                                                                                                             |
+| :----------------------- | :---------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Follow your HA theme** | `sun_entity: sun.sun`                                                         | The card shows the sun during the day and the moon at night, syncing its colors to whatever your Home Assistant theme is doing. Android and iOS can auto-toggle dark mode based on sunrise and sunset — this is exactly what the card was designed for.                                                                  |
+| **Follow the sun**       | `sun_entity: sun.sun`<br>`card_color_mode: entity`<br>`theme_entity: sun.sun` | The card switches between light and dark at the real sunrise and sunset, regardless of what your Home Assistant theme is doing. Its colors match the time of day no matter what the rest of your dashboard looks like.                                                                                                   |
+| **Force light or dark**  | `card_color_mode: force_dark`<br>or `card_color_mode: force_light`            | Locks the card's colors to one value. The sky still follows `sun_entity`, so you still get the moon and stars at night — only the card's colors are forced.                                                                                                                                                              |
+| **Custom logic**         | `card_color_mode: entity`<br>`theme_entity: sensor.my_custom_mode`            | `theme_entity` can point at any entity — a template sensor, an `input_boolean`, or anything else. The card switches to its dark look when the state is `dark`, `night`, `evening`, `on`, `true`, or `below_horizon`. Anything else counts as light. Useful for rules like "dark after 9pm" or "dark when it's overcast". |
+
+</details>
 
 ## Performance
 
@@ -1388,8 +1266,6 @@ Even with all this effort, older setups might still struggle, and the birds may 
 
 <details>
 <summary><strong>Performance Settings</strong></summary>
-
-<br>
 
 The card has three performance presets (`low`, `default`, and `ultra`) which cover most setups. If you need more control, each setting can be changed individually. Any value set manually overrides the preset.
 
@@ -1433,9 +1309,10 @@ bird_animation_speed: 1.4 # Birds only; multiplied on top of animation_speed
 star_animation_speed: 0.6 # Stars only; twinkle speed (0.0-2.0)
 ```
 
-<br>
-
 ## Troubleshooting
+
+<details>
+<summary><strong>Installation & Updates</strong></summary>
 
 ### Editor preview stutters or FPS looks wrong after install/update
 
@@ -1446,10 +1323,12 @@ star_animation_speed: 0.6 # Stars only; twinkle speed (0.0-2.0)
 
 1. Verify the resource URL is correct: `/local/atmo-weather-card/atmo-weather-card.js`.
 2. Verify all files exist in `config/www/atmo-weather-card/`:
-   - `atmo-weather-card.js`
-   - `atmo-weather-card-editor.js`
-   - `atmo-weather-animations.js`
-   - `atmo-weather-fauna.js`
+
+- `atmo-weather-card.js`
+- `atmo-weather-card-editor.js`
+- `atmo-weather-animations.js`
+- `atmo-weather-config.js`
+- `atmo-weather-fauna.js`
 
 ### Changes are not visible after update
 
@@ -1457,6 +1336,11 @@ star_animation_speed: 0.6 # Stars only; twinkle speed (0.0-2.0)
 2. Hard-refresh the dashboard.
 3. Verify the Lovelace resource still points to `/local/atmo-weather-card/atmo-weather-card.js`.
 4. If needed, reload Home Assistant frontend once.
+
+</details>
+
+<details>
+<summary><strong>Layout & Editor</strong></summary>
 
 ### Editor values differ from runtime defaults
 
@@ -1474,13 +1358,16 @@ star_animation_speed: 0.6 # Stars only; twinkle speed (0.0-2.0)
 1. Increase `card_stack_order` step by step (for example `1`, then `2`).
 2. Check `card_offset` and card placement if cards visually overlap.
 
-### No birds or planes are visible
+### Attribute shows N/A after changing a chip's sensor
 
-1. Check `perf_fauna`:
-   - `0` = no fauna
-   - `1` = birds only
-   - `2` = birds and planes
-2. Check your density settings (`fauna_bird_density`, `fauna_plane_density`) and wait a short time for spawns.
+1. Since v6.6.5, changing a chip's entity (`entity`, `name_sensor`, `sub_value_entity`, `gauge_entity`) automatically clears its attribute field, since the previously selected attribute may not exist on the new entity.
+2. On older versions, manually clear or re-select the attribute field after switching the entity.
+3. Update to the latest release to get this automatic reset.
+
+</details>
+
+<details>
+<summary><strong>Data & Effects</strong></summary>
 
 ### Weather entity is unavailable or values look wrong
 
@@ -1488,23 +1375,32 @@ star_animation_speed: 0.6 # Stars only; twinkle speed (0.0-2.0)
 2. Confirm the entity has valid state/attributes (temperature, wind, etc.).
 3. If unavailable, fix entity availability first, then reload the dashboard.
 
-### Chip value shows no decimal places, or the unit disappeared
+### No birds or planes are visible
 
-1. On "Auto" (no `value_precision` set), decimal places follow Home Assistant's own **Display Precision** for that entity/attribute (**Settings → Devices & services → Entities** → your entity → **Advanced settings**). The card does not control this.
-2. Set `value_precision` (`0`, `1`, or `2`) on the chip to force an exact number of decimals regardless of the entity's own precision.
-3. Make sure you're on v6.6.4 or later — earlier versions could drop the unit or trim trailing zero decimals while `value_precision` was set.
+1. Check `perf_fauna`:
 
-### Attribute shows N/A after changing a chip's sensor
+- `0` = no fauna
+- `1` = birds only
+- `2` = birds and planes
 
-1. Since v6.6.5, changing a chip's entity (`entity`, `name_sensor`, `sub_value_entity`, `gauge_entity`) automatically clears its attribute field, since the previously selected attribute may not exist on the new entity.
-2. On older versions, manually clear or re-select the attribute field after switching the entity.
-3. Update to the latest release to get this automatic reset.
+2. Check your density settings (`fauna_bird_density`, `fauna_plane_density`) and wait a short time for spawns.
 
 ### No night effects (stars/comets) are visible
 
 1. Verify day/night detection is correct (`sun_entity`, card color mode, and weather conditions).
 2. Ensure `perf_effects` is `1` or `2`.
 3. Wait briefly after state transitions for particle initialization.
+
+</details>
+
+<details>
+<summary><strong>Display & Performance</strong></summary>
+
+### Chip value shows no decimal places, or the unit disappeared
+
+1. On "Auto" (no `value_precision` set), decimal places follow Home Assistant's own **Display Precision** for that entity/attribute (**Settings → Devices & services → Entities** → your entity → **Advanced settings**). The card does not control this.
+2. Set `value_precision` (`0`, `1`, or `2`) on the chip to force an exact number of decimals regardless of the entity's own precision.
+3. Make sure you're on v6.6.4 or later — earlier versions could drop the unit or trim trailing zero decimals while `value_precision` was set.
 
 ### Performance is weak on older devices
 
@@ -1513,7 +1409,11 @@ star_animation_speed: 0.6 # Stars only; twinkle speed (0.0-2.0)
 3. Reduce fauna/effects intensity if needed.
 4. On high-DPI displays, reducing `perf_dpr` usually helps the most.
 
-<br>
+</details>
+
+## Maintenance
+
+Atmo Weather Card is an independent, actively maintained Lovelace card project. See [Maintenance & Archive Info](MAINTENANCE.md) for maintenance status and historical background.
 
 ## License
 
