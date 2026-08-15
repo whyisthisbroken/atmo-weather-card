@@ -22,9 +22,9 @@
 
 **Customization** · [Appearance](#appearance) · [CSS Variables](#css-variables)
 
-**Guides** · [Chips](#chips) · [Layout & Layering](#layout-layering) · [Icons](#weather-icons) · [Performance Tuning](#performance-tuning)
+**Guides** · [Chips](#chips) · [Layout & Layering](#layout-layering) · [Icons](#weather-icons)
 
-**Reference** · [Color Mode](#color-mode) · [Performance](#performance)
+**Reference** · [Color Mode](#color-mode) · [Performance](#performance) · [Performance Tuning](#performance-tuning)
 
 **Help** · [Troubleshooting](#troubleshooting)
 
@@ -1203,12 +1203,25 @@ This explains how to create an image for your own home and use it in the card.
 
 </details>
 
-<a name="performance-tuning"></a>
+## Color Mode
+
+The card's appearance depends on your **`sun_entity`** (sun or moon) and your **`card_color_mode`** (light or dark).
 
 <details>
-<summary><b>Performance Tuning</b></summary>
+<summary><strong>How to set this up</strong></summary>
 
-Start with a preset and only override individual values when you need a specific trade-off. Explicit performance values always take precedence over `perf_mode`.
+| Mode                     | Config                                                                        | What it does                                                                                                                                                                                                                                                                                                             |
+| :----------------------- | :---------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Follow your HA theme** | `sun_entity: sun.sun`                                                         | The card shows the sun during the day and the moon at night, syncing its colors to whatever your Home Assistant theme is doing. Android and iOS can auto-toggle dark mode based on sunrise and sunset — this is exactly what the card was designed for.                                                                  |
+| **Follow the sun**       | `sun_entity: sun.sun`<br>`card_color_mode: entity`<br>`theme_entity: sun.sun` | The card switches between light and dark at the real sunrise and sunset, regardless of what your Home Assistant theme is doing. Its colors match the time of day no matter what the rest of your dashboard looks like.                                                                                                   |
+| **Force light or dark**  | `card_color_mode: force_dark`<br>or `card_color_mode: force_light`            | Locks the card's colors to one value. The sky still follows `sun_entity`, so you still get the moon and stars at night — only the card's colors are forced.                                                                                                                                                              |
+| **Custom logic**         | `card_color_mode: entity`<br>`theme_entity: sensor.my_custom_mode`            | `theme_entity` can point at any entity — a template sensor, an `input_boolean`, or anything else. The card switches to its dark look when the state is `dark`, `night`, `evening`, `on`, `true`, or `below_horizon`. Anything else counts as light. Useful for rules like "dark after 9pm" or "dark when it's overcast". |
+
+</details>
+
+## Performance
+
+Start with a `perf_mode` preset. Individual performance settings override the preset.
 
 | Situation                                             | Recommended setting  | Result                                             |
 | :---------------------------------------------------- | :------------------- | :------------------------------------------------- |
@@ -1228,41 +1241,7 @@ perf_effects: 0
 perf_fauna: 1
 ```
 
-Test one change at a time. See [Performance](#performance) for the complete reference and [Troubleshooting](#performance-is-weak-on-older-devices) for device-specific recovery steps.
-
-</details>
-
-## Color Mode
-
-The card's appearance depends on your **`sun_entity`** (sun or moon) and your **`card_color_mode`** (light or dark).
-
-<details>
-<summary><strong>How to set this up</strong></summary>
-
-| Mode                     | Config                                                                        | What it does                                                                                                                                                                                                                                                                                                             |
-| :----------------------- | :---------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Follow your HA theme** | `sun_entity: sun.sun`                                                         | The card shows the sun during the day and the moon at night, syncing its colors to whatever your Home Assistant theme is doing. Android and iOS can auto-toggle dark mode based on sunrise and sunset — this is exactly what the card was designed for.                                                                  |
-| **Follow the sun**       | `sun_entity: sun.sun`<br>`card_color_mode: entity`<br>`theme_entity: sun.sun` | The card switches between light and dark at the real sunrise and sunset, regardless of what your Home Assistant theme is doing. Its colors match the time of day no matter what the rest of your dashboard looks like.                                                                                                   |
-| **Force light or dark**  | `card_color_mode: force_dark`<br>or `card_color_mode: force_light`            | Locks the card's colors to one value. The sky still follows `sun_entity`, so you still get the moon and stars at night — only the card's colors are forced.                                                                                                                                                              |
-| **Custom logic**         | `card_color_mode: entity`<br>`theme_entity: sensor.my_custom_mode`            | `theme_entity` can point at any entity — a template sensor, an `input_boolean`, or anything else. The card switches to its dark look when the state is `dark`, `night`, `evening`, `on`, `true`, or `below_horizon`. Anything else counts as light. Useful for rules like "dark after 9pm" or "dark when it's overcast". |
-
-</details>
-
-## Performance
-
-> [!NOTE]
-> Performance handling was significantly overhauled compared to the original Atmospheric Weather Card (v4.5).
->
-> The new `perf_fps` option lets you control the animation frame rate directly (previously fixed at ~30fps),
-> all performance values (`perf_fps`, `perf_cloud_quality`, `perf_dpr`) are now automatically validated and clamped to safe ranges,
-> and chip rendering uses incremental DOM patching instead of a full rebuild on every update,
-> this reducing unnecessary re-renders and improving overall smoothness, especially on weaker devices or setups with many chips.
-
-Fast performance and impressive animations are basically natural enemies when building a card for Home Assistant. Changing even a tiny detail, like how the clouds or stars work, can instantly slow the dashboard down. There were so many times I got an effect looking absolutely perfect, only to realize it was too heavy and had to replace it with a simpler version.
-
-The card uses every trick available to keep things running smoothly. Because of this, almost a third of the code exists purely to keep the card fast. I really dislike how much this adds to the size of the code, but that is just how it is.
-
-Even with all this effort, older setups might still struggle, and the birds may stutter. If that happens, try switching `perf_mode` to `low`: it disables the extra effects and lowers the rendering resolution. You can also fine-tune the frame rate, cloud detail, effects intensity, and canvas sharpness individually.
+Test one change at a time. See [Troubleshooting](#performance-is-weak-on-older-devices) for device-specific recovery steps.
 
 <details>
 <summary><strong>Performance Settings</strong></summary>
@@ -1287,7 +1266,10 @@ The card has three performance presets (`low`, `default`, and `ultra`) which cov
 
 </details>
 
-#### Example: Custom Fauna Configuration
+<details>
+<summary><strong>Examples</strong></summary>
+
+#### Custom Fauna Configuration
 
 ```yaml
 type: custom:atmo-weather-card
@@ -1299,7 +1281,7 @@ fauna_bird_flock_size: 10 # Higher average flock size (actual spawn count still 
 fauna_birds_at_night: false # Disable birds during night
 ```
 
-#### Example: Animation Speed Control
+#### Animation Speed Control
 
 ```yaml
 type: custom:atmo-weather-card
@@ -1308,6 +1290,8 @@ animation_speed: 1.0 # Global animation speed (0.0-3.0)
 bird_animation_speed: 1.4 # Birds only; multiplied on top of animation_speed
 star_animation_speed: 0.6 # Stars only; twinkle speed (0.0-2.0)
 ```
+
+</details>
 
 ## Troubleshooting
 
