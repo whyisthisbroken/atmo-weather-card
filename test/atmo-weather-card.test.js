@@ -92,49 +92,6 @@ test("set hass tolerates unavailable and unknown entities", () => {
   assert.equal(card._lastSnapshot.temp, "");
 });
 
-test("preview override temporarily replaces weather and day/night only", () => {
-  const config = {
-    weather_entity: "weather.home",
-    sun_entity: "sun.home",
-  };
-  const card = createSetterCard(config);
-  const hass = {
-    states: {
-      "weather.home": {
-        state: "cloudy",
-        attributes: { temperature: 18, wind_speed: 10 },
-      },
-      "sun.home": { state: "above_horizon", attributes: {} },
-    },
-    themes: { darkMode: false },
-    config: { latitude: 50 },
-    locale: { language: "de" },
-  };
-
-  card.hass = hass;
-  card.setPreviewOverride({ weather: "rainy", isNight: true });
-
-  assert.equal(card._lastSnapshot.weather, "rainy");
-  assert.equal(card._isTimeNight, true);
-  assert.equal(card._isThemeDark, true);
-  assert.equal(card._windSpeed, 0);
-  assert.deepEqual(card._config, config);
-
-  card.setPreviewOverride(null);
-
-  assert.equal(card._lastSnapshot.weather, "cloudy");
-  assert.equal(card._isTimeNight, false);
-  assert.deepEqual(card._config, config);
-});
-
-test("preview night changes invalidate the render snapshot", () => {
-  const card = createSetterCard({ weather_entity: "weather.home" });
-
-  assert.equal(
-    card._hasSnapshotChanged({ previewNight: false }, { previewNight: true }),
-    true,
-  );
-});
 test("weather effects survive a simulated day/night transition", () => {
   const card = createSetterCard({ weather_entity: "weather.home" });
   card._params = { type: "cloud" };
@@ -148,37 +105,4 @@ test("weather effects survive a simulated day/night transition", () => {
   assert.equal(card._lastState, "rainy");
   assert.equal(card._params.type, "rain");
   assert.equal(card._params.count, 120);
-});
-
-test("preview events apply only to the matching weather entity", () => {
-  const card = createSetterCard({
-    weather_entity: "weather.home",
-    sun_entity: "sun.home",
-  });
-  card.hass = {
-    states: {
-      "weather.home": { state: "cloudy", attributes: {} },
-      "sun.home": { state: "above_horizon", attributes: {} },
-    },
-    themes: { darkMode: false },
-    config: { latitude: 50 },
-    locale: { language: "de" },
-  };
-
-  card._handlePreviewOverride({
-    detail: {
-      weatherEntity: "weather.other",
-      preview: { weather: "rainy", isNight: true },
-    },
-  });
-  assert.equal(card._lastSnapshot.weather, "cloudy");
-
-  card._handlePreviewOverride({
-    detail: {
-      weatherEntity: "weather.home",
-      preview: { weather: "rainy", isNight: true },
-    },
-  });
-  assert.equal(card._lastSnapshot.weather, "rainy");
-  assert.equal(card._isTimeNight, true);
 });

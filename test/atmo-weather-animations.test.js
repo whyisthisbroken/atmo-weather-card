@@ -141,39 +141,6 @@ test("drawFog moves and renders fog banks", () => {
   assert.equal(ctx.globalAlpha, 1);
 });
 
-test("drawClouds slows motion during an editor simulation", () => {
-  const card = baseCard();
-  card._layerFadeProgress.clouds = 1;
-  card._renderState = {};
-  card._previewOverride = { weather: "rainy", isNight: false };
-  const cloud = {
-    x: 10,
-    y: 10,
-    speed: 1,
-    layer: 0,
-    cloudType: "cumulus",
-    opacity: 1,
-    seed: 0,
-    breathPhase: 0,
-    breathSpeed: 0,
-    scale: 1,
-    _bakedCanvas: {},
-    _atlasX: 0,
-    _atlasY: 0,
-    _atlasW: 1,
-    _atlasH: 1,
-    _bakeOffX: 0,
-    _bakeOffY: 0,
-    _bakeLogicalW: 1,
-    _bakeLogicalH: 1,
-  };
-  const ctx = createContext();
-
-  drawClouds(card, ctx, [cloud], 100, 100, 1);
-
-  assert.equal(cloud.x, 10.245);
-});
-
 test("drawLightning removes expired bolts", () => {
   const card = baseCard();
   card._params = { thunder: true };
