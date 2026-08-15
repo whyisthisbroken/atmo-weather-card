@@ -487,8 +487,17 @@ export function advanceWindAndPulse(card) {
     Math.sin(card._gustPhase * 2.1) * 0.15 +
     Math.sin(card._microGustPhase) * 0.08;
   card._sunPulsePhase += 0.008 * animSpeed;
-  return ((p.wind || 0.1) + card._windGust) * (1 + card._windSpeed);
+  const baseWind = p.wind || 0.1,
+    gustWind = baseWind + card._windGust,
+    // Gusts share one value across all clouds — letting it go negative made
+    // every cloud reverse direction together (looked like a curtain swaying).
+    minWind = baseWind * 0.15;
+  return Math.max(minWind, gustWind) * (1 + card._windSpeed);
 }
+
+// Instead of an abrupt teleport, off-screen clouds dissolve and reappear
+// elsewhere after a smooth fade — avoids any hard "wrap" point being visible.
+const CLOUD_FADE_FRAMES = 120; // ~4s at the nominal 30fps baseline
 
 export function drawClouds(card, ctx, cloudList, w, h, effectiveWind) {
   if (cloudList.length === 0) return;
@@ -496,6 +505,7 @@ export function drawClouds(card, ctx, cloudList, w, h, effectiveWind) {
   if (fadeOpacity <= 0) return;
   if (!card._renderState) return;
   const animSpeed = card._animationSpeed * (card._frameScale || 1);
+  const fadeStep = animSpeed / CLOUD_FADE_FRAMES;
   for (let i = 0; i < cloudList.length; i++) {
     const cloud = cloudList[i];
     const layer = cloud.layer || 0;
@@ -510,16 +520,33 @@ export function drawClouds(card, ctx, cloudList, w, h, effectiveWind) {
       Math.sin(layerPhase * 2.5 + (cloud.seed || 0) * 0.001) *
       (2 + layer * 2.5);
     const effectiveSpeed = baseSpeed * effectiveWind * depthFactor * animSpeed;
-    cloud.x += effectiveSpeed + microDrift * animSpeed;
-    if (cloud.x > w + 320) {
-      cloud.x = -320 - ((cloud.seed || 0) % 140);
+    let fadePhase = cloud._fadePhase || "drift";
+    let fadeAlpha = cloud._fadeAlpha != null ? cloud._fadeAlpha : 1;
+    if (fadePhase === "drift") {
+      cloud.x += effectiveSpeed + microDrift * animSpeed;
+      // Random per-cloud margin so clouds don't all start fading at once.
+      if (cloud._fadeMargin === undefined)
+        cloud._fadeMargin = 60 + ((cloud.seed || 0) % 220);
+      if (cloud.x > w + cloud._fadeMargin) fadePhase = "out";
+    } else if (fadePhase === "out") {
+      fadeAlpha -= fadeStep;
+      if (fadeAlpha <= 0) {
+        fadeAlpha = 0;
+        cloud.x = -320 - (((cloud.seed || 0) * 7) % 260);
+        fadePhase = "in";
+      }
+    } else {
+      fadeAlpha += fadeStep;
+      if (fadeAlpha >= 1) {
+        fadeAlpha = 1;
+        fadePhase = "drift";
+      }
     }
-    if (cloud.x < -320) {
-      cloud.x = w + 120 + ((cloud.seed || 0) % 180);
-    }
+    cloud._fadePhase = fadePhase;
+    cloud._fadeAlpha = fadeAlpha;
     cloud.breathPhase =
       (cloud.breathPhase || 0) + (cloud.breathSpeed || 0.002) * animSpeed;
-    if (!cloud._bakedCanvas) continue;
+    if (!cloud._bakedCanvas || fadeAlpha <= 0) continue;
     const breathScale =
       1 +
       Math.sin(cloud.breathPhase) * (softCloud ? 0.014 : 0.018 + layer * 0.01);
@@ -537,7 +564,7 @@ export function drawClouds(card, ctx, cloudList, w, h, effectiveWind) {
     const mistAlpha = softCloud ? 0.76 : 1;
     const layerAlpha =
       (softCloud ? baseAlpha * 0.82 : baseAlpha) * mistAlpha + hazeBoost;
-    ctx.globalAlpha = Math.min(1, layerAlpha);
+    ctx.globalAlpha = Math.min(1, layerAlpha) * fadeAlpha;
     ctx.drawImage(
       cloud._bakedCanvas,
       cloud._atlasX,
