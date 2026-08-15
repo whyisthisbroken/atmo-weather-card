@@ -503,8 +503,9 @@ export function drawClouds(card, ctx, cloudList, w, h, effectiveWind) {
     const depthFactor = 0.7 + layer * 0.35;
     const baseSpeed = cloud.speed || 0.02;
     const layerPhase = (cloud.breathPhase || 0) + (cloud.seed || 0) * 0.0007;
+    // Kept small so side-to-side sway never dominates the steady drift.
     const microDrift =
-      Math.sin(layerPhase * (1.8 + layer * 0.7)) * (7 + layer * 10) * 0.02;
+      Math.sin(layerPhase * (1.8 + layer * 0.7)) * (7 + layer * 10) * 0.001;
     const driftWave =
       Math.sin(layerPhase * 2.5 + (cloud.seed || 0) * 0.001) *
       (2 + layer * 2.5);
