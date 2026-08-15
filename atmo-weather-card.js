@@ -1,6 +1,6 @@
 /**
  * ATMO WEATHER CARD
- * Version: 6.6.6
+ * Version: 7.1.1
  */
 import {
   advanceWindAndPulse,
@@ -41,7 +41,7 @@ try {
   });
 } catch (_) {}
 // CONSTANTS & CONFIGURATION
-const EDITOR_IMPORT_VERSION = "6.6.6";
+const EDITOR_IMPORT_VERSION = "7.1.1";
 const NIGHT_MODES = Object.freeze([
   "dark",
   "night",
@@ -1641,6 +1641,27 @@ class AtmosphericWeatherCard extends HTMLElement {
       : preset.perf_dpr;
     this._applyConfigStyles();
   }
+  setPreviewOverride(preview) {
+    const weather =
+      preview && typeof preview.weather === "string"
+        ? preview.weather.trim().toLowerCase()
+        : "";
+    const isNight =
+      preview && typeof preview.isNight === "boolean" ? preview.isNight : null;
+    const next = weather || isNight !== null ? { weather, isNight } : null;
+    const current = this._previewOverride;
+    if (
+      (current === null && next === null) ||
+      (current &&
+        next &&
+        current.weather === next.weather &&
+        current.isNight === next.isNight)
+    )
+      return;
+    this._previewOverride = next;
+    this._lastSnapshot = null;
+    if (this._hass) this.hass = this._hass;
+  }
   set hass(hass) {
     if (!hass || !this._config) return;
     this._hass = hass;
@@ -1718,7 +1739,11 @@ class AtmosphericWeatherCard extends HTMLElement {
     ) {
       this._moonRotationRad = (51 - hass.config.latitude) * (Math.PI / 180);
     }
-    const wEntity = wObj || FALLBACK_WEATHER;
+    const preview = this._previewOverride;
+    const wEntity =
+      preview && preview.weather
+        ? { ...(wObj || FALLBACK_WEATHER), state: preview.weather }
+        : wObj || FALLBACK_WEATHER;
     const sunEntity = this._config.sun_entity
       ? hass.states[this._config.sun_entity]
       : null;
@@ -1786,6 +1811,7 @@ class AtmosphericWeatherCard extends HTMLElement {
       botSig,
       sysDark: !!sysDark,
       lang,
+      previewNight: preview && preview.isNight,
     };
     if (
       this._lastSnapshot &&
@@ -1804,7 +1830,12 @@ class AtmosphericWeatherCard extends HTMLElement {
       this._moonPhaseConfig =
         MOON_PHASES[moonEntity.state] || MOON_PHASES["full_moon"];
     }
-    const axes = this._resolveAxes(sunEntity, themeEntity, sysDark),
+    const axes = this._resolveAxes(
+        sunEntity,
+        themeEntity,
+        sysDark,
+        preview && preview.isNight,
+      ),
       isTimeNight = axes.isTimeNight,
       isThemeDark = axes.isThemeDark;
     const hasNightChanged =
@@ -1938,7 +1969,7 @@ class AtmosphericWeatherCard extends HTMLElement {
   _resolveChipPosition() {
     return (this._config && this._config.chip_area_position) || "bottom-left";
   }
-  _resolveAxes(sunEntity, themeEntity, sysDark) {
+  _resolveAxes(sunEntity, themeEntity, sysDark, previewIsNight = null) {
     const mode = this._config.card_color_mode
       ? this._config.card_color_mode.toLowerCase()
       : null;
@@ -1990,7 +2021,12 @@ class AtmosphericWeatherCard extends HTMLElement {
               : sunEntity
                 ? sunIsNight
                 : false;
-    return { isTimeNight, isThemeDark, isImageNight };
+    const hasPreviewTime = typeof previewIsNight === "boolean";
+    return {
+      isTimeNight: hasPreviewTime ? previewIsNight : isTimeNight,
+      isThemeDark,
+      isImageNight: hasPreviewTime ? previewIsNight : isImageNight,
+    };
   }
   // ENTITY & STATE HELPERS
   _getEntityState(hass, entityId, defaultValue = null) {
@@ -6225,10 +6261,7 @@ class AtmosphericWeatherCard extends HTMLElement {
     if (glow.compOp) ctx.globalCompositeOperation = glow.compOp;
     ctx.translate(cx, cy);
     if (glow.showDisc) {
-      const auraR = Math.min(
-        sunBaseR * 5.8 * (glow.auraSizeMul || 1),
-        sizeCap,
-      );
+      const auraR = Math.min(sunBaseR * 5.8 * (glow.auraSizeMul || 1), sizeCap);
       const coronaSpecs = [
         [-2.82, 0.82, 0.12, 0.14],
         [-2.25, 0.58, 0.16, 0.1],
@@ -6245,18 +6278,17 @@ class AtmosphericWeatherCard extends HTMLElement {
       const auraX =
           Math.sin(auraPhase * 1.55) * sunBaseR * 0.065 +
           Math.sin(auraPhase * 2.8 + 1.2) * sunBaseR * 0.028,
-        auraY =
-          Math.cos(auraPhase * 1.2 + 0.8) * sunBaseR * 0.045,
+        auraY = Math.cos(auraPhase * 1.2 + 0.8) * sunBaseR * 0.045,
         auraScale = 1 + Math.sin(auraPhase * 1.9 + 2.1) * 0.028;
-      ctx.globalAlpha = fadeOpacity * Math.min(
-        1,
-        glow.intensity * 0.82 * (glow.auraOpacityMul || 1),
-      );
+      ctx.globalAlpha =
+        fadeOpacity *
+        Math.min(1, glow.intensity * 0.82 * (glow.auraOpacityMul || 1));
       for (const [angle, lengthRatio, widthRatio, alpha] of coronaSpecs) {
         const tonguePhase = auraPhase * 1.35 + angle * 1.7;
         const tongueScale = 1 + Math.sin(tonguePhase) * 0.075;
         const length = auraR * lengthRatio * auraScale * tongueScale,
-          width = auraR * widthRatio * auraScale * (1 + Math.cos(tonguePhase) * 0.04),
+          width =
+            auraR * widthRatio * auraScale * (1 + Math.cos(tonguePhase) * 0.04),
           centerOffset =
             auraR * (0.2 + lengthRatio * 0.28) * auraScale * tongueScale,
           gradient = ctx.createLinearGradient(-length, 0, length, 0);
