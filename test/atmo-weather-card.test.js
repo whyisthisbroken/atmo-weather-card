@@ -116,6 +116,8 @@ test("preview override temporarily replaces weather and day/night only", () => {
 
   assert.equal(card._lastSnapshot.weather, "rainy");
   assert.equal(card._isTimeNight, true);
+  assert.equal(card._isThemeDark, true);
+  assert.equal(card._windSpeed, 0);
   assert.deepEqual(card._config, config);
 
   card.setPreviewOverride(null);
@@ -123,6 +125,30 @@ test("preview override temporarily replaces weather and day/night only", () => {
   assert.equal(card._lastSnapshot.weather, "cloudy");
   assert.equal(card._isTimeNight, false);
   assert.deepEqual(card._config, config);
+});
+
+test("preview night changes invalidate the render snapshot", () => {
+  const card = createSetterCard({ weather_entity: "weather.home" });
+
+  assert.equal(
+    card._hasSnapshotChanged({ previewNight: false }, { previewNight: true }),
+    true,
+  );
+});
+
+test("weather effects survive a simulated day/night transition", () => {
+  const card = createSetterCard({ weather_entity: "weather.home" });
+  card._params = { type: "cloud" };
+  card._lastState = "cloudy";
+  card._buildRenderState = () => {};
+  card._handleWeatherChange =
+    AtmosphericWeatherCard.prototype._handleWeatherChange;
+
+  card._handleWeatherChange("rainy", { type: "rain", count: 120 }, true);
+
+  assert.equal(card._lastState, "rainy");
+  assert.equal(card._params.type, "rain");
+  assert.equal(card._params.count, 120);
 });
 
 test("preview events apply only to the matching weather entity", () => {

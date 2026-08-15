@@ -1761,7 +1761,14 @@ class AtmosphericWeatherCard extends HTMLElement {
     const preview = this._previewOverride;
     const wEntity =
       preview && preview.weather
-        ? { ...(wObj || FALLBACK_WEATHER), state: preview.weather }
+        ? {
+            ...(wObj || FALLBACK_WEATHER),
+            state: preview.weather,
+            attributes: {
+              ...((wObj && wObj.attributes) || FALLBACK_WEATHER.attributes),
+              wind_speed: 0,
+            },
+          }
         : wObj || FALLBACK_WEATHER;
     const sunEntity = this._config.sun_entity
       ? hass.states[this._config.sun_entity]
@@ -2043,7 +2050,7 @@ class AtmosphericWeatherCard extends HTMLElement {
     const hasPreviewTime = typeof previewIsNight === "boolean";
     return {
       isTimeNight: hasPreviewTime ? previewIsNight : isTimeNight,
-      isThemeDark,
+      isThemeDark: hasPreviewTime && previewIsNight ? true : isThemeDark,
       isImageNight: hasPreviewTime ? previewIsNight : isImageNight,
     };
   }
@@ -2398,7 +2405,8 @@ class AtmosphericWeatherCard extends HTMLElement {
       prev.status !== next.status ||
       prev.botSig !== next.botSig ||
       prev.sysDark !== next.sysDark ||
-      prev.lang !== next.lang
+      prev.lang !== next.lang ||
+      prev.previewNight !== next.previewNight
     );
   }
   _calculateStatusImage(hass, isNight) {
