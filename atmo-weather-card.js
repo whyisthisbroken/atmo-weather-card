@@ -1,6 +1,6 @@
 /**
  * ATMO WEATHER CARD
- * Version: 7.1.1
+ * Version: 6.6.6
  */
 import {
   advanceWindAndPulse,
@@ -41,7 +41,7 @@ try {
   });
 } catch (_) {}
 // CONSTANTS & CONFIGURATION
-const EDITOR_IMPORT_VERSION = "7.1.1";
+const EDITOR_IMPORT_VERSION = "6.6.6";
 const NIGHT_MODES = Object.freeze([
   "dark",
   "night",
@@ -1255,8 +1255,6 @@ class AtmosphericWeatherCard extends HTMLElement {
     this._resizeDebounceTimer = null;
     this._pendingResize = false;
     this._needsReinit = false;
-    this._previewReinitTimer = null;
-    this._previewRevision = 0;
     this._cachedDimensions = { width: 0, height: 0, dpr: 1 };
     this._perfCloudRes = CLOUD_ATLAS_SIZE_DEFAULT;
     this._perfFps = 30;
@@ -1277,7 +1275,6 @@ class AtmosphericWeatherCard extends HTMLElement {
     this._prevCustomCssClasses = null;
     this._boundVisibilityChange = this._handleVisibilityChange.bind(this);
     this._boundTap = this._handleTap.bind(this);
-    this._boundPreviewOverride = this._handlePreviewOverride.bind(this);
     this._fcData = new Map(_fcCache);
     this._fcSubs = new Map();
     this._precisionFmtCache = null;
@@ -1296,10 +1293,6 @@ class AtmosphericWeatherCard extends HTMLElement {
   }
   // HOME ASSISTANT LIFECYCLE
   connectedCallback() {
-    window.addEventListener(
-      "atmo-weather-card-preview",
-      this._boundPreviewOverride,
-    );
     // Load Figtree font from Google Fonts
     if (!window._figtreeLoaded) {
       const link = document.createElement("link");
@@ -1355,10 +1348,6 @@ class AtmosphericWeatherCard extends HTMLElement {
     }
   }
   disconnectedCallback() {
-    window.removeEventListener(
-      "atmo-weather-card-preview",
-      this._boundPreviewOverride,
-    );
     this._stopAnimation();
     if (this._resizeObserver) this._resizeObserver.disconnect();
     if (this._intersectionObserver) this._intersectionObserver.disconnect();
@@ -1369,10 +1358,6 @@ class AtmosphericWeatherCard extends HTMLElement {
     if (this._resizeDebounceTimer) {
       clearTimeout(this._resizeDebounceTimer);
       this._resizeDebounceTimer = null;
-    }
-    if (this._previewReinitTimer) {
-      clearTimeout(this._previewReinitTimer);
-      this._previewReinitTimer = null;
     }
     this._isVisible = false;
     this.removeEventListener("click", this._boundTap);
@@ -1656,38 +1641,6 @@ class AtmosphericWeatherCard extends HTMLElement {
       : preset.perf_dpr;
     this._applyConfigStyles();
   }
-  setPreviewOverride(preview) {
-    const weather =
-      preview && typeof preview.weather === "string"
-        ? preview.weather.trim().toLowerCase()
-        : "";
-    const isNight =
-      preview && typeof preview.isNight === "boolean" ? preview.isNight : null;
-    const next = weather || isNight !== null ? { weather, isNight } : null;
-    const current = this._previewOverride;
-    if (
-      (current === null && next === null) ||
-      (current &&
-        next &&
-        current.weather === next.weather &&
-        current.isNight === next.isNight)
-    )
-      return;
-    this._previewOverride = next;
-    this._previewRevision++;
-    this._lastSnapshot = null;
-    if (this._hass) this.hass = this._hass;
-  }
-  _handlePreviewOverride(event) {
-    const detail = event && event.detail;
-    if (
-      !detail ||
-      !this._config ||
-      detail.weatherEntity !== this._config.weather_entity
-    )
-      return;
-    this.setPreviewOverride(detail.preview || null);
-  }
   set hass(hass) {
     if (!hass || !this._config) return;
     this._hass = hass;
@@ -1765,18 +1718,7 @@ class AtmosphericWeatherCard extends HTMLElement {
     ) {
       this._moonRotationRad = (51 - hass.config.latitude) * (Math.PI / 180);
     }
-    const preview = this._previewOverride;
-    const wEntity =
-      preview && preview.weather
-        ? {
-            ...(wObj || FALLBACK_WEATHER),
-            state: preview.weather,
-            attributes: {
-              ...((wObj && wObj.attributes) || FALLBACK_WEATHER.attributes),
-              wind_speed: 0,
-            },
-          }
-        : wObj || FALLBACK_WEATHER;
+    const wEntity = wObj || FALLBACK_WEATHER;
     const sunEntity = this._config.sun_entity
       ? hass.states[this._config.sun_entity]
       : null;
@@ -1844,7 +1786,6 @@ class AtmosphericWeatherCard extends HTMLElement {
       botSig,
       sysDark: !!sysDark,
       lang,
-      previewNight: preview && preview.isNight,
     };
     if (
       this._lastSnapshot &&
@@ -1863,12 +1804,7 @@ class AtmosphericWeatherCard extends HTMLElement {
       this._moonPhaseConfig =
         MOON_PHASES[moonEntity.state] || MOON_PHASES["full_moon"];
     }
-    const axes = this._resolveAxes(
-        sunEntity,
-        themeEntity,
-        sysDark,
-        preview && preview.isNight,
-      ),
+    const axes = this._resolveAxes(sunEntity, themeEntity, sysDark),
       isTimeNight = axes.isTimeNight,
       isThemeDark = axes.isThemeDark;
     const hasNightChanged =
@@ -2002,7 +1938,7 @@ class AtmosphericWeatherCard extends HTMLElement {
   _resolveChipPosition() {
     return (this._config && this._config.chip_area_position) || "bottom-left";
   }
-  _resolveAxes(sunEntity, themeEntity, sysDark, previewIsNight = null) {
+  _resolveAxes(sunEntity, themeEntity, sysDark) {
     const mode = this._config.card_color_mode
       ? this._config.card_color_mode.toLowerCase()
       : null;
@@ -2054,12 +1990,7 @@ class AtmosphericWeatherCard extends HTMLElement {
               : sunEntity
                 ? sunIsNight
                 : false;
-    const hasPreviewTime = typeof previewIsNight === "boolean";
-    return {
-      isTimeNight: hasPreviewTime ? previewIsNight : isTimeNight,
-      isThemeDark: hasPreviewTime ? previewIsNight : isThemeDark,
-      isImageNight: hasPreviewTime ? previewIsNight : isImageNight,
-    };
+    return { isTimeNight, isThemeDark, isImageNight };
   }
   // ENTITY & STATE HELPERS
   _getEntityState(hass, entityId, defaultValue = null) {
@@ -2412,8 +2343,7 @@ class AtmosphericWeatherCard extends HTMLElement {
       prev.status !== next.status ||
       prev.botSig !== next.botSig ||
       prev.sysDark !== next.sysDark ||
-      prev.lang !== next.lang ||
-      prev.previewNight !== next.previewNight
+      prev.lang !== next.lang
     );
   }
   _calculateStatusImage(hass, isNight) {
@@ -2657,12 +2587,8 @@ class AtmosphericWeatherCard extends HTMLElement {
         // Defer heavy _initParticles (includes _bakeAllClouds) when the
         // card is off-screen. The dirty flag is consumed by
         // _handleVisibilityChange when the card scrolls into view.
-        if (this._isVisible || this._previewOverride) {
-          if (this._previewReinitTimer) clearTimeout(this._previewReinitTimer);
-          const previewRevision = this._previewRevision;
-          this._previewReinitTimer = setTimeout(() => {
-            this._previewReinitTimer = null;
-            if (previewRevision !== this._previewRevision) return;
+        if (this._isVisible) {
+          setTimeout(() => {
             this._initParticles();
             if (this._width > 0) this._lastInitWidth = this._width;
             this._startAnimation();
@@ -4416,7 +4342,7 @@ class AtmosphericWeatherCard extends HTMLElement {
         if (this._width > 0) this._lastInitWidth = this._width;
       }
       this._startAnimation();
-    } else if (!this._isVisible && wasVisible && !this._previewOverride) {
+    } else if (!this._isVisible && wasVisible) {
       this._stopAnimation();
     }
   }
@@ -6466,11 +6392,7 @@ class AtmosphericWeatherCard extends HTMLElement {
   }
   // ANIMATION LOOP
   _animate(timestamp) {
-    if (
-      !this.isConnected ||
-      this._animID === null ||
-      (!this._isVisible && !this._previewOverride)
-    ) {
+    if (!this.isConnected || this._animID === null || !this._isVisible) {
       this._stopAnimation();
       return;
     }
@@ -6503,7 +6425,7 @@ class AtmosphericWeatherCard extends HTMLElement {
     this._animID = requestAnimationFrame(this._boundAnimate);
   }
   _startAnimation() {
-    if (this._animID === null && (this._isVisible || this._previewOverride)) {
+    if (this._animID === null && this._isVisible) {
       this._lastFrameTime = performance.now();
       this._frameScale = 1;
       this._animID = requestAnimationFrame(this._boundAnimate);
