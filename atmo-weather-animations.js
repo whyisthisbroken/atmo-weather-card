@@ -478,9 +478,9 @@ export function shouldSkipFrame(card, timestamp) {
 }
 
 // Tuned so normal wind presets produce clearly visible cross-screen drift.
-const CLOUD_DRIFT_SCALE = 45;
+const CLOUD_DRIFT_SCALE = 10;
 // Upper bound (px/frame at animSpeed=1) for the wind-driven part of drift.
-const CLOUD_DRIFT_MAX = 6;
+const CLOUD_DRIFT_MAX = 3;
 
 export function advanceWindAndPulse(card) {
   const p = card._params;
@@ -505,6 +505,7 @@ export function drawClouds(card, ctx, cloudList, w, h, effectiveWind) {
   if (fadeOpacity <= 0) return;
   if (!card._renderState) return;
   const animSpeed = card._animationSpeed * (card._frameScale || 1);
+  const cloudDriftMul = card._cloudDriftSpeed || 1;
   for (let i = 0; i < cloudList.length; i++) {
     const cloud = cloudList[i];
     const layer = cloud.layer || 0;
@@ -519,12 +520,16 @@ export function drawClouds(card, ctx, cloudList, w, h, effectiveWind) {
       Math.sin(layerPhase * 2.5 + (cloud.seed || 0) * 0.001) *
       (2 + layer * 2.5);
     const windDrivenSpeed =
-      baseSpeed * effectiveWind * depthFactor * CLOUD_DRIFT_SCALE;
+      baseSpeed *
+      effectiveWind *
+      depthFactor *
+      CLOUD_DRIFT_SCALE *
+      cloudDriftMul;
     // Cap the wind-driven component so storms can't fling clouds unrealistically
     // fast; animation_speed still applies after, since that's an explicit user choice.
+    const driftCap = CLOUD_DRIFT_MAX * cloudDriftMul;
     const effectiveSpeed =
-      Math.max(-CLOUD_DRIFT_MAX, Math.min(CLOUD_DRIFT_MAX, windDrivenSpeed)) *
-      animSpeed;
+      Math.max(-driftCap, Math.min(driftCap, windDrivenSpeed)) * animSpeed;
     cloud.x += effectiveSpeed + microDrift * animSpeed;
     if (cloud.x > w + 320) {
       cloud.x = -320 - ((cloud.seed || 0) % 140);

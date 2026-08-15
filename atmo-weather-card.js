@@ -1234,6 +1234,7 @@ class AtmosphericWeatherCard extends HTMLElement {
     this._animationSpeed = 1.0;
     this._birdAnimationSpeed = 1.0;
     this._starAnimationSpeed = 1.0;
+    this._cloudDriftSpeed = 1.0;
     this._windKmh = 0;
     this._microGustPhase = 0;
     this._layerFadeProgress = {
@@ -1600,6 +1601,13 @@ class AtmosphericWeatherCard extends HTMLElement {
         : 1.0;
     this._starAnimationSpeed = Number.isFinite(rawStarAnimSpeed)
       ? Math.max(0, Math.min(2.0, rawStarAnimSpeed))
+      : 1.0;
+    const rawCloudDriftSpeed =
+      config.cloud_drift_speed != null
+        ? parseFloat(config.cloud_drift_speed)
+        : 1.0;
+    this._cloudDriftSpeed = Number.isFinite(rawCloudDriftSpeed)
+      ? Math.max(0.25, Math.min(3.0, rawCloudDriftSpeed))
       : 1.0;
     // Fauna density controls (Option C)
     const rawBirdDensity =
