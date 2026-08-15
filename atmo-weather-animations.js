@@ -2,6 +2,10 @@ export const TWO_PI = Math.PI * 2;
 
 export { drawBirds, drawPlanes } from "./atmo-weather-fauna.js";
 
+function getSimulationMotionScale(card) {
+  return card._previewOverride ? 0.12 : 1;
+}
+
 export function fillCircle(ctx, x, y, r) {
   ctx.beginPath();
   ctx.arc(x, y, r, 0, TWO_PI);
@@ -496,8 +500,8 @@ export function drawClouds(card, ctx, cloudList, w, h, effectiveWind) {
   if (fadeOpacity <= 0) return;
   if (!card._renderState) return;
   const animSpeed = card._animationSpeed * (card._frameScale || 1);
-  const previewMotionScale = card._previewOverride ? 0.35 : 1;
-  const previewBreathScale = card._previewOverride ? 0.55 : 1;
+  const previewMotionScale = getSimulationMotionScale(card);
+  const previewBreathScale = card._previewOverride ? 0.35 : 1;
   for (let i = 0; i < cloudList.length; i++) {
     const cloud = cloudList[i];
     const layer = cloud.layer || 0;
@@ -591,7 +595,8 @@ export function drawWindVapor(card, ctx, w, h, effectiveWind) {
   const len = Math.min(pool, activeCount);
   if (len <= 0) return;
   const animSpeed = card._animationSpeed * (card._frameScale || 1);
-  const gustVal = card._windGust * windIntensity;
+  const previewMotionScale = getSimulationMotionScale(card);
+  const gustVal = card._windGust * windIntensity * previewMotionScale;
   const isDark = card._isThemeDark;
   const rotFade = isWindy
     ? 0
@@ -603,9 +608,11 @@ export function drawWindVapor(card, ctx, w, h, effectiveWind) {
   ctx.globalCompositeOperation = isDark ? "screen" : "source-over";
   for (let i = 0; i < len; i++) {
     const v = card._windVapor[i];
-    v.phase += v.phaseSpeed * Math.max(speedMul, 0.04) * animSpeed;
+    v.phase +=
+      v.phaseSpeed * Math.max(speedMul, 0.04) * animSpeed * previewMotionScale;
     const gustBoost = Math.max(0, gustVal) * v.gustWeight * 1.2;
-    const baseVelocity = v.speed * speedMul + effectiveWind * speedMul;
+    const baseVelocity =
+      (v.speed * speedMul + effectiveWind * speedMul) * previewMotionScale;
     v.x +=
       (baseVelocity + gustBoost) * (1 + card._windSpeed * 0.15) * animSpeed;
     const undulation = Math.sin(v.phase) * v.drift;
@@ -892,16 +899,19 @@ export function drawCelestialClouds(card, ctx, w, h, effectiveWind) {
   if (fadeOpacity <= 0) return;
   const len = card._celestialClouds.length;
   const animSpeed = card._animationSpeed * (card._frameScale || 1);
+  const previewMotionScale = getSimulationMotionScale(card);
   ctx.globalAlpha = fadeOpacity;
   for (let i = 0; i < len; i++) {
     const cloud = card._celestialClouds[i];
     if (!cloud._bakedCanvas) continue;
     const sunUnit = cloud._sunUnit !== undefined ? cloud._sunUnit : 1.0;
-    cloud.driftPhase += 0.008 * animSpeed;
-    cloud.breathPhase += cloud.breathSpeed * animSpeed;
-    const driftX = Math.sin(cloud.driftPhase) * 12 * sunUnit;
-    const driftY = Math.cos(cloud.driftPhase * 0.7) * 4 * sunUnit;
-    cloud.x = cloud.baseX + driftX + effectiveWind * 0.3;
+    cloud.driftPhase += 0.008 * animSpeed * previewMotionScale;
+    cloud.breathPhase += cloud.breathSpeed * animSpeed * previewMotionScale;
+    const driftX =
+      Math.sin(cloud.driftPhase) * 12 * sunUnit * previewMotionScale;
+    const driftY =
+      Math.cos(cloud.driftPhase * 0.7) * 4 * sunUnit * previewMotionScale;
+    cloud.x = cloud.baseX + driftX + effectiveWind * 0.3 * previewMotionScale;
     cloud.y = cloud.baseY + driftY;
     const driftClamp = 60 * sunUnit;
     if (cloud.x > cloud.baseX + driftClamp) cloud.x = cloud.baseX + driftClamp;

@@ -171,7 +171,7 @@ test("drawClouds slows motion during an editor simulation", () => {
 
   drawClouds(card, ctx, [cloud], 100, 100, 1);
 
-  assert.equal(cloud.x, 10.245);
+  assert.equal(cloud.x, 10.084);
 });
 
 test("drawLightning removes expired bolts", () => {

@@ -136,6 +136,52 @@ test("preview night changes invalidate the render snapshot", () => {
   );
 });
 
+test("preview day and night fully determine rendering axes", () => {
+  const card = createSetterCard({ weather_entity: "weather.home" });
+
+  assert.deepEqual(card._resolveAxes(null, null, true, false), {
+    isTimeNight: false,
+    isThemeDark: false,
+    isImageNight: false,
+  });
+  assert.deepEqual(card._resolveAxes(null, null, false, true), {
+    isTimeNight: true,
+    isThemeDark: true,
+    isImageNight: true,
+  });
+});
+
+test("active previews rebuild particles even when marked offscreen", () => {
+  const card = createSetterCard({ weather_entity: "weather.home" });
+  card._params = { type: "cloud" };
+  card._lastState = "cloudy";
+  card._previewOverride = { weather: "rainy", isNight: true };
+  card._previewRevision = 0;
+  card._previewReinitTimer = null;
+  card._isVisible = false;
+  card.isConnected = true;
+  card._width = 0;
+  let initCount = 0;
+  card._initParticles = () => initCount++;
+  card._startAnimation = () => {};
+  card._buildRenderState = () => {};
+  card._handleWeatherChange =
+    AtmosphericWeatherCard.prototype._handleWeatherChange;
+  const originalSetTimeout = globalThis.setTimeout;
+  globalThis.setTimeout = (callback) => {
+    callback();
+    return 1;
+  };
+
+  try {
+    card._handleWeatherChange("rainy", { type: "rain", count: 120 }, true);
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+  }
+
+  assert.equal(initCount, 1);
+});
+
 test("weather effects survive a simulated day/night transition", () => {
   const card = createSetterCard({ weather_entity: "weather.home" });
   card._params = { type: "cloud" };

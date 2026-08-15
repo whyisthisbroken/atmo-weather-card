@@ -489,6 +489,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
     super();
     this._simulationWeather = "sunny";
     this._simulationNight = false;
+    this._simulationNeedsSync = true;
   }
   set hass(val) {
     const old = this._hass;
@@ -510,6 +511,8 @@ class AtmosphericWeatherCardEditor extends LitElement {
     return this._hass;
   }
   updated() {
+    if (!this._simulationNeedsSync) return;
+    this._simulationNeedsSync = false;
     this._emitCurrentSimulationPreview();
   }
   _emitCurrentSimulationPreview() {
@@ -1946,6 +1949,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
       autofilled = true;
     }
     this._config = this._cleanConfig(c);
+    this._simulationNeedsSync = true;
     if (c.card_color_mode === "light") this._colorModeState = "force_light";
     else if (c.card_color_mode === "dark") this._colorModeState = "force_dark";
     else if (c.theme_entity) this._colorModeState = "entity";
