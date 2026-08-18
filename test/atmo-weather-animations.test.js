@@ -7,6 +7,7 @@ import {
   drawHail,
   drawLightning,
   drawRain,
+  drawShootingStars,
   drawSnow,
 } from "../atmo-weather-animations.js";
 
@@ -33,6 +34,7 @@ function createContext() {
       return { addColorStop() {} };
     },
     beginPath() {},
+    arc() {},
     ellipse() {},
     save() {},
     restore() {},
@@ -139,6 +141,73 @@ test("drawFog moves and renders fog banks", () => {
   assert.ok(card._fogBanks[0].x > 10);
   assert.equal(ctx.fillCalls, 1);
   assert.equal(ctx.globalAlpha, 1);
+});
+
+test("drawClouds preserves the original drift calculation at low effects", () => {
+  const card = baseCard();
+  card._layerFadeProgress.clouds = 1;
+  card._renderState = {};
+  card._perfEffects = 0;
+  const cloud = {
+    x: 10,
+    y: 20,
+    speed: 0.03,
+    layer: 2,
+    seed: 120,
+    breathPhase: 0.5,
+    breathSpeed: 0,
+    opacity: 1,
+    _bakedCanvas: {},
+    _bakeOffX: 0,
+    _bakeOffY: 0,
+    _atlasX: 0,
+    _atlasY: 0,
+    _atlasW: 10,
+    _atlasH: 10,
+    _bakeLogicalW: 10,
+    _bakeLogicalH: 10,
+  };
+  const layerPhase = cloud.breathPhase + cloud.seed * 0.0007;
+  const expectedMicroDrift =
+    Math.sin(layerPhase * (1.8 + cloud.layer * 0.7)) *
+    (7 + cloud.layer * 10) *
+    0.001;
+  const expectedSpeed =
+    cloud.speed * 1 * (0.7 + cloud.layer * 0.35) * 0.5 + expectedMicroDrift;
+  const ctx = createContext();
+
+  drawClouds(card, ctx, [cloud], 1000, 100, 1);
+
+  assert.ok(Math.abs(cloud.x - (10 + expectedSpeed)) < 1e-12);
+});
+
+test("drawShootingStars does not spawn during bad weather", () => {
+  const card = baseCard();
+  card._layerFadeProgress.stars = 1;
+  card._renderState = { isBadWeatherForComets: true };
+  card._shootingStars = [];
+  card._perfEffects = 1;
+  const ctx = createContext();
+  const originalRandom = Math.random;
+  Math.random = () => 0;
+
+  try {
+    drawShootingStars(card, ctx, 100, 100, { MAX_SHOOTING_STARS: 1 }, 12);
+  } finally {
+    Math.random = originalRandom;
+  }
+
+  assert.equal(card._shootingStars.length, 0);
+
+  card._renderState.isBadWeatherForComets = false;
+  Math.random = () => 0;
+  try {
+    drawShootingStars(card, ctx, 100, 100, { MAX_SHOOTING_STARS: 1 }, 12);
+  } finally {
+    Math.random = originalRandom;
+  }
+
+  assert.equal(card._shootingStars.length, 1);
 });
 
 test("drawLightning removes expired bolts", () => {

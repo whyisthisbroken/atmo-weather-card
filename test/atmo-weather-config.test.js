@@ -8,7 +8,6 @@ const topLevelRenamePairs = [
   ["square", "card_square"],
   ["stack_order", "card_stack_order"],
   ["full_width", "card_full_width"],
-  ["filter", "card_filter"],
   ["css_mask_vertical", "card_mask_vertical"],
   ["css_mask_horizontal", "card_mask_horizontal"],
   ["disable_text", "card_hide_text"],
@@ -18,7 +17,6 @@ const topLevelRenamePairs = [
   ["night", "image_night"],
   ["theme", "card_color_mode"],
   ["sun_moon_size", "celestial_size"],
-  ["moon_style", "celestial_moon_style"],
   ["image_offset_x", "image_x"],
   ["image_offset_y", "image_y"],
   ["status_image_day", "status_day"],
@@ -127,6 +125,19 @@ test("rename does not overwrite existing target key", () => {
 
   assert.strictEqual(output.card_offset, 99);
   assert.ok(!("offset" in output));
+});
+
+test("legacy card_filter migrates to independent cloud and sun filters", () => {
+  const output = migrateConfig({
+    card_filter: "vivid",
+    card_filter_clouds: "muted",
+    celestial_moon_style: "yellow",
+  });
+
+  assert.strictEqual(output.card_filter_clouds, "muted");
+  assert.strictEqual(output.card_filter_sun, "vivid");
+  assert.ok(!("card_filter" in output));
+  assert.ok(!("celestial_moon_style" in output));
 });
 
 test("bugfix: chip overflow marquee migrates to label_overflow marquee", () => {

@@ -501,6 +501,19 @@ const CLOUD_FADE_FRAMES = 240; // ~4s at the nominal 30fps baseline
 // Single knob for overall cloud drift speed (1.0 = original v7.1.0 pace).
 const CLOUD_SPEED_SCALE = 0.5;
 
+function valueNoise1D(value, seed) {
+  const hash = (index) => {
+    let mixed = (index | 0) ^ (seed | 0);
+    mixed = Math.imul(mixed ^ (mixed >>> 16), 0x45d9f3b);
+    mixed = Math.imul(mixed ^ (mixed >>> 16), 0x45d9f3b);
+    return ((mixed ^ (mixed >>> 16)) >>> 0) / 0xffffffff;
+  };
+  const start = Math.floor(value);
+  const fraction = value - start;
+  const smooth = fraction * fraction * (3 - 2 * fraction);
+  return (hash(start) * (1 - smooth) + hash(start + 1) * smooth) * 2 - 1;
+}
+
 export function drawClouds(card, ctx, cloudList, w, h, effectiveWind) {
   if (cloudList.length === 0) return;
   const fadeOpacity = card._layerFadeProgress.clouds;
@@ -512,14 +525,28 @@ export function drawClouds(card, ctx, cloudList, w, h, effectiveWind) {
     const cloud = cloudList[i];
     const layer = cloud.layer || 0;
     const softCloud = ["stratus", "scud", "cirrus"].includes(cloud.cloudType);
-    const depthFactor = 0.7 + layer * 0.35;
+    const enhancedEffects = card._perfEffects >= 1;
+    const depthFactor = enhancedEffects
+      ? 0.55 + layer * 0.46
+      : 0.7 + layer * 0.35;
     const baseSpeed = cloud.speed || 0.02;
     const layerPhase = (cloud.breathPhase || 0) + (cloud.seed || 0) * 0.0007;
     // Kept small so side-to-side sway never dominates the steady drift.
-    const microDrift =
-      Math.sin(layerPhase * (1.8 + layer * 0.7)) * (7 + layer * 10) * 0.001;
-    const driftWave =
-      Math.sin(layerPhase + (cloud.seed || 0) * 0.001) * (1 + layer * 1.25);
+    const microDrift = enhancedEffects
+      ? valueNoise1D(
+          layerPhase * (1.8 + layer * 0.7),
+          (cloud.seed || 0) + 101,
+        ) *
+        (7 + layer * 10) *
+        0.001
+      : Math.sin(layerPhase * (1.8 + layer * 0.7)) * (7 + layer * 10) * 0.001;
+    const driftWave = enhancedEffects
+      ? valueNoise1D(
+          layerPhase + (cloud.seed || 0) * 0.001,
+          (cloud.seed || 0) + 733,
+        ) *
+        (1 + layer * 1.25)
+      : Math.sin(layerPhase + (cloud.seed || 0) * 0.001) * (1 + layer * 1.25);
     const effectiveSpeed =
       baseSpeed * effectiveWind * depthFactor * animSpeed * CLOUD_SPEED_SCALE;
     let fadePhase = cloud._fadePhase || "drift";
@@ -880,12 +907,20 @@ export function renderAnimationFrame(
   const fx = card._perfEffects;
   const fauna = card._perfFauna;
 
+  if (card._cloudSunAngleLighting) card._trackCloudSunAngle(w, h);
+
   if (fx >= 1 && rs.glow && rs.glow.drawPhase === "bg")
     card._drawCelestialGlow(bg, w, h);
   if (fx >= 1) card._drawAurora(mid, w);
   card._drawStars(bg, w, h, dpr);
   card._drawMoon(bg, w, h);
-  if (fx >= 1 && card._isNight && card._isThemeDark && card._stars.length > 0)
+  if (
+    fx >= 1 &&
+    card._isNight &&
+    card._isThemeDark &&
+    !rs.isBadWeatherForComets &&
+    card._stars.length > 0
+  )
     card._drawShootingStars(bg, w, h);
   if (fx >= 1 && card._isThemeDark) card._drawComets(bg, w, h);
 
@@ -1058,12 +1093,14 @@ export function drawShootingStars(
   limits,
   trailCapShootingStar,
 ) {
+  const badWeather = card._renderState.isBadWeatherForComets;
   const fadeOpacity = card._layerFadeProgress.stars;
   const dpr = card._cachedDimensions.dpr;
   const isUltra = card._perfEffects >= 2;
   const trailCap = isUltra ? 36 : trailCapShootingStar;
   const frameScale = card._frameScale || 1;
   if (
+    !badWeather &&
     Math.random() < 0.002145 * frameScale &&
     card._shootingStars.length < limits.MAX_SHOOTING_STARS
   ) {

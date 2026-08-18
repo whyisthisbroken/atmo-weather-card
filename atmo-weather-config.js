@@ -28,6 +28,13 @@ export function migrateConfig(raw) {
   rename("theme", "card_color_mode");
   rename("sun_moon_size", "celestial_size");
   rename("moon_style", "celestial_moon_style");
+  if (c.card_filter !== undefined) {
+    if (c.card_filter_clouds === undefined)
+      c.card_filter_clouds = c.card_filter;
+    if (c.card_filter_sun === undefined) c.card_filter_sun = c.card_filter;
+    delete c.card_filter;
+  }
+  delete c.celestial_moon_style;
   if (c.celestial_alignment === undefined) {
     const oldX =
         c.sun_moon_x_position != null ? c.sun_moon_x_position : c.celestial_x,

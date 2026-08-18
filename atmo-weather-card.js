@@ -58,6 +58,13 @@ const ACTIVE_STATES = Object.freeze([
   "home",
   "active",
 ]);
+const OVERCAST_STATES = Object.freeze([
+  "cloudy",
+  "rainy",
+  "pouring",
+  "lightning-rainy",
+  "snowy-rainy",
+]);
 const FALLBACK_WEATHER = Object.freeze({
   state: "cloudy",
   attributes: {
@@ -995,7 +1002,7 @@ const LIGHT_BAD_BOOST_TYPES = Object.freeze(
   new Set(["rain", "rainy", "hail", "snowy-rainy", "fog"]),
 );
 const CLOUD_PALETTES = Object.freeze({
-  darkNight: [215, 225, 245, 58, 72, 112, 15, 22, 45, 0.72, 0.66, 0.05],
+  darkNight: [225, 235, 250, 140, 155, 185, 70, 82, 115, 0.85, 0.8, 0.12],
   darkDay: [218, 228, 250, 110, 128, 176, 52, 66, 114, 0.86, 0.62, 0.07],
   lightStorm: [255, 255, 255, 198, 208, 228, 114, 129, 165, 1.0, 0.89, 0.15],
   lightRain: [255, 255, 255, 202, 212, 232, 120, 136, 174, 1.0, 0.88, 0.14],
@@ -1261,6 +1268,16 @@ class AtmosphericWeatherCard extends HTMLElement {
     this._perfCloudQuality = 1.5;
     this._perfEffects = 1;
     this._perfFauna = 2;
+    this._cloudSunAngleLighting = false;
+    this._cloudBreathingShapes = false;
+    this._lastSunAngleBucket = null;
+    this._lastBakeTime = null;
+    this._pendingAdvancedCloudBake = false;
+    this._pendingFullCloudBake = false;
+    this._pendingCloudBakes = new Set();
+    this._pendingBakeRequested = false;
+    this._pendingBakeTimer = null;
+    this._cloudBreathingTimer = null;
     this._faunaBirdsAtNight = true;
     this._perfDpr = PERFORMANCE_CONFIG.MAX_DPR;
     this._lastInitWidth = 0;
@@ -1286,7 +1303,7 @@ class AtmosphericWeatherCard extends HTMLElement {
     return this._isTimeNight;
   }
   get _isImmersive() {
-    return this._config.card_style !== "standalone";
+    return this._config.card_style === "immersive";
   }
   get _isDarkDayImmersive() {
     return this._isImmersive && this._isThemeDark && !this._isTimeNight;
@@ -1343,6 +1360,7 @@ class AtmosphericWeatherCard extends HTMLElement {
     }
     if (this._initializationComplete) {
       this._startAnimation();
+      this._configureCloudBreathingTimer();
     } else if (this._renderGate.hasFirstHass) {
       this._tryInitialize();
     }
@@ -1359,6 +1377,14 @@ class AtmosphericWeatherCard extends HTMLElement {
       clearTimeout(this._resizeDebounceTimer);
       this._resizeDebounceTimer = null;
     }
+    this._clearCloudBreathingTimer();
+    if (this._pendingBakeTimer) {
+      clearTimeout(this._pendingBakeTimer);
+      this._pendingBakeTimer = null;
+    }
+    this._pendingAdvancedCloudBake = false;
+    this._pendingFullCloudBake = false;
+    this._pendingCloudBakes.clear();
     this._isVisible = false;
     this.removeEventListener("click", this._boundTap);
     this._clearAllParticles();
@@ -1366,7 +1392,14 @@ class AtmosphericWeatherCard extends HTMLElement {
     this._initializationComplete = false;
   }
   setConfig(config) {
+    const previousConfig = this._config;
+    const previousCloudSunAngleLighting = this._cloudSunAngleLighting;
+    const previousCloudBreathingShapes = this._cloudBreathingShapes;
     config = migrateConfig(config);
+    const filtersChanged =
+      previousConfig &&
+      (previousConfig.card_filter_clouds !== config.card_filter_clouds ||
+        previousConfig.card_filter_sun !== config.card_filter_sun);
     this._config = config;
     this._chips = this._deriveChips(this._config);
     this._initDOM();
@@ -1463,9 +1496,6 @@ class AtmosphericWeatherCard extends HTMLElement {
       config.card_tap_action.action &&
       config.card_tap_action.action !== "none";
     root.classList.toggle("clickable", !!hasTapAction);
-    const filterVal =
-      FILTER_PRESETS[(config.card_filter || "").toLowerCase()] || "";
-    root.style.setProperty("--_canvas-filter", filterVal || "none");
     this._hasStatusFeature = !!(
       config.status_entity &&
       (config.status_day || config.status_night)
@@ -1574,6 +1604,14 @@ class AtmosphericWeatherCard extends HTMLElement {
         : rawEffects === false
           ? 0
           : parseInt(rawEffects, 10) || 0;
+    this._cloudSunAngleLighting =
+      this._config.cloud_sun_angle_lighting != null
+        ? this._config.cloud_sun_angle_lighting
+        : this._perfEffects >= 2;
+    this._cloudBreathingShapes =
+      this._config.cloud_breathing_shapes != null
+        ? this._config.cloud_breathing_shapes
+        : this._perfEffects >= 2;
     const rawFauna =
       config.perf_fauna != null ? config.perf_fauna : preset.perf_fauna;
     this._perfFauna =
@@ -1640,6 +1678,16 @@ class AtmosphericWeatherCard extends HTMLElement {
       ? Math.max(0.5, Math.min(PERFORMANCE_CONFIG.MAX_DPR, parsedDpr))
       : preset.perf_dpr;
     this._applyConfigStyles();
+    const advancedCloudSettingsChanged =
+      previousCloudSunAngleLighting !== this._cloudSunAngleLighting ||
+      previousCloudBreathingShapes !== this._cloudBreathingShapes;
+    this._configureCloudBreathingTimer();
+    if (filtersChanged && this._renderState) {
+      this._bakeAllClouds();
+      this._updateLastSunAngleBucket();
+    } else if (advancedCloudSettingsChanged && this._renderState) {
+      this._requestAdvancedCloudBake();
+    }
   }
   set hass(hass) {
     if (!hass || !this._config) return;
@@ -2374,7 +2422,8 @@ class AtmosphericWeatherCard extends HTMLElement {
       type === "lightning" ||
       type === "pouring" ||
       type === "snow" ||
-      type === "mix";
+      type === "mix" ||
+      OVERCAST_STATES.includes(state);
     const isSevereWeather =
       !!(p && p.thunder) || type === "hail" || type === "pouring";
     const goodWeather =
@@ -2382,7 +2431,7 @@ class AtmosphericWeatherCard extends HTMLElement {
       state === "partlycloudy" ||
       state === "clear-night" ||
       state === "exceptional";
-    const isStandalone = this._config.card_style === "standalone";
+    const isStandalone = !this._isImmersive;
     const isDarkDayImmersive = this._isDarkDayImmersive;
     const glow = this._computeGlowParams(
       state,
@@ -2799,7 +2848,7 @@ class AtmosphericWeatherCard extends HTMLElement {
             #card-root.scheme-night .has-icon-bg.with-bg.frosted { --_stacked-icon-border: 1px solid rgba(255,255,255,0.08); }
             #card-root.scheme-night .has-icon-bg.with-bg.contrast { --_stacked-icon-shadow: 0 2px 6px rgba(0,0,0,0.28), 0 1px 2px rgba(0,0,0,0.18); }
             #card-root.is-offscreen .awc-marquee-host .awc-marquee-track { animation-play-state: paused; }
-            canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; filter: var(--awc-canvas-filter, var(--_canvas-filter, none)); --mask-v: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent); --mask-h: linear-gradient(to right, transparent, black 10%, black 90%, transparent); -webkit-mask-image: var(--mask-v), var(--mask-h); mask-image: var(--mask-v), var(--mask-h); -webkit-mask-composite: source-in; mask-composite: intersect; }
+            canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; --mask-v: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent); --mask-h: linear-gradient(to right, transparent, black 10%, black 90%, transparent); -webkit-mask-image: var(--mask-v), var(--mask-h); mask-image: var(--mask-v), var(--mask-h); -webkit-mask-composite: source-in; mask-composite: intersect; }
             #fg-canvas { -webkit-mask-image: none !important; mask-image: none !important; }
             #image-slot { position: absolute; top: 0; height: 100%; width: auto; user-select: none; pointer-events: none; box-sizing: border-box; }
             #image-slot > img { display: block; height: 100%; width: auto; max-width: 100%; object-fit: contain; border: none; outline: none; }
@@ -4402,6 +4451,7 @@ class AtmosphericWeatherCard extends HTMLElement {
       } catch (e) {
         console.error("ATMO-WEATHER-CARD: _initParticles failed", e);
       }
+      this._configureCloudBreathingTimer();
       this._checkRenderGate();
     });
   }
@@ -4876,7 +4926,10 @@ class AtmosphericWeatherCard extends HTMLElement {
     this._sessionSizeBias = (Math.random() - 0.5) * 0.26;
     // Height-proportional puff anatomy — sub-linear so short cards aren't dominated
     const REFERENCE_HEIGHT = 350;
-    const baseUnit = 100 * Math.pow(Math.max(h, 80) / REFERENCE_HEIGHT, 0.7);
+    const baseUnit = Math.max(
+      100 * Math.pow(Math.max(h, 80) / REFERENCE_HEIGHT, 0.7),
+      70,
+    );
     // Silhouette compression — wide+flat shape, puffs stay round
     const baseVCompress = 0.55;
     // Cluster placement — fewer clusters = visible banks with open sky gaps
@@ -5431,9 +5484,9 @@ class AtmosphericWeatherCard extends HTMLElement {
           star._haloOuterR = (isFeature ? 3.8 : 3.0) * haloBoost;
           star._bodyR = 0.6;
           star._spikeRatio = isFeature ? 0.38 : 0.3;
-          star._spikeLen = (isFeature ? 2.8 : 2.0) * haloBoost;
+          star._spikeLen = (isFeature ? 1.8 : 1.3) * haloBoost;
           star._crownRatio = isFeature ? 0.34 : 0.28;
-          star._crownLen = (isFeature ? 3.2 : 2.5) * haloBoost;
+          star._crownLen = (isFeature ? 2.0 : 1.6) * haloBoost;
         }
         const haloDpr = isUltra ? 2 : 1;
         const haloSize = Math.ceil(size * star._haloOuterR * 2 + 2) * haloDpr,
@@ -5725,14 +5778,14 @@ class AtmosphericWeatherCard extends HTMLElement {
     };
   }
   // CLOUD & MOON BAKING
-  _allocCloudAtlas() {
+  _allocCloudAtlas(width = this._perfCloudRes, height = this._perfCloudRes) {
     let canvas;
     try {
-      canvas = new OffscreenCanvas(this._perfCloudRes, this._perfCloudRes);
+      canvas = new OffscreenCanvas(width, height);
     } catch (e) {
       canvas = document.createElement("canvas");
-      canvas.width = this._perfCloudRes;
-      canvas.height = this._perfCloudRes;
+      canvas.width = width;
+      canvas.height = height;
     }
     return {
       canvas,
@@ -5740,6 +5793,26 @@ class AtmosphericWeatherCard extends HTMLElement {
     };
   }
   _bakeAllClouds() {
+    const now = performance.now();
+    const minInterval = 2000;
+    if (this._lastBakeTime != null && now - this._lastBakeTime < minInterval) {
+      this._pendingBakeRequested = true;
+      if (!this._pendingBakeTimer) {
+        const remaining = minInterval - (now - this._lastBakeTime);
+        this._pendingBakeTimer = setTimeout(() => {
+          this._pendingBakeTimer = null;
+          if (this._pendingBakeRequested) {
+            this._pendingBakeRequested = false;
+            this._bakeAllClouds();
+          }
+        }, remaining);
+      }
+      return;
+    }
+    this._lastBakeTime = now;
+    this._doBakeAllClouds();
+  }
+  _doBakeAllClouds() {
     const rs = this._renderState;
     if (!rs) return;
     if (!this._cloudAtlases) this._cloudAtlases = [];
@@ -5804,6 +5877,128 @@ class AtmosphericWeatherCard extends HTMLElement {
       }
     }
   }
+  _getCloudSunAngleBucket(w, h) {
+    if (!this._cloudSunAngleLighting || !w || !h) return null;
+    const celestial = this._getCelestialPosition(w, h);
+    const angle =
+      (Math.atan2(celestial.y - h / 2, celestial.x - w / 2) * 180) / Math.PI;
+    return Math.round(angle / 10) * 10;
+  }
+  _getCloudSunDirection() {
+    const dpr = this._cachedDimensions.dpr || 1;
+    const w = this._cachedDimensions.width / dpr;
+    const h = this._cachedDimensions.height / dpr;
+    if (!w || !h) return null;
+    const celestial = this._getCelestialPosition(w, h);
+    const dx = celestial.x - w / 2;
+    const dy = celestial.y - h / 2;
+    const length = Math.hypot(dx, dy);
+    if (!length) return null;
+    return { x: dx / length, y: dy / length };
+  }
+  _updateLastSunAngleBucket() {
+    const dpr = this._cachedDimensions.dpr || 1;
+    this._lastSunAngleBucket = this._getCloudSunAngleBucket(
+      this._cachedDimensions.width / dpr,
+      this._cachedDimensions.height / dpr,
+    );
+  }
+  _trackCloudSunAngle(w, h) {
+    if (!this._cloudSunAngleLighting) {
+      this._lastSunAngleBucket = null;
+      return;
+    }
+    const bucket = this._getCloudSunAngleBucket(w, h);
+    if (bucket !== null && bucket !== this._lastSunAngleBucket)
+      this._requestAdvancedCloudBake();
+  }
+  _requestAdvancedCloudBake(clouds) {
+    this._pendingAdvancedCloudBake = true;
+    if (clouds) {
+      for (const cloud of clouds) this._pendingCloudBakes.add(cloud);
+    } else {
+      this._pendingFullCloudBake = true;
+    }
+    this._pendingAdvancedCloudBake = false;
+    this._pendingFullCloudBake = false;
+    this._pendingCloudBakes.clear();
+    this._bakeAllClouds();
+    this._updateLastSunAngleBucket();
+  }
+  _clearCloudBreathingTimer() {
+    if (!this._cloudBreathingTimer) return;
+    clearTimeout(this._cloudBreathingTimer);
+    this._cloudBreathingTimer = null;
+  }
+  _configureCloudBreathingTimer() {
+    this._clearCloudBreathingTimer();
+    if (!this._cloudBreathingShapes || !this.isConnected) return;
+    const scheduleNext = () => {
+      this._cloudBreathingTimer = setTimeout(
+        () => {
+          this._cloudBreathingTimer = null;
+          if (
+            this._cloudBreathingShapes &&
+            this._isVisible &&
+            this._stateInitialized
+          ) {
+            const dpr = this._cachedDimensions.dpr || 1;
+            const w = this._cachedDimensions.width / dpr;
+            const h = this._cachedDimensions.height / dpr;
+            const changedClouds = [];
+            for (const cloud of [...this._clouds, ...this._fgClouds]) {
+              if (!this._isCloudVisible(cloud, w, h)) continue;
+              this._breatheCloudShape(cloud);
+              changedClouds.push(cloud);
+            }
+            if (changedClouds.length)
+              this._requestAdvancedCloudBake(changedClouds);
+          }
+          if (this._cloudBreathingShapes && this.isConnected) scheduleNext();
+        },
+        8000 + Math.random() * 7000,
+      );
+    };
+    scheduleNext();
+  }
+  _isCloudVisible(cloud, w, h) {
+    const scale = cloud.scale || 1;
+    const x = cloud.x + (cloud._bakeOffX || 0) * scale;
+    const y = cloud.y + (cloud._bakeOffY || 0) * scale;
+    const cloudW = (cloud._bakeLogicalW || 0) * scale;
+    const cloudH = (cloud._bakeLogicalH || 0) * scale;
+    return x + cloudW > 0 && x < w && y + cloudH > 0 && y < h;
+  }
+  _breatheCloudShape(cloud) {
+    for (const puff of cloud.puffs || []) {
+      if (puff._breathBaseX === undefined) {
+        puff._breathBaseX = puff.offsetX;
+        puff._breathBaseY = puff.offsetY;
+      }
+      const offset = puff.rad * 0.04;
+      puff.offsetX = puff._breathBaseX + (Math.random() * 2 - 1) * offset;
+      puff.offsetY = puff._breathBaseY + (Math.random() * 2 - 1) * offset;
+    }
+  }
+  _drawNoisyPuff(ctx, radius, segments, seed) {
+    const hash = (index) => {
+      let mixed = (index | 0) ^ (seed | 0);
+      mixed = Math.imul(mixed ^ (mixed >>> 16), 0x45d9f3b);
+      mixed = Math.imul(mixed ^ (mixed >>> 16), 0x45d9f3b);
+      return ((mixed ^ (mixed >>> 16)) >>> 0) / 0xffffffff;
+    };
+    ctx.beginPath();
+    for (let segment = 0; segment <= segments; segment++) {
+      const index = segment % segments;
+      const angle = (index / segments) * TWO_PI;
+      const noisyRadius = radius * (0.88 + hash(index) * 0.24);
+      const x = Math.cos(angle) * noisyRadius;
+      const y = Math.sin(angle) * noisyRadius;
+      if (segment === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+  }
   _bakeCloud(cloud, packer) {
     const puffs = cloud.puffs;
     if (!puffs || puffs.length === 0) return;
@@ -5820,6 +6015,9 @@ class AtmosphericWeatherCard extends HTMLElement {
       ambient = cp.ambient;
     const hStretch = cloud._hStretch !== undefined ? cloud._hStretch : 1.0;
     const vCompress = cloud._vCompress !== undefined ? cloud._vCompress : 0.55;
+    const sunDirection = this._cloudSunAngleLighting
+      ? this._getCloudSunDirection()
+      : null;
     const layerHighlightOffset =
       cloud.layer === 5 && !isThemeDark ? 0.5 : highlightOffsetBase;
     const spec = CLOUD_TYPES[cloud.cloudType] || CLOUD_TYPES.organic,
@@ -5864,6 +6062,19 @@ class AtmosphericWeatherCard extends HTMLElement {
     const physW = Math.ceil(bakeW * dpr);
     const physH = Math.ceil(bakeH * dpr);
     if (physW > this._perfCloudRes || physH > this._perfCloudRes) return;
+    if (!packer) {
+      const atlas = this._allocCloudAtlas(physW, physH);
+      packer = {
+        canvas: atlas.canvas,
+        ctx: atlas.ctx,
+        x: 0,
+        y: 0,
+        rowHeight: 0,
+        advance() {
+          return false;
+        },
+      };
+    }
     const cellGap = Math.max(2, Math.ceil(2 * dpr));
     if (packer.x + physW + cellGap > this._perfCloudRes) {
       packer.x = 0;
@@ -5902,6 +6113,9 @@ class AtmosphericWeatherCard extends HTMLElement {
     // and a quadratic bottom-fade is applied post-modifier to prevent stacked-halo mush.
     const isImmersiveLight = isLightBg && this._isImmersive;
     const simpleGrad = this._perfCloudQuality <= 1.0;
+    oc.filter =
+      FILTER_PRESETS[(this._config.card_filter_clouds || "").toLowerCase()] ||
+      "none";
     for (let j = 0; j < puffs.length; j++) {
       const puff = puffs[j],
         sq = puff.squash !== undefined ? puff.squash : 1.0,
@@ -5976,6 +6190,11 @@ class AtmosphericWeatherCard extends HTMLElement {
         dShadR = (dShadR * dim) | 0;
         dShadG = (dShadG * dim) | 0;
         dShadB = (dShadB * dim) | 0;
+      }
+      if (sunDirection) {
+        const highlightDistance = Math.hypot(pHlX, pHlY);
+        pHlX = sunDirection.x * highlightDistance;
+        pHlY = sunDirection.y * highlightDistance;
       }
       if (finalOpacity < 0.005) continue;
       oc.save();
@@ -6054,11 +6273,16 @@ class AtmosphericWeatherCard extends HTMLElement {
         }
       }
       oc.fillStyle = grad;
-      oc.beginPath();
-      oc.arc(0, 0, pRadius, 0, TWO_PI);
+      if (this._perfEffects >= 1)
+        this._drawNoisyPuff(oc, pRadius, 20, (cloud.seed || 0) + j * 101);
+      else {
+        oc.beginPath();
+        oc.arc(0, 0, pRadius, 0, TWO_PI);
+      }
       oc.fill();
       oc.restore();
     }
+    oc.filter = "none";
     oc.restore();
     cloud._bakedCanvas = packer.canvas;
     cloud._atlasX = atlasX;
@@ -6106,6 +6330,9 @@ class AtmosphericWeatherCard extends HTMLElement {
     oc.width = bakeW;
     oc.height = bakeH;
     const oCtx = oc.getContext("2d", { willReadFrequently: false });
+    oCtx.filter =
+      FILTER_PRESETS[(this._config.card_filter_clouds || "").toLowerCase()] ||
+      "none";
     for (let j = 0; j < puffs.length; j++) {
       const puff = puffs[j],
         drawX = puff.offsetX - minX,
@@ -6191,11 +6418,16 @@ class AtmosphericWeatherCard extends HTMLElement {
       if (puff.rotation) oCtx.rotate(puff.rotation);
       if (puff.squash !== 1.0) oCtx.scale(1, puff.squash);
       oCtx.fillStyle = grad;
-      oCtx.beginPath();
-      oCtx.arc(0, 0, pRadius, 0, TWO_PI);
+      if (this._perfEffects >= 1)
+        this._drawNoisyPuff(oCtx, pRadius, 20, (cloud.seed || 0) + j * 101);
+      else {
+        oCtx.beginPath();
+        oCtx.arc(0, 0, pRadius, 0, TWO_PI);
+      }
       oCtx.fill();
       oCtx.restore();
     }
+    oCtx.filter = "none";
     cloud._bakedCanvas = oc;
     cloud._bakeOffX = minX;
     cloud._bakeOffY = minY;
@@ -6272,6 +6504,10 @@ class AtmosphericWeatherCard extends HTMLElement {
       sizeCap = Math.min(w, h) * 0.9;
     const [gR, gG, gB] = glow.color;
     ctx.save();
+    const sunFilter =
+      FILTER_PRESETS[(this._config.card_filter_sun || "").toLowerCase()] ||
+      "none";
+    ctx.filter = sunFilter;
     if (glow.compOp) ctx.globalCompositeOperation = glow.compOp;
     ctx.translate(cx, cy);
     if (glow.showDisc) {
@@ -6316,12 +6552,14 @@ class AtmosphericWeatherCard extends HTMLElement {
           Math.sin(angle) * centerOffset + auraY,
         );
         ctx.rotate(angle);
-        ctx.filter = `blur(${Math.max(2, auraR * 0.06)}px)`;
+        const blurFilter = `blur(${Math.max(2, auraR * 0.06)}px)`;
+        ctx.filter =
+          sunFilter === "none" ? blurFilter : `${blurFilter} ${sunFilter}`;
         ctx.fillStyle = gradient;
         ctx.beginPath();
         ctx.ellipse(0, 0, length, width, 0, 0, TWO_PI);
         ctx.fill();
-        ctx.filter = "none";
+        ctx.filter = sunFilter;
         ctx.restore();
       }
       if (!this._sunDiscGrad || this._sunDiscGradR !== sunBaseR) {
@@ -6395,6 +6633,7 @@ class AtmosphericWeatherCard extends HTMLElement {
       ctx.fillStyle = dc.core;
       fillCircle(ctx, 0, 0, dc.coreR);
     }
+    ctx.filter = "none";
     ctx.restore();
   }
   _drawCelestialClouds(ctx, w, h, effectiveWind) {

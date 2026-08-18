@@ -17,7 +17,8 @@ const LABELS = Object.freeze({
   card_offset: "Card Offset",
   card_stack_order: "Layer Order",
   card_tap_action: "Tap Action",
-  card_filter: "Visual Filter",
+  card_filter_clouds: "Cloud Filter",
+  card_filter_sun: "Sun Filter",
   card_full_width: "Full Width",
   card_mask_vertical: "Fade Top & Bottom Edges",
   card_mask_horizontal: "Fade Left & Right Edges",
@@ -28,7 +29,6 @@ const LABELS = Object.freeze({
   celestial_alignment: "Alignment",
   celestial_x: "X Offset",
   celestial_y: "Y Offset",
-  celestial_moon_style: "Moon Glow Color",
   image_day: "Day Image URL",
   image_night: "Night Image URL",
   image_scale: "Image Scale (%)",
@@ -67,7 +67,7 @@ const LABELS = Object.freeze({
   perf_mode: "Performance Preset",
   perf_fps: "Frame Rate",
   perf_cloud_quality: "Cloud Detail",
-  perf_effects: "Weather Effects",
+  perf_effects: "Effect Quality",
   perf_fauna: "Fauna",
   perf_dpr: "Sharpness",
   animation_speed: "Animation Speed",
@@ -89,8 +89,8 @@ const HELPERS = Object.freeze({
   card_mask_vertical: "Adds a soft fade to the top and bottom edges.",
   card_mask_horizontal: "Adds a soft fade to the left and right edges.",
   card_hide_text: "Hides all text overlays in one toggle.",
-  card_filter: "A color filter applied to the animations.",
-  celestial_moon_style: "",
+  card_filter_clouds: "A color filter applied to clouds.",
+  card_filter_sun: "A color filter applied to the sun.",
   celestial_x: "Horizontal offset from the alignment edge, in pixels.",
   celestial_y: "Vertical offset from the alignment edge, in pixels.",
   celestial_position: "",
@@ -169,7 +169,6 @@ const KEY_ORDER = Object.freeze([
   "celestial_alignment",
   "celestial_x",
   "celestial_y",
-  "celestial_moon_style",
   "image_day",
   "image_night",
   "image_scale",
@@ -211,7 +210,8 @@ const KEY_ORDER = Object.freeze([
   "card_mask_vertical",
   "card_mask_horizontal",
   "card_stack_order",
-  "card_filter",
+  "card_filter_clouds",
+  "card_filter_sun",
   "chip_icon_background",
   "custom_cards_position",
   "custom_cards_css_class",
@@ -232,10 +232,10 @@ const KEY_ORDER = Object.freeze([
   "custom_cards",
 ]);
 const DISPLAY_DEFAULTS = Object.freeze({
-  card_style: "immersive",
+  card_style: "standalone",
   card_color_mode: "auto",
-  card_filter: "none",
-  celestial_moon_style: "default",
+  card_filter_clouds: "none",
+  card_filter_sun: "none",
   image_alignment: "top-right",
   card_background_style: "frosted",
   chip_area_layout: "wrap",
@@ -358,19 +358,19 @@ const OPT = Object.freeze({
     { value: "force_light", label: "Force light mode" },
     { value: "force_dark", label: "Force dark mode" },
   ],
-  card_filter: [
+  card_filter_clouds: [
     { value: "none", label: "None" },
     { value: "darken", label: "Darken" },
     { value: "vivid", label: "Vivid" },
     { value: "muted", label: "Muted" },
     { value: "warm", label: "Warm" },
   ],
-  celestial_moon_style: [
-    { value: "default", label: "Default (follows theme)" },
-    { value: "blue", label: "Blue" },
-    { value: "yellow", label: "Yellow" },
-    { value: "purple", label: "Purple" },
-    { value: "grey", label: "Grey" },
+  card_filter_sun: [
+    { value: "none", label: "None" },
+    { value: "darken", label: "Darken" },
+    { value: "vivid", label: "Vivid" },
+    { value: "muted", label: "Muted" },
+    { value: "warm", label: "Warm" },
   ],
   chip_overflow: [
     { value: "ellipsis", label: "Ellipsis (…)" },
@@ -2436,7 +2436,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
   _renderCardStyleSegmented() {
     const c = this._formData,
       isSquare = c.card_square === true,
-      current = c.card_style || "immersive";
+      current = c.card_style || "standalone";
     const opts = [
       { value: "immersive", label: "Immersive" },
       { value: "standalone", label: "Standalone" },
@@ -5157,18 +5157,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
             )}`;
           })(),
         )}
-        ${this._renderDisclosure(
-          "Moon Style",
-          this._renderForm([
-            {
-              name: "celestial_moon_style",
-              selector: {
-                select: { mode: "dropdown", options: OPT.celestial_moon_style },
-              },
-            },
-          ]),
-        )}</ha-expansion-panel
-      >
+      </ha-expansion-panel>
       <ha-expansion-panel
         outlined
         data-panel="color_mode"
@@ -5184,9 +5173,18 @@ class AtmosphericWeatherCardEditor extends LitElement {
           "Advanced options",
           this._renderForm([
             {
-              name: "card_filter",
+              name: "card_filter_clouds",
               selector: {
-                select: { mode: "dropdown", options: OPT.card_filter },
+                select: {
+                  mode: "dropdown",
+                  options: OPT.card_filter_clouds,
+                },
+              },
+            },
+            {
+              name: "card_filter_sun",
+              selector: {
+                select: { mode: "dropdown", options: OPT.card_filter_sun },
               },
             },
           ]),
@@ -5208,7 +5206,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
           html`${this._renderToggleGroup([
             { key: "card_hide_text", label: LABELS.card_hide_text },
             { key: "card_square", label: LABELS.card_square },
-            ...(!((this._formData.card_style || "") === "standalone")
+            ...(!((this._formData.card_style || "standalone") === "standalone")
               ? [
                   { key: "card_full_width", label: LABELS.card_full_width },
                   {
