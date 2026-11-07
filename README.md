@@ -44,23 +44,25 @@ Click any weather condition or Day/Night to switch instantly and see every effec
 
 ## Installation
 
-### Method 1: HACS (Recommended)
+Requires Home Assistant 2026.11 or newer.
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=whyisthisbroken&repository=atmo-weather-card&category=plugin)
+### Method 1: Marketplace (Recommended)
 
-Easiest way to install and manage updates. HACS handles everything for you.
+[![Open your Home Assistant instance and open this repository in the Marketplace.](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=whyisthisbroken&repository=atmo-weather-card&category=plugin)
+
+Easiest way to install and manage updates. The card is added as a custom repository. Existing HACS installs moved to the Marketplace automatically with Home Assistant 2026.11.
 
 <details>
 <summary>Installation Steps</summary>
 
-1. Open HACS in Home Assistant.
-2. Click the three-dot menu (top right) → Custom repositories.
-3. Add the repository URL: https://github.com/whyisthisbroken/atmo-weather-card
-4. Select category: Dashboard
-5. Click Add.
-6. HACS will scan the repository and redirect you to it automatically. If not, go to HACS and search for Atmo Weather Card.
-7. Click Download.
-8. Reload your dashboard (clear browser cache if the card doesn't appear).
+1. Go to **Settings** → **Marketplace** and select **Add from link** (top right).
+2. Connect GitHub if you are asked to. Custom repositories require this connection.
+3. Under **GitHub link**, enter `whyisthisbroken/atmo-weather-card` and select **Add**.
+4. If you are asked for a **Type**, select **Dashboard** and select **Add** again.
+5. Open Atmo Weather Card and select **Install**.
+6. Reload your dashboard (clear browser cache if the card doesn't appear).
+
+The Marketplace checks custom repositories for new versions every 48 hours.
 
 </details>
 
@@ -68,27 +70,22 @@ Easiest way to install and manage updates. HACS handles everything for you.
 
 [![Open your Home Assistant instance and navigate to your lovelace resources.](https://my.home-assistant.io/badges/lovelace_resources.svg)](https://my.home-assistant.io/redirect/lovelace_resources/)
 
-For manual installation without HACS. [Download the latest files from the releases page.](https://github.com/whyisthisbroken/atmo-weather-card/releases)
+For manual installation without the Marketplace. [Download the latest files from the releases page.](https://github.com/whyisthisbroken/atmo-weather-card/releases)
 
 <details>
 <summary>Installation Steps</summary>
 
-1. **Download files** from the [latest release](https://github.com/whyisthisbroken/atmo-weather-card/releases):
-   - `atmo-weather-card.js`
-   - `atmo-weather-card-editor.js`
-   - `atmo-weather-animations.js`
-   - `atmo-weather-config.js`
-   - `atmo-weather-fauna.js`
+1. **Download the source archive** from the [latest release](https://github.com/whyisthisbroken/atmo-weather-card/releases) and open its `dist` folder.
 
-2. **Place files** in your Home Assistant config folder:
+2. **Copy everything from `dist`** to your Home Assistant config folder:
 
    ```
    config/www/atmo-weather-card/
    ├── atmo-weather-card.js
    ├── atmo-weather-card-editor.js
-   ├── atmo-weather-animations.js
-   ├── atmo-weather-config.js
-   └── atmo-weather-fauna.js
+   ├── figtree-latin-wght-normal.woff2
+   ├── figtree-latin-ext-wght-normal.woff2
+   └── figtree-LICENSE.txt
    ```
 
 3. **Add resource** in Home Assistant:
@@ -226,8 +223,7 @@ chips:
     forecast_precision: 0
     icon_path: /local/your-icon-folder/
     unit_format: °
-    forecast_show_min: true
-    forecast_low_position: below
+    sub_value_attribute: templow
   - entity: weather.your_weather_entity
     forecast: daily
     attribute: temperature
@@ -236,8 +232,7 @@ chips:
     forecast_precision: 0
     icon_path: /local/your-icon-folder/
     unit_format: °
-    forecast_show_min: true
-    forecast_low_position: below
+    sub_value_attribute: templow
   - entity: weather.your_weather_entity
     forecast: daily
     attribute: temperature
@@ -246,8 +241,7 @@ chips:
     forecast_precision: 0
     icon_path: /local/your-icon-folder/
     unit_format: °
-    forecast_show_min: true
-    forecast_low_position: below
+    sub_value_attribute: templow
   - entity: weather.your_weather_entity
     forecast: daily
     attribute: temperature
@@ -256,8 +250,7 @@ chips:
     forecast_precision: 0
     icon_path: /local/your-icon-folder/
     unit_format: °
-    forecast_show_min: true
-    forecast_low_position: below
+    sub_value_attribute: templow
   - entity: weather.your_weather_entity
     forecast: daily
     attribute: temperature
@@ -266,8 +259,7 @@ chips:
     forecast_precision: 0
     icon_path: /local/your-icon-folder/
     unit_format: °
-    forecast_show_min: true
-    forecast_low_position: below
+    sub_value_attribute: templow
   - entity: weather.your_weather_entity
     forecast: daily
     attribute: temperature
@@ -276,8 +268,7 @@ chips:
     forecast_precision: 0
     icon_path: /local/your-icon-folder/
     unit_format: °
-    forecast_show_min: true
-    forecast_low_position: below
+    sub_value_attribute: templow
 grid_options:
   rows: auto
 ```
@@ -346,7 +337,9 @@ chips:
   - entity: weather.your_weather_entity
     forecast: daily
     attribute: temperature
-    forecast_show_min: true
+    sub_value_attribute: templow
+
+    sub_value_position: beside
     forecast_precision: 0
     name: Today
     icon: weather
@@ -355,7 +348,9 @@ chips:
   - entity: weather.your_weather_entity
     forecast: daily
     attribute: temperature
-    forecast_show_min: true
+    sub_value_attribute: templow
+
+    sub_value_position: beside
     forecast_precision: 0
     forecast_offset: 1
     icon: weather
@@ -551,7 +546,9 @@ chips:
     value_weight: "600"
     overflow: marquee
     label_overflow: ellipsis
-    forecast_show_min: true
+    sub_value_attribute: templow
+
+    sub_value_position: beside
   - forecast: daily
     attribute: temperature
     forecast_offset: 1
@@ -567,7 +564,9 @@ chips:
     name: Tomorrow
     overflow: marquee
     label_overflow: ellipsis
-    forecast_show_min: true
+    sub_value_attribute: templow
+
+    sub_value_position: beside
 grid_options:
   rows: auto
 ```
@@ -588,12 +587,11 @@ Card editor
 ├─ weather_entity                          (always visible, top)
 ├─ Sun & Moon
 │  ├─ sun_entity, moon_phase_entity
-│  ├─ Position & Size ▸ celestial_position, celestial_alignment,
-│  │                    celestial_x, celestial_y, celestial_size
-│  └─ Moon Style ▸ celestial_moon_style
+│  └─ Position & Size ▸ celestial_position, celestial_alignment,
+│                       celestial_x, celestial_y, celestial_size
 ├─ Color Mode
 │  ├─ card_color_mode, theme_entity
-│  └─ Advanced options ▸ card_filter
+│  └─ Advanced options ▸ card_filter_clouds, card_filter_sun
 ├─ Card Style
 │  ├─ card_style, card_height, card_padding
 │  └─ Advanced options ▸ card_hide_text, card_square, card_full_width,
@@ -606,7 +604,7 @@ Card editor
 │  │          status_day, status_night
 │  └─ Cards ▸ custom_cards_position, custom_cards_css_class, custom_cards
 ├─ Performance
-│  └─ perf_mode, perf_fps, perf_cloud_quality, perf_effects, perf_dpr,
+│  └─ wind_style, perf_mode, perf_fps, perf_cloud_quality, perf_effects, perf_dpr,
 │     perf_fauna, fauna_bird_density, fauna_plane_density,
 │     fauna_bird_flock_size, fauna_birds_at_night, animation_speed,
 │     bird_animation_speed, star_animation_speed
@@ -623,7 +621,7 @@ The sections below document every option, including type, default, and behavior.
 
 | Option             | Type                | Default     | Description                                                                                                                                                                                                                                                                                                                                                                     |
 | :----------------- | :------------------ | :---------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `card_style`       | `string`            | `immersive` | Set to `standalone` for a solid background with dynamic weather visuals, or `immersive` for a transparent background.                                                                                                                                                                                                                                                           |
+| `card_style`       | `string`            | `standalone` | Set to `standalone` for a solid background with dynamic weather visuals, or `immersive` for a transparent background.                                                                                                                                                                                                                                                           |
 | `card_height`      | `number` · `string` | `200`       | Height in pixels. Numbers are automatically treated as px (e.g., `110` becomes `110px`). **Set to `auto`** to dynamically fill the available height (for grid layouts).                                                                                                                                                                                                         |
 | `card_padding`     | `string`            | `16px`      | Inner padding around the text. Accepts any CSS padding value (e.g., `8px`, `12px 20px`).                                                                                                                                                                                                                                                                                        |
 | `card_hide_text`   | `boolean`           | `false`     | Hides all text overlays, including chips. The card's weather animations and configured chip settings remain available if you enable it again.                                                                                                                                                                                                                                   |
@@ -640,9 +638,9 @@ The sections below document every option, including type, default, and behavior.
 
 | Option                 | Type      | Default   | Description                                                                                                                                                                                                                                                            |
 | :--------------------- | :-------- | :-------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `card_color_mode`      | `string`  | `auto`    | Controls the card's color scheme. By default, it follows your Home Assistant theme. Set to `entity` to follow a `theme_entity`, or `force_dark` / `force_light` to lock the look. Also accepts `night` / `day` to override the sky content. See [Colors](#color-mode). |
-| `card_filter`          | `string`  | `none`    | Applies a visual filter preset to the weather canvas. Options: `darken`, `vivid`, `muted`, `warm`.                                                                                                                                                                     |
-| `celestial_moon_style` | `string`  | `default` | The moon's glow color. `default` follows the theme (muted blue in light mode, white in dark mode). Other options: `blue`, `yellow`, `purple`, `grey`.                                                                                                                  |
+| `card_color_mode`      | `string`  | `auto`    | Controls the card's color scheme. By default, it follows your Home Assistant theme, or `theme_entity` if you set one. Use `dark` or `light` to lock the look. `night` and `day` override the sky content. The older `force_dark` and `force_light` still work. See [Colors](#color-mode). |
+| `card_filter_clouds`   | `string`  | `none`    | Applies a visual filter preset to the clouds. Options: `none`, `darken`, `vivid`, `muted`, `warm`. |
+| `card_filter_sun`      | `string`  | `none`    | Applies a visual filter preset to the sun glow. Same options as `card_filter_clouds`. An older `card_filter` value is applied to both automatically. |
 | `card_mask_vertical`   | `boolean` | `true`    | _(Immersive only)_ Fades the top and bottom edges. Set to `false` to disable.                                                                                                                                                                                          |
 | `card_mask_horizontal` | `boolean` | `true`    | _(Immersive only)_ Fades the left and right edges. Set to `false` to disable.                                                                                                                                                                                          |
 | `theme_entity`         | `string`  | —         | Drives the card's color scheme from any entity's state instead of your HA theme. Commonly set to `sun.sun` to sync the card with sunrise/sunset. See [Colors](#color-mode).                                                                                            |
@@ -706,7 +704,7 @@ Chip
 ├─ Position
 │  └─ position, position_anchor, position_x, position_y, behind_effects
 └─ Tap Action
-   └─ card_tap_action              (scoped to this chip)
+   └─ tap_action                   (scoped to this chip)
 ```
 
 > [!TIP]
@@ -723,7 +721,7 @@ Chip
 | `chip_area_position`         | `string`  | `bottom-left` | Where the chips row is positioned.                                                                                                                                                                                                                                                                    |
 | `chip_area_layout`           | `string`  | `wrap`        | Row behavior. `wrap` moves overflowing chips to a new line, `horizontal-scroll` keeps them on one line with a hidden scrollbar and edge fades, `vertical-scroll` stacks them in a scrollable column, `grid` arranges them in equal columns. `scroll` is accepted as an alias for `horizontal-scroll`. |
 | `chip_area_columns`          | `number`  | `3`           | Number of equal-width columns when `chip_area_layout: grid` is active.                                                                                                                                                                                                                                |
-| `chip_area_align`            | `string`  | `start`       | How each chip aligns inside its grid cell. Options: `start`, `center`, `end`. Grid layout only.                                                                                                                                                                                                       |
+| `chip_area_align`            | `string`  | `start`       | How chips align inside the chip area. Options: `start`, `center`, `end`, `spread`. |
 | `chip_area_width`            | `string`  | —             | Limits the full row width (e.g., `60%` or `200px`). Useful to place the chips row next to the top text instead of spanning the card.                                                                                                                                                                  |
 | `chip_area_height`           | `string`  | —             | Sets the height of the chips row (e.g., `120px`).                                                                                                                                                                                                                                                     |
 | `chip_padding`               | `string`  | `5px 10px`    | Inner padding of each chip (e.g., `5px 10px`).                                                                                                                                                                                                                                                        |
@@ -763,7 +761,6 @@ Each entry inside the `chips` list accepts the following keys.
 | `forecast_offset`       | `number`  | `0`         | Which forecast entry to display. `0` = today/now, `1` = tomorrow/next hour, and so on. Daily goes up to 6, hourly up to 23.                                                                                                                                                                                                                                                                    |
 | `forecast_precision`    | `number`  | —           | Maximum number of decimal places for forecast values (0–2). Only limits the number shown; trailing zero decimals are trimmed (e.g. a whole number stays without a decimal point even at precision `1` or `2`).                                                                                                                                                                                 |
 | `value_precision`       | `number`  | —           | Forces the chip's main value to always show exactly this many decimal places (0–2), padding with zeros if needed (e.g. `22` becomes `22.0` at precision `1`). Leave unset to use Home Assistant's own display precision for the entity/attribute ("Auto"). Does not apply to forecast chips — use `forecast_precision` for those.                                                              |
-| `forecast_show_min`     | `boolean` | `false`     | Shows the low/high temperature range (e.g., `8 – 18`) instead of only the high. Only works with `attribute: temperature` on daily forecasts. In the editor this is internally mapped to sub-value options (`sub_value_attribute: templow` and `sub_value_position`).                                                                                                                           |
 | `unit_format`           | `string`  | —           | Replaces the unit shown after the value. Placed directly after the value with no space, e.g. `°` turns `12 °C` into `12°`.                                                                                                                                                                                                                                                                     |
 | `name`                  | `string`  | —           | Optional label shown before the value (e.g., `Wind`). For forecast chips, this overrides the auto-generated day/time name.                                                                                                                                                                                                                                                                     |
 | `icon`                  | `string`  | _auto_      | An `mdi:` icon (e.g., `mdi:water-percent`), the keyword `weather` to automatically show the icon matching the current weather state (or the forecasted condition when using `forecast`), or empty to inherit the sensor's own icon.                                                                                                                                                            |
@@ -778,21 +775,20 @@ Each entry inside the `chips` list accepts the following keys.
 | `label_overflow`        | `string`  | `ellipsis`  | How the name label handles overflow. Same options as `overflow`.                                                                                                                                                                                                                                                                                                                               |
 | `marquee_speed`         | `number`  | `30`        | Scroll speed in pixels per second when any overflow mode is `marquee` (`overflow`, `label_overflow`, or `sub_value_overflow`). Minimum `5`.                                                                                                                                                                                                                                                    |
 | `marquee_rtl`           | `boolean` | `false`     | Reverses marquee direction (scrolls right-to-left) for all marquee-based text overflows.                                                                                                                                                                                                                                                                                                       |
-| `card_tap_action`       | `object`  | `more-info` | A standard Home Assistant [tap action](https://www.home-assistant.io/dashboards/actions/) scoped to this chip.                                                                                                                                                                                                                                                                                 |
+| `tap_action`            | `object`  | `more-info` | A standard Home Assistant [tap action](https://www.home-assistant.io/dashboards/actions/) scoped to this chip.                                                                                                                                                                                                                                                                                 |
 | `name_sensor`           | `string`  | —           | An entity whose state (or attribute) is used as the chip's dynamic name label. Updates in real time.                                                                                                                                                                                                                                                                                           |
 | `name_attribute`        | `string`  | —           | Reads a specific attribute from the `name_sensor` entity instead of its state.                                                                                                                                                                                                                                                                                                                 |
 | `hide_sub_value`        | `boolean` | `false`     | Hides the optional secondary value.                                                                                                                                                                                                                                                                                                                                                            |
 | `sub_value_entity`      | `string`  | —           | Entity used for the secondary value.                                                                                                                                                                                                                                                                                                                                                           |
-| `sub_value_attribute`   | `string`  | —           | Attribute read from `sub_value_entity` instead of its state.                                                                                                                                                                                                                                                                                                                                   |
+| `sub_value_attribute`   | `string`  | —           | Attribute read from `sub_value_entity` instead of its state. On a forecast chip, `templow` shows the daily low next to the high. |
 | `sub_value_format`      | `string`  | —           | Optional text format for the secondary value.                                                                                                                                                                                                                                                                                                                                                  |
-| `sub_value_position`    | `string`  | —           | Where to display the secondary value. Use `beside` or `below`.                                                                                                                                                                                                                                                                                                                                 |
+| `sub_value_position`    | `string`  | `below`     | Where to display the secondary value. Use `beside` for an inline range such as `8 – 18`, or leave it unset to show it below the main value. |
 | `sub_value_overflow`    | `string`  | `ellipsis`  | How the secondary value handles overflow. Uses the same options as `overflow`.                                                                                                                                                                                                                                                                                                                 |
 | `position`              | `string`  | —           | Set to `custom` to detach this chip from the row and place it freely on the card using `position_anchor`, `position_x`, and `position_y`.                                                                                                                                                                                                                                                      |
 | `position_anchor`       | `string`  | `top-left`  | Anchor point for a free-positioned chip. Uses a 9-cell grid (e.g., `top-left`, `center`, `bottom-right`).                                                                                                                                                                                                                                                                                      |
 | `position_x`            | `string`  | `0`         | Horizontal offset for a free-positioned chip (e.g., `20px`, `10%`).                                                                                                                                                                                                                                                                                                                            |
 | `position_y`            | `string`  | `0`         | Vertical offset for a free-positioned chip (e.g., `20px`, `10%`).                                                                                                                                                                                                                                                                                                                              |
 | `behind_effects`        | `boolean` | `false`     | Places the chip behind the weather animations. Only works on free-positioned chips.                                                                                                                                                                                                                                                                                                            |
-| `forecast_low_position` | `string`  | —           | Where to show the low temperature when `forecast_show_min` is active. `beside` places it inline (e.g., `8 – 18`). `below` renders it on a second line under the high. In the editor this is internally mapped to `sub_value_position` (`beside`/`below`).                                                                                                                                      |
 
 </details>
 
@@ -903,7 +899,6 @@ custom_cards:
 | `--awc-card-border-radius`     | `12px`       | Adjusts the corner radius.                                                                                |
 | `--awc-card-border-width`      | _HA theme_   | Overrides the card's border width. Inherits from the Home Assistant theme by default.                     |
 | `--awc-card-padding`           | `16px`       | Padding space around the text.                                                                            |
-| `--awc-canvas-filter`          | `none`       | Applies a custom CSS filter to the canvas (this overrides the `card_filter` config option).               |
 | `--awc-stack-order`            | `-1` / `1`   | Controls the stacking order (z-index) of the card. Defaults to `-1` for immersive and `1` for standalone. |
 | `--awc-custom-cards-direction` | `row`        | Flex direction of the custom cards container.                                                             |
 | `--awc-custom-cards-gap`       | `8px`        | Gap between items in the custom cards container.                                                          |
@@ -1032,7 +1027,9 @@ chips:
     forecast: daily
     attribute: temperature
     forecast_offset: 1
-    forecast_show_min: true
+    sub_value_attribute: templow
+
+    sub_value_position: beside
     icon: weather
     icon_path: /local/weather-icons/
   - entity: weather.your_weather_entity
@@ -1044,7 +1041,7 @@ chips:
 
 The first chip shows tomorrow's temperature range (low – high) with a weather icon matching tomorrow's condition. The second chip shows the temperature 3 hours from now, with `°` directly after the value instead of the full unit.
 
-For the full list of forecast-related options (`forecast`, `forecast_offset`, `forecast_precision`, `forecast_show_min`, `forecast_low_position`, `value_precision`, `unit_format`), see **Per-chip options** in [Appearance](#appearance).
+For the full list of forecast-related options (`forecast`, `forecast_offset`, `forecast_precision`, `sub_value_attribute`, `sub_value_position`, `value_precision`, `unit_format`), see **Per-chip options** in [Appearance](#appearance).
 
 </details>
 
@@ -1222,9 +1219,9 @@ The card's appearance depends on your **`sun_entity`** (sun or moon) and your **
 | Mode                     | Config                                                                        | What it does                                                                                                                                                                                                                                                                                                             |
 | :----------------------- | :---------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Follow your HA theme** | `sun_entity: sun.sun`                                                         | The card shows the sun during the day and the moon at night, syncing its colors to whatever your Home Assistant theme is doing. Android and iOS can auto-toggle dark mode based on sunrise and sunset — this is exactly what the card was designed for.                                                                  |
-| **Follow the sun**       | `sun_entity: sun.sun`<br>`card_color_mode: entity`<br>`theme_entity: sun.sun` | The card switches between light and dark at the real sunrise and sunset, regardless of what your Home Assistant theme is doing. Its colors match the time of day no matter what the rest of your dashboard looks like.                                                                                                   |
-| **Force light or dark**  | `card_color_mode: force_dark`<br>or `card_color_mode: force_light`            | Locks the card's colors to one value. The sky still follows `sun_entity`, so you still get the moon and stars at night — only the card's colors are forced.                                                                                                                                                              |
-| **Custom logic**         | `card_color_mode: entity`<br>`theme_entity: sensor.my_custom_mode`            | `theme_entity` can point at any entity — a template sensor, an `input_boolean`, or anything else. The card switches to its dark look when the state is `dark`, `night`, `evening`, `on`, `true`, or `below_horizon`. Anything else counts as light. Useful for rules like "dark after 9pm" or "dark when it's overcast". |
+| **Follow the sun**       | `sun_entity: sun.sun`<br>`theme_entity: sun.sun` | The card switches between light and dark at the real sunrise and sunset, regardless of what your Home Assistant theme is doing. Its colors match the time of day no matter what the rest of your dashboard looks like.                                                                                                   |
+| **Force light or dark**  | `card_color_mode: dark`<br>or `card_color_mode: light`            | Locks the card's colors to one value. The sky still follows `sun_entity`, so you still get the moon and stars at night — only the card's colors are forced.                                                                                                                                                              |
+| **Custom logic**         | `theme_entity: sensor.my_custom_mode`            | `theme_entity` can point at any entity — a template sensor, an `input_boolean`, or anything else. The card switches to its dark look when the state is `dark`, `night`, `evening`, `on`, `true`, or `below_horizon`. Anything else counts as light. Useful for rules like "dark after 9pm" or "dark when it's overcast". |
 
 </details>
 
@@ -1259,10 +1256,12 @@ The card has three performance presets (`low`, `default`, and `ultra`) which cov
 
 | Option                  | Type      | Default   | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | :---------------------- | :-------- | :-------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `perf_mode`             | `string`  | `default` | Performance preset. `low` disables effects and lowers resolution for weak devices. `default` is balanced. `ultra` raises the frame rate and cloud detail to maximum.                                                                                                                                                                                                                                                                                                                                                                   |
+| `perf_mode`             | `string`  | `default` | Performance preset. `low` disables effects and lowers resolution for weak devices. `default` is balanced. `ultra` raises the frame rate and cloud detail to maximum, and keeps large cards (for example on wall tablets) at full sharpness.                                                                                                                                                                                                                                                                                                                                                                   |
 | `perf_fps`              | `number`  | `30`      | Animation frame rate. `30` saves battery, `60` is smoother. See [Troubleshooting: Editor preview stutters or FPS looks wrong after install/update](#editor-preview-stutters-or-fps-looks-wrong-after-installupdate) and [Performance is weak on older devices](#performance-is-weak-on-older-devices).                                                                                                                                                                                                                                 |
 | `perf_cloud_quality`    | `number`  | `1.5`     | Cloud detail level. Controls how many puffs each cloud shape gets. `0.5` = low, `1` = medium, `1.5` = high, `2` = ultra.                                                                                                                                                                                                                                                                                                                                                                                                               |
 | `perf_effects`          | `number`  | `1`       | Weather effects intensity. `0` disables visual effects like shooting stars, comets, aurora, fog/wind visuals, and similar atmospheric extras. `1` enables default spawn rates. `2` increases effect intensity and spawn rates (comets appear 1.8x more often). Spawn rates also scale with `perf_fps` and overall system performance. See [Troubleshooting: No night effects (stars/comets) are visible](#no-night-effects-starscomets-are-visible) and [Performance is weak on older devices](#performance-is-weak-on-older-devices). |
+| `cloud_sun_angle_lighting` | `boolean` | _auto_ | YAML only. Lights clouds from the current sun angle. On by default when `perf_effects` is `2`. |
+| `cloud_breathing_shapes`   | `boolean` | _auto_ | YAML only. Slowly reshapes clouds over time. On by default when `perf_effects` is `2`. |
 | `perf_fauna`            | `number`  | `2`       | Birds and planes spawn rate. `0` = no fauna, `1` = birds only, `2` = birds and planes. Separate control from weather effects. See [Troubleshooting: No birds or planes are visible](#no-birds-or-planes-are-visible).                                                                                                                                                                                                                                                                                                                  |
 | `animation_speed`       | `number`  | `1.0`     | Global animation speed multiplier. Range `0` to `3`. `0` freezes animated motion, `1.0` is default speed, `2.0` is double speed.                                                                                                                                                                                                                                                                                                                                                                                                       |
 | `bird_animation_speed`  | `number`  | `1.0`     | Bird-only speed multiplier. Range `0` to `3`. Applied on top of `animation_speed` for bird movement and wing flapping.                                                                                                                                                                                                                                                                                                                                                                                                                 |
@@ -1272,6 +1271,7 @@ The card has three performance presets (`low`, `default`, and `ultra`) which cov
 | `fauna_plane_density`   | `number`  | `1.0`     | Plane spawn rate multiplier. Range `0.5` to `2.0`. Scales how often planes appear. `0.5` = sparse, `1.0` = default, `2.0` = frequent. Only works with `perf_fauna: 2`. See [Troubleshooting: No birds or planes are visible](#no-birds-or-planes-are-visible).                                                                                                                                                                                                                                                                         |
 | `fauna_bird_flock_size` | `number`  | `6`       | Target average birds per flock. Range `1` to `20`. Runtime fallback is `6`. If `perf_mode: default` is active and no explicit value is set, the editor preset applies `8`. Actual flock size is randomized around this value (about ±2) and occasional single-bird passes can still occur. See [Troubleshooting: Editor values differ from runtime defaults](#editor-values-differ-from-runtime-defaults).                                                                                                                             |
 | `fauna_birds_at_night`  | `boolean` | `true`    | Controls whether birds can appear at night. Set to `false` for daytime-only birds. Planes are unaffected. See [Troubleshooting: No birds or planes are visible](#no-birds-or-planes-are-visible).                                                                                                                                                                                                                                                                                                                                      |
+| `wind_style`            | `string`  | `lines`   | Wind display. `lines` draws long wind lines, `flow` a field of short streaks, `off` hides it. Direction follows `wind_bearing` of the weather entity, strength follows the wind speed. Shown in windy weather, and in rain, hail or snow from 40 km/h.                                                                                                                                                                                                                                                                                 |
 
 </details>
 
@@ -1319,9 +1319,8 @@ star_animation_speed: 0.6 # Stars only; twinkle speed (0.0-2.0)
 
 - `atmo-weather-card.js`
 - `atmo-weather-card-editor.js`
-- `atmo-weather-animations.js`
-- `atmo-weather-config.js`
-- `atmo-weather-fauna.js`
+- `figtree-latin-wght-normal.woff2`
+- `figtree-latin-ext-wght-normal.woff2`
 
 ### Changes are not visible after update
 
@@ -1361,6 +1360,14 @@ star_animation_speed: 0.6 # Stars only; twinkle speed (0.0-2.0)
 
 <details>
 <summary><strong>Data & Effects</strong></summary>
+
+### Forecast chip shows "Please check your weather provider"
+
+The chip appears in your Home Assistant language and means the weather entity delivers no forecast of the requested type.
+
+1. Check that your weather integration offers this forecast. Many offer `daily` but not `hourly`.
+2. Test it under **Developer Tools** → **Actions** with `weather.get_forecasts`.
+3. Check the integration for errors, for example an expired API key. The chip shows the value again as soon as data arrives.
 
 ### Weather entity is unavailable or values look wrong
 

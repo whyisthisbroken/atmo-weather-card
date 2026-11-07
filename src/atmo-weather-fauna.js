@@ -164,7 +164,7 @@ export function drawBirds(card, ctx, w, h) {
   const headLw =
     minLineWidth < Infinity ? Math.max(0.8, minLineWidth * 0.5) : 1;
   ctx.lineWidth = headLw;
-  for (const [lw, pts] of widthBuckets) {
+  for (const [, pts] of widthBuckets) {
     for (let j = 6; j < pts.length; j += 13) {
       const hx = pts[j];
       const hy = pts[j + 1];
@@ -179,7 +179,7 @@ export function drawBirds(card, ctx, w, h) {
   const tailLw =
     minLineWidth < Infinity ? Math.max(0.6, minLineWidth * 0.4) : 0.8;
   ctx.lineWidth = tailLw;
-  for (const [lw, pts] of widthBuckets) {
+  for (const [, pts] of widthBuckets) {
     for (let j = 9; j < pts.length; j += 13) {
       const tx1 = pts[j];
       const ty1 = pts[j + 1];
@@ -228,7 +228,7 @@ export function drawPlanes(
     plane.x += plane.vx * animSpeed;
     plane.y += plane.vy * animSpeed;
     if (plane.gapTimer > 0) plane.gapTimer -= frameScale;
-    else if (Math.random() < 0.005) plane.gapTimer = 8 + Math.random() * 14;
+    else if (Math.random() < 0.005 * frameScale) plane.gapTimer = 8 + Math.random() * 14;
     const wi = plane.histHead;
     const dxR = plane.x - plane._lastRecX;
     const dyR = plane.y - plane._lastRecY;
@@ -241,11 +241,11 @@ export function drawPlanes(
       plane._lastRecX = plane.x;
       plane._lastRecY = plane.y;
     }
-    const windShift = (card._windSpeed || 0) * 0.15;
+    const windShift = (card._windSpeed || 0) * 0.15 * frameScale;
     for (let j = 1; j < plane.histLen; j++) {
       const ridx = circularIndex(plane.histHead, 1 + j, trailCapPlane);
       plane.histBuf[ridx * 3] += windShift;
-      plane.histBuf[ridx * 3 + 1] += 0.02;
+      plane.histBuf[ridx * 3 + 1] += 0.02 * frameScale;
     }
     if (plane.histLen > 2) {
       const baseOp = card._isThemeDark ? 0.12 : 0.23;

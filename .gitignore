@@ -2,3 +2,4 @@
 .DS_Store
 *.log
 jsconfig.json
+node_modules/

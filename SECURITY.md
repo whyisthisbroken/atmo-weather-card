@@ -2,12 +2,12 @@
 
 ## Supported Versions
 
-Security fixes are provided for the current major version only.
+Security fixes are provided for the latest release only.
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 6.x     | :white_check_mark: |
-| < 6.0   | :x:                |
+| 2026.11 | :white_check_mark: |
+| < 2026.11 | :x:              |
 
 ## Reporting a Vulnerability
 
