@@ -368,3 +368,29 @@ test("ultra keeps large cards sharp, other modes cap the pixels", () => {
     window.devicePixelRatio = ratio;
   }
 });
+
+test("the dynamic sun stays at the horizon while Home Assistant rolls over sunset and sunrise", () => {
+  const h = 3600e3;
+  const place = (state, risingIn, settingIn) => {
+    const hass = makeHass({ sun: state });
+    const now = Date.now();
+    Object.assign(hass.states["sun.sun"].attributes, {
+      elevation: 0,
+      next_rising: new Date(now + risingIn).toISOString(),
+      next_setting: new Date(now + settingIn).toISOString(),
+    });
+    const card = mountCard({ celestial_position: "dynamic_both" }, hass);
+    return card._computeDynamicCelestial("dynamic_both").t;
+  };
+
+  // Normal afternoon: sunset in 1 h, sunrise tomorrow.
+  assert.ok(place("above_horizon", 15 * h, 1 * h) > 0.85);
+  // Just after sunset: next_setting already points to tomorrow, the state is still above.
+  assert.equal(place("above_horizon", 15 * h, 24 * h - 60e3), 1);
+  // Just before sunrise the state flipped early: the sun starts on the left.
+  assert.equal(place("above_horizon", 5 * 60e3, 9 * h), 0);
+  // Just after sunrise: next_rising points to tomorrow, the state is still below.
+  assert.equal(place("below_horizon", 24 * h - 60e3, 9 * h), 1);
+  // Just before sunset the state flipped early: the moon starts on the left.
+  assert.equal(place("below_horizon", 15 * h, 5 * 60e3), 0);
+});

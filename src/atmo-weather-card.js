@@ -1590,10 +1590,20 @@ class AtmosphericWeatherCard extends HTMLElement {
     if (!isFinite(nextRise) || !isFinite(nextSet)) return null;
     const now = Date.now();
     const dayMs = 86400000;
+    // Home Assistant moves next_rising / next_setting to the next day at the
+    // event, but the sun state can follow a few minutes later. In that window
+    // the events come in the wrong order, so keep the body at the horizon it
+    // is about to leave or has just reached instead of counting back 24 h.
+    const nearHorizon = 6 * 3600000;
     let t;
     if (isNight) {
-      const thisSet = nextSet - dayMs;
-      t = (now - thisSet) / (nextRise - thisSet);
+      if (nextRise > nextSet) t = nextSet - now < nearHorizon ? 0 : 1;
+      else {
+        const thisSet = nextSet - dayMs;
+        t = (now - thisSet) / (nextRise - thisSet);
+      }
+    } else if (nextSet > nextRise) {
+      t = nextRise - now < nearHorizon ? 0 : 1;
     } else {
       const thisRise = nextRise - dayMs;
       t = (now - thisRise) / (nextSet - thisRise);
