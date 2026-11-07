@@ -7,21 +7,38 @@
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-View%20in%20Browser-2ea44f.svg)](https://whyisthisbroken.github.io/atmo-weather-card/)
 
 <h2>Animated weather card for Home Assistant Lovelace dashboards</h2>
-<img width="480" height="160" alt="atmo-weather-card-preview" src="https://github.com/user-attachments/assets/ac0efcb4-c520-4ec1-a713-2991cab33c50" />
+<img width="560" alt="Atmo Weather Card cycling through sunny, cloudy, rain, thunderstorm, snow, fog, wind and night scenes" src="https://github.com/user-attachments/assets/83dbed24-03a5-411c-a9ae-c470280d7208" />
 
-*This is only a GIF preview (very standard configuration) — you can do so much more with it,
-and it looks a lot prettier in the dashboard, try it out*
+*Sun, clouds, rain, thunderstorms, snow, fog, wind and starry nights — all drawn live from your weather entity.
+A GIF can only hint at it: in the dashboard every scene runs smoothly and keeps changing.*
 
 ### 👉 [**See it live in your browser — no video, real-time animation**](https://whyisthisbroken.github.io/atmo-weather-card/)
 Click any weather condition or Day/Night to switch instantly and see every effect in motion.
 
 </div>
+
 ### Features
 
-- Animated weather display
-- Current conditions
-- Forecast support
-- Dashboard-friendly layout / editor
+- **Live weather scenes** for every Home Assistant condition, by day and by night — layered clouds, rain, hail, snow, fog, thunderstorms with lightning, and overcast skies
+- **Wind you can see** — direction and strength from your weather entity, drawn as wind lines or a flow field
+- **Sun and moon** that follow the real sun position, with sunrise and sunset colors, live moon phases and a moon tilted for your latitude
+- **Night sky** with stars, shooting stars, comets and aurora; birds and planes by day
+- **Chips** for any entity or attribute, weather forecasts, ring and bar gauges, free positioning and many styles
+- **Visual editor** for everything, plus full YAML control
+- **Performance presets** from Low (older tablets) to Ultra (smooth 60 fps, sharp on large wall displays)
+
+<details>
+<summary><b>Gallery: every weather condition</b></summary>
+
+**Day**
+
+<p align="center"><img src="https://github.com/user-attachments/assets/ba18e486-d087-4451-9fd8-9dae9c0b3cd8" alt="All weather conditions by day" width="760" /></p>
+
+**Night**
+
+<p align="center"><img src="https://github.com/user-attachments/assets/6621b22b-8b00-43ea-9cf2-d14d714dfabd" alt="Weather conditions at night" width="760" /></p>
+
+</details>
 
 ---
 
@@ -140,7 +157,7 @@ The card is meant to be pretty flexible. You can customize these examples howeve
 
 <details>
 <summary><b>Forecast Slider</b></summary>
-<img width="481" height="181" alt="image" src="https://github.com/user-attachments/assets/6dc47298-5827-4243-a232-67532d41099e" />
+<img width="480" alt="Forecast slider example" src="https://github.com/user-attachments/assets/7ce1551c-d815-4eae-8556-a81825ea5606" />
 
 ```yaml
 type: custom:atmo-weather-card
@@ -277,7 +294,7 @@ grid_options:
 
 <details>
 <summary><b>Forecast & Mini-graph</b></summary>
-<img width="486" height="182" alt="image" src="https://github.com/user-attachments/assets/5c7df2ef-5054-4ad8-82f5-f76342662eba" />
+<img width="480" alt="Forecast and mini-graph example" src="https://github.com/user-attachments/assets/aaa02a6b-1c90-4d8e-ac9f-cd42d4e49d31" />
 
 This example embeds a mini-graph-card with a bit of card-mod styling. For extra drama, the large header text is layered behind the weather elements.
 
@@ -440,7 +457,7 @@ custom_cards:
 
 <details>
 <summary><b>Forecast & Ring Chip</b></summary>
-<img width="478" height="133" alt="image" src="https://github.com/user-attachments/assets/427bfe78-0bf4-4f40-b966-64aad1eeba81" />
+<img width="480" alt="Forecast and ring chip example" src="https://github.com/user-attachments/assets/560953d6-563d-400f-8d2f-f2a99383efbb" />
 
 ```yaml
 type: custom:atmo-weather-card
@@ -619,6 +636,8 @@ The sections below document every option, including type, default, and behavior.
 <details>
 <summary><strong>Card Style & Layout</strong></summary>
 
+<p align="center"><img src="https://github.com/user-attachments/assets/a56047a4-8617-45d0-afdb-ea1edfda115b" alt="card_style standalone and immersive" width="560" /></p>
+
 | Option             | Type                | Default     | Description                                                                                                                                                                                                                                                                                                                                                                     |
 | :----------------- | :------------------ | :---------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `card_style`       | `string`            | `standalone` | Set to `standalone` for a solid background with dynamic weather visuals, or `immersive` for a transparent background.                                                                                                                                                                                                                                                           |
@@ -635,6 +654,10 @@ The sections below document every option, including type, default, and behavior.
 
 <details>
 <summary><strong>Theme & Filters</strong></summary>
+
+<p align="center"><img src="https://github.com/user-attachments/assets/6fb3e7d7-77c5-41de-bbab-a46c2645c329" alt="card_color_mode light and dark" width="560" /></p>
+
+<p align="center"><img src="https://github.com/user-attachments/assets/7082bf43-6c5d-4158-b657-5a007715721b" alt="card_filter_clouds presets: none, darken, vivid, muted, warm" width="760" /></p>
 
 | Option                 | Type      | Default   | Description                                                                                                                                                                                                                                                            |
 | :--------------------- | :-------- | :-------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -714,6 +737,10 @@ Chip
 
 <details>
 <summary><strong>Row options</strong></summary>
+
+<p align="center"><img src="https://github.com/user-attachments/assets/a0b0cdcb-b2fe-4f63-a688-3186efbf5814" alt="chip_style inline, stacked and vertical" width="760" /></p>
+
+<p align="center"><img src="https://github.com/user-attachments/assets/90e01d4a-ebdf-4046-a93d-8fa24fd47d6b" alt="card_background_style frosted and contrast" width="560" /></p>
 
 | Option                       | Type      | Default       | Description                                                                                                                                                                                                                                                                                           |
 | :--------------------------- | :-------- | :------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -1252,6 +1279,8 @@ Test one change at a time. See [Troubleshooting](#performance-is-weak-on-older-d
 <details>
 <summary><strong>Performance Settings</strong></summary>
 
+<p align="center"><img src="https://github.com/user-attachments/assets/336cf73a-0518-42d6-9534-aa927fe3b272" alt="wind_style lines and flow" width="560" /></p>
+
 The card has three performance presets (`low`, `default`, and `ultra`) which cover most setups. If you need more control, each setting can be changed individually. Any value set manually overrides the preset.
 
 | Option                  | Type      | Default   | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
@@ -1259,7 +1288,7 @@ The card has three performance presets (`low`, `default`, and `ultra`) which cov
 | `perf_mode`             | `string`  | `default` | Performance preset. `low` disables effects and lowers resolution for weak devices. `default` is balanced. `ultra` raises the frame rate and cloud detail to maximum, and keeps large cards (for example on wall tablets) at full sharpness.                                                                                                                                                                                                                                                                                                                                                                   |
 | `perf_fps`              | `number`  | `30`      | Animation frame rate. `30` saves battery, `60` is smoother. See [Troubleshooting: Editor preview stutters or FPS looks wrong after install/update](#editor-preview-stutters-or-fps-looks-wrong-after-installupdate) and [Performance is weak on older devices](#performance-is-weak-on-older-devices).                                                                                                                                                                                                                                 |
 | `perf_cloud_quality`    | `number`  | `1.5`     | Cloud detail level. Controls how many puffs each cloud shape gets. `0.5` = low, `1` = medium, `1.5` = high, `2` = ultra.                                                                                                                                                                                                                                                                                                                                                                                                               |
-| `perf_effects`          | `number`  | `1`       | Weather effects intensity. `0` disables visual effects like shooting stars, comets, aurora, fog/wind visuals, and similar atmospheric extras. `1` enables default spawn rates. `2` increases effect intensity and spawn rates (comets appear 1.8x more often). Spawn rates also scale with `perf_fps` and overall system performance. See [Troubleshooting: No night effects (stars/comets) are visible](#no-night-effects-starscomets-are-visible) and [Performance is weak on older devices](#performance-is-weak-on-older-devices). |
+| `perf_effects`          | `number`  | `1`       | Weather effects intensity. `0` disables visual effects like shooting stars, comets, aurora, fog banks, and similar atmospheric extras. The fog haze and the wind display stay visible, with fewer wind lines. `1` enables default spawn rates. `2` increases effect intensity and spawn rates (comets appear 1.8x more often). Spawn rates also scale with `perf_fps` and overall system performance. See [Troubleshooting: No night effects (stars/comets) are visible](#no-night-effects-starscomets-are-visible) and [Performance is weak on older devices](#performance-is-weak-on-older-devices). |
 | `cloud_sun_angle_lighting` | `boolean` | _auto_ | YAML only. Lights clouds from the current sun angle. On by default when `perf_effects` is `2`. |
 | `cloud_breathing_shapes`   | `boolean` | _auto_ | YAML only. Slowly reshapes clouds over time. On by default when `perf_effects` is `2`. |
 | `perf_fauna`            | `number`  | `2`       | Birds and planes spawn rate. `0` = no fauna, `1` = birds only, `2` = birds and planes. Separate control from weather effects. See [Troubleshooting: No birds or planes are visible](#no-birds-or-planes-are-visible).                                                                                                                                                                                                                                                                                                                  |
