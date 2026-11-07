@@ -1,1 +1,5 @@
+* text=auto
 test/ export-ignore
+dist/** -text linguist-generated
+docs/** -text
+docs/index.html text

@@ -467,13 +467,24 @@ export class CloudShapeGenerator {
   }
 }
 
+// All motion constants are tuned per frame at 30 fps. Every mode advances by
+// elapsed time in those units, so a higher frame rate is smoother, not faster.
+export const BASE_FPS = 30;
+const BASE_FRAME_MS = 1000 / BASE_FPS;
+
+// Trails that store one point per frame need more points at higher frame
+// rates to keep the same length on screen.
+export function trailPoints(card, base) {
+  return Math.max(2, Math.round((base * (card._perfFps || BASE_FPS)) / BASE_FPS));
+}
+
 export function shouldSkipFrame(card, timestamp) {
   const targetFps = Math.max(15, card._perfFps || 30);
   const targetInterval = 1000 / targetFps;
   const deltaTime = timestamp - card._lastFrameTime;
   if (deltaTime < targetInterval * 0.85) return true;
   card._lastFrameTime = timestamp;
-  card._frameScale = Math.max(0.25, Math.min(3.0, deltaTime / targetInterval));
+  card._frameScale = Math.max(0.25, Math.min(3.0, deltaTime / BASE_FRAME_MS));
   return false;
 }
 
@@ -739,45 +750,91 @@ export function drawAurora(card, ctx, w) {
   ctx.restore();
 }
 
+// A veil over the whole card that thickens towards the ground, with soft
+// drifting banks on top. Each bank is the full radial gradient stretched to the
+// bank shape, so it fades to zero at every edge. Low mode keeps only the veil.
 export function drawFog(card, ctx, w) {
   const fadeOpacity = card._layerFadeProgress.effects;
   const len = card._fogBanks.length;
   const dpr = card._cachedDimensions.dpr;
+  const h = card._cachedDimensions.height / dpr;
   if (fadeOpacity <= 0) return;
   const animSpeed = card._animationSpeed * (card._frameScale || 1);
-  for (let i = 0; i < len; i++) {
+  const color = card._isLightBackground
+    ? "190,200,215"
+    : card._isTimeNight
+      ? "85,90,105"
+      : "72,81,95";
+  const hazeKey = `${color}|${h}`;
+  if (card._fogHazeKey !== hazeKey) {
+    const haze = ctx.createLinearGradient(0, 0, 0, h);
+    haze.addColorStop(0, `rgba(${color},0.45)`);
+    haze.addColorStop(0.5, `rgba(${color},0.725)`);
+    haze.addColorStop(1, `rgba(${color},1)`);
+    card._fogHaze = haze;
+    card._fogHazeKey = hazeKey;
+  }
+  ctx.globalAlpha = (card._isLightBackground ? 0.55 : 0.4675) * fadeOpacity;
+  ctx.fillStyle = card._fogHaze;
+  ctx.fillRect(0, 0, w, h);
+  const banks = card._perfEffects === 0 ? 0 : len;
+  for (let i = 0; i < banks; i++) {
     const f = card._fogBanks[i];
     f.x += f.speed * animSpeed;
     f.phase += 0.008 * animSpeed;
     if (f.x > w + f.w / 2) f.x = -f.w / 2;
     if (f.x < -f.w / 2) f.x = w + f.w / 2;
     const undulation = Math.sin(f.phase) * 5;
+    const radius = f.w / 2;
     if (!f._g) {
-      const color = card._isLightBackground
-        ? "190,200,215"
-        : card._isTimeNight
-          ? "85,90,105"
-          : "72,81,95";
-      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, f.w / 2);
+      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, radius);
       g.addColorStop(0, `rgba(${color},1)`);
-      g.addColorStop(0.5, `rgba(${color},0.6)`);
+      g.addColorStop(0.2, `rgba(${color},0.85)`);
+      g.addColorStop(0.45, `rgba(${color},0.5)`);
+      g.addColorStop(0.7, `rgba(${color},0.2)`);
+      g.addColorStop(0.88, `rgba(${color},0.06)`);
       g.addColorStop(1, `rgba(${color},0)`);
       f._g = g;
       f._baseOp =
-        f.opacity * (1 + f.layer * 0.2) * (card._isLightBackground ? 0.6 : 1.0);
+        f.opacity *
+        (1 + f.layer * 0.2) *
+        (card._isLightBackground ? 0.6 : 1.0) *
+        1.3;
     }
-    const vSquash = 0.1 + f.layer * 0.18;
-    ctx.scale(1, vSquash);
-    const drawY = (f.y + undulation) / vSquash;
+    const halfHeight = f.h * (0.6 + f.layer * 0.7);
     ctx.globalAlpha = f._baseOp * fadeOpacity;
-    ctx.translate(f.x, drawY);
+    ctx.translate(f.x, f.y + undulation);
+    ctx.scale(1, halfHeight / radius);
     ctx.fillStyle = f._g;
-    ctx.beginPath();
-    ctx.ellipse(0, 0, f.w / 2, f.h, 0, 0, TWO_PI);
-    ctx.fill();
+    ctx.fillRect(-radius, -radius, radius * 2, radius * 2);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
+  drawFogLight(card, ctx, w, h, fadeOpacity);
   ctx.globalAlpha = 1;
+}
+
+// Light scattered in the fog: a wide soft aura around the sun or moon and, by
+// day, a pale milky sun disc that just shows through the veil.
+function drawFogLight(card, ctx, w, h, fadeOpacity) {
+  const { x, y } = card._getCelestialPosition(w, h);
+  const night = card._isNight;
+  const rgb = night ? "215,225,245" : "255,244,214";
+  const aura = ctx.createRadialGradient(x, y, 0, x, y, Math.min(w, h) * 0.75);
+  aura.addColorStop(0, `rgba(${rgb},0.55)`);
+  aura.addColorStop(0.18, `rgba(${rgb},0.275)`);
+  aura.addColorStop(0.5, `rgba(${rgb},0.077)`);
+  aura.addColorStop(1, `rgba(${rgb},0)`);
+  ctx.globalAlpha = fadeOpacity;
+  ctx.fillStyle = aura;
+  ctx.fillRect(0, 0, w, h);
+  if (night) return;
+  const r = card._celestialSize ? card._celestialSize / 2 : 31;
+  const disc = ctx.createRadialGradient(x, y, 0, x, y, r);
+  disc.addColorStop(0, "rgba(255,251,238,0.8)");
+  disc.addColorStop(0.75, "rgba(255,247,225,0.6)");
+  disc.addColorStop(1, "rgba(255,244,214,0)");
+  ctx.fillStyle = disc;
+  ctx.fillRect(x - r, y - r, r * 2, r * 2);
 }
 
 export function drawRain(card, ctx, w, h, effectiveWind) {
@@ -893,6 +950,226 @@ export function drawHail(card, ctx, w, h, effectiveWind) {
   ctx.globalAlpha = 1;
 }
 
+// ── Wind display ──
+// Shown for windy weather, and for rain, hail and snow once the wind is strong.
+// Direction comes from wind_bearing (where the wind blows from), speed and
+// density from the wind speed. Two styles: long wind lines or a flow field.
+export const STRONG_WIND_KMH = 40;
+
+export function windDisplayActive(card) {
+  const p = card._params;
+  if (!p || card._windStyle === "off") return false;
+  if (p.flow) return true;
+  return (p.count || 0) > 0 && (card._windKmh || 0) >= STRONG_WIND_KMH;
+}
+
+function windSetup(card) {
+  const kmh = Math.max(card._windKmh || 0, 15);
+  const rad = ((card._windBearing ?? 270) * Math.PI) / 180;
+  return {
+    kmh,
+    strength: Math.min(1, kmh / 70),
+    // Screen direction the wind blows to: from the west means to the right.
+    angle: Math.atan2(Math.cos(rad), -Math.sin(rad)),
+    density:
+      card._perfEffects >= 2 ? 1.5 : card._perfEffects >= 1 ? 1 : 0.5,
+    animSpeed: card._animationSpeed * (card._frameScale || 1),
+  };
+}
+
+// Draws a stored polyline from index `from` to `to` in bands that grow from a
+// thin faint tail to the full-width head.
+function strokeTapered(ctx, pts, from, to, alpha, width, bands) {
+  for (let band = 0; band < bands; band++) {
+    const a = from + Math.floor(((to - from) * band) / bands);
+    const b = from + Math.floor(((to - from) * (band + 1)) / bands);
+    if (b <= a) continue;
+    const k = (band + 1) / bands;
+    ctx.globalAlpha = alpha * (0.2 + 0.8 * k);
+    ctx.lineWidth = width * (0.4 + 0.6 * k);
+    ctx.beginPath();
+    ctx.moveTo(pts[a * 2], pts[a * 2 + 1]);
+    for (let j = a + 1; j <= b; j++) ctx.lineTo(pts[j * 2], pts[j * 2 + 1]);
+    ctx.stroke();
+  }
+}
+
+// Wind lines: long, thin, gently waving strokes that draw themselves along the
+// wind. The front glides to a stop while the line fades away from its tail.
+const WIND_LINE_STEP = 3;
+// Share of the path that is visible at once, and the share the front eases out on.
+const WIND_LINE_SPAN = 0.45;
+const WIND_LINE_EASE = 0.25;
+
+function buildWindLine(line, w, h, angle) {
+  const length = w * (0.3 + Math.random() * 0.3);
+  const steps = Math.max(10, Math.round(length / WIND_LINE_STEP));
+  const pts = new Float32Array((steps + 1) * 2);
+  // Start upwind of a random point so the line sweeps across the card.
+  let x = w / 2 - Math.cos(angle) * length * 0.6 + (Math.random() - 0.5) * w * 0.8;
+  let y = h / 2 - Math.sin(angle) * length * 0.6 + (Math.random() - 0.5) * h * 0.8;
+  let heading = angle + (Math.random() - 0.5) * 0.2;
+  const waveAmp = 0.012 + Math.random() * 0.012;
+  const wavePhase = Math.random() * TWO_PI;
+  pts[0] = x;
+  pts[1] = y;
+  for (let i = 1; i <= steps; i++) {
+    heading += Math.sin(wavePhase + i * 0.09) * waveAmp;
+    x += Math.cos(heading) * WIND_LINE_STEP;
+    y += Math.sin(heading) * WIND_LINE_STEP;
+    pts[i * 2] = x;
+    pts[i * 2 + 1] = y;
+  }
+  line.pts = pts;
+  line.count = steps + 1;
+  line.head = 0;
+  line.tail = 0;
+  line.delay = Math.random() * 60;
+  line.width = 0.7 + Math.random() * 0.5;
+}
+
+export function drawWindLines(card, ctx, w, h) {
+  const fadeOpacity = card._layerFadeProgress.effects;
+  if (fadeOpacity <= 0) return;
+  const s = windSetup(card);
+  const target = Math.max(3, Math.round(6 * s.density * (0.5 + s.strength * 0.8)));
+  if (
+    !card._windLines ||
+    card._windLines.length !== target ||
+    card._windLinesAngle !== s.angle
+  ) {
+    card._windLines = [];
+    card._windLinesAngle = s.angle;
+    for (let i = 0; i < target; i++) {
+      const line = {};
+      buildWindLine(line, w, h, s.angle);
+      card._windLines.push(line);
+    }
+  }
+  // Points per base frame for the drawing head and the following tail.
+  const pace = ((1.2 + s.kmh * 0.05) / WIND_LINE_STEP) * s.animSpeed;
+  const alphaBase = fadeOpacity * (0.5 + s.strength * 0.3);
+  ctx.save();
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = "rgb(255,255,255)";
+  for (const line of card._windLines) {
+    if (line.delay > 0) {
+      line.delay -= s.animSpeed;
+      continue;
+    }
+    const last = line.count - 1;
+    const span = line.count * WIND_LINE_SPAN;
+    // The front slows down smoothly towards the end of its path.
+    const ease = Math.min(1, Math.max(0.2, (last - line.head) / (line.count * WIND_LINE_EASE)));
+    line.head = Math.min(last, line.head + pace * ease);
+    // The tail keeps its pace, so near the end the line shrinks from behind.
+    const retracting = line.head > last - span * 0.5;
+    if (retracting || line.head - line.tail > span) line.tail += pace;
+    if (retracting && line.tail >= line.head - 1) {
+      buildWindLine(line, w, h, s.angle);
+      continue;
+    }
+    const from = Math.floor(line.tail);
+    const to = Math.floor(line.head);
+    if (to - from < 2) continue;
+    // Fade in while the line grows, fade out while it shrinks.
+    const alpha = alphaBase * Math.min(1, (line.head - line.tail) / (span * 0.6));
+    strokeTapered(ctx, line.pts, from, to, alpha, line.width, 6);
+  }
+  ctx.restore();
+}
+
+// Flow field: many short glowing streaks with tails, gently curled.
+const FLOW_TRAIL = 9;
+
+function spawnFlow(f, w, h) {
+  f.x = Math.random() * w;
+  f.y = Math.random() * h;
+  f.len = 0;
+  f.head = 0;
+  f.age = 0;
+  f.life = 60 + Math.random() * 90;
+  f.speed = 0.7 + Math.random() * 0.6;
+}
+
+export function drawWindFlow(card, ctx, w, h) {
+  const fadeOpacity = card._layerFadeProgress.effects;
+  if (fadeOpacity <= 0) return;
+  const s = windSetup(card);
+  const target = Math.round(100 * s.density * (0.5 + s.strength * 0.7));
+  const cap = trailPoints(card, FLOW_TRAIL);
+  if (!card._flow || card._flow.length !== target || card._flowCap !== cap) {
+    card._flow = [];
+    card._flowCap = cap;
+    for (let i = 0; i < target; i++) {
+      const f = { hist: new Float32Array(cap * 2) };
+      spawnFlow(f, w, h);
+      f.age = Math.random() * f.life;
+      card._flow.push(f);
+    }
+  }
+  card._flowTime = (card._flowTime || 0) + 0.01 * s.animSpeed;
+  const t = card._flowTime;
+  const pace = (0.9 + s.kmh * 0.045) * s.animSpeed;
+  const ordered = new Float32Array(cap * 2);
+  ctx.save();
+  ctx.lineCap = "round";
+  ctx.strokeStyle = card._isThemeDark ? "rgb(220,232,255)" : "rgb(255,255,255)";
+  for (const f of card._flow) {
+    const curl =
+      Math.sin(f.x * 0.011 + t * 1.3) * Math.cos(f.y * 0.019 - t) * 0.55;
+    f.x += Math.cos(s.angle + curl) * pace * f.speed;
+    f.y += Math.sin(s.angle + curl) * pace * f.speed;
+    f.age += s.animSpeed;
+    f.hist[f.head * 2] = f.x;
+    f.hist[f.head * 2 + 1] = f.y;
+    f.head = (f.head + 1) % cap;
+    if (f.len < cap) f.len++;
+    if (f.age > f.life || f.x < -20 || f.x > w + 20 || f.y < -20 || f.y > h + 20) {
+      spawnFlow(f, w, h);
+      continue;
+    }
+    if (f.len < 3) continue;
+    // Oldest point first, so the tail starts thin and the head is brightest.
+    for (let j = 0; j < f.len; j++) {
+      const idx = (f.head - f.len + j + cap) % cap;
+      ordered[j * 2] = f.hist[idx * 2];
+      ordered[j * 2 + 1] = f.hist[idx * 2 + 1];
+    }
+    const alpha =
+      Math.sin((Math.PI * f.age) / f.life) *
+      fadeOpacity *
+      (0.35 + s.strength * 0.3);
+    strokeTapered(ctx, ordered, 0, f.len - 1, alpha, 1.2, 3);
+  }
+  ctx.restore();
+}
+
+// Overcast skies: a grey ceiling behind the clouds so no clear sky shows
+// through. At night it stays denser towards the bottom of the card.
+export function drawCloudDeck(card, ctx, w, h) {
+  const night = card._isThemeDark;
+  const color = night
+    ? "38,40,46"
+    : card._params.dark
+      ? "112,120,134"
+      : "150,160,176";
+  const key = `${color}|${h}`;
+  if (card._deckKey !== key) {
+    const g = ctx.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, `rgba(${color},0.85)`);
+    g.addColorStop(0.55, `rgba(${color},0.51)`);
+    g.addColorStop(1, `rgba(${color},${night ? 0.6 : 0.34})`);
+    card._deckGrad = g;
+    card._deckKey = key;
+  }
+  ctx.globalAlpha = card._layerFadeProgress.clouds;
+  ctx.fillStyle = card._deckGrad;
+  ctx.fillRect(0, 0, w, h);
+  ctx.globalAlpha = 1;
+}
+
 export function renderAnimationFrame(
   card,
   bg,
@@ -909,8 +1186,7 @@ export function renderAnimationFrame(
 
   if (card._cloudSunAngleLighting) card._trackCloudSunAngle(w, h);
 
-  if (fx >= 1 && rs.glow && rs.glow.drawPhase === "bg")
-    card._drawCelestialGlow(bg, w, h);
+  if (rs.glow && rs.glow.drawPhase === "bg") card._drawCelestialGlow(bg, w, h);
   if (fx >= 1) card._drawAurora(mid, w);
   card._drawStars(bg, w, h, dpr);
   card._drawMoon(bg, w, h);
@@ -925,15 +1201,29 @@ export function renderAnimationFrame(
   if (fx >= 1 && card._isThemeDark) card._drawComets(bg, w, h);
 
   const glowActive = rs.glow;
-  if (fx >= 1 && glowActive && glowActive.drawPhase === "mid-pre")
+  if (glowActive && glowActive.drawPhase === "mid-pre")
     card._drawCelestialGlow(mid, w, h);
   if (fx >= 1 && card._celestialClouds.length > 0)
     card._drawCelestialClouds(mid, w, h, effectiveWind);
   if (fx >= 1 && card._windVapor.length > 0)
     drawWindVapor(card, mid, w, h, effectiveWind);
-  if (fx >= 1 && card._fogBanks.length > 0) card._drawFog(mid, w);
+  if (card._fogBanks.length > 0) card._drawFog(mid, w);
+  if (card._params && card._params.overcast) drawCloudDeck(card, mid, w, h);
   drawClouds(card, mid, card._clouds, w, h, effectiveWind);
-  if (fx >= 1 && glowActive && glowActive.drawPhase === "mid-post")
+  if (windDisplayActive(card)) {
+    // Only the active style keeps its state.
+    if (card._windStyle === "flow") {
+      card._windLines = null;
+      drawWindFlow(card, mid, w, h);
+    } else {
+      card._flow = null;
+      drawWindLines(card, mid, w, h);
+    }
+  } else {
+    card._windLines = null;
+    card._flow = null;
+  }
+  if (glowActive && glowActive.drawPhase === "mid-post")
     card._drawCelestialGlow(mid, w, h);
   const birdsAtNightEnabled = card._faunaBirdsAtNight !== false;
   const canDrawBirds = fauna >= 1 && (!card._isNight || birdsAtNightEnabled);
@@ -958,8 +1248,8 @@ export function drawCelestialClouds(card, ctx, w, h, effectiveWind) {
     const cloud = card._celestialClouds[i];
     if (!cloud._bakedCanvas) continue;
     const sunUnit = cloud._sunUnit !== undefined ? cloud._sunUnit : 1.0;
-    cloud.driftPhase += 0.008 * animSpeed;
-    cloud.breathPhase += cloud.breathSpeed * animSpeed;
+    cloud.driftPhase += 0.0027 * animSpeed;
+    cloud.breathPhase += cloud.breathSpeed * 0.5 * animSpeed;
     const driftX = Math.sin(cloud.driftPhase) * 12 * sunUnit;
     const driftY = Math.cos(cloud.driftPhase * 0.7) * 4 * sunUnit;
     cloud.x = cloud.baseX + driftX + effectiveWind * 0.3;
@@ -1097,7 +1387,7 @@ export function drawShootingStars(
   const fadeOpacity = card._layerFadeProgress.stars;
   const dpr = card._cachedDimensions.dpr;
   const isUltra = card._perfEffects >= 2;
-  const trailCap = isUltra ? 36 : trailCapShootingStar;
+  const trailCap = trailPoints(card, trailCapShootingStar);
   const frameScale = card._frameScale || 1;
   if (
     !badWeather &&
@@ -1239,9 +1529,10 @@ export function drawComets(card, ctx, w, h, trailCapComet) {
       _coreRgb: coreRgb,
       _glowRgb: glowRgb,
       _tailRgb: tailRgb,
-      tailBuf: new Float32Array(trailCapComet * 2),
+      tailBuf: new Float32Array(trailPoints(card, trailCapComet) * 2),
       tailHead: 0,
       tailLen: 0,
+      _trailCap: trailPoints(card, trailCapComet),
     });
   }
   const fadeOpacity = card._layerFadeProgress.stars;
@@ -1256,16 +1547,16 @@ export function drawComets(card, ctx, w, h, trailCapComet) {
       card._comets.splice(i, 1);
       continue;
     }
+    const cap = c._trailCap || trailCapComet;
     c.tailBuf[c.tailHead * 2] = c.x;
     c.tailBuf[c.tailHead * 2 + 1] = c.y;
-    c.tailHead = (c.tailHead + 1) % trailCapComet;
-    if (c.tailLen < trailCapComet) c.tailLen++;
+    c.tailHead = (c.tailHead + 1) % cap;
+    if (c.tailLen < cap) c.tailLen++;
     if (c.tailLen > 2) {
       const newestIdx =
-        (((c.tailHead - 1) % trailCapComet) + trailCapComet) % trailCapComet;
+        (((c.tailHead - 1) % cap) + cap) % cap;
       const oldestIdx =
-        (((c.tailHead - c.tailLen) % trailCapComet) + trailCapComet) %
-        trailCapComet;
+        (((c.tailHead - c.tailLen) % cap) + cap) % cap;
       const hx = c.tailBuf[newestIdx * 2];
       const hy = c.tailBuf[newestIdx * 2 + 1];
       const tx = c.tailBuf[oldestIdx * 2];
@@ -1301,8 +1592,7 @@ export function drawComets(card, ctx, w, h, trailCapComet) {
       ctx.beginPath();
       for (let j = jStart; j <= jEnd; j++) {
         const idx =
-          (((c.tailHead - 1 - j) % trailCapComet) + trailCapComet) %
-          trailCapComet;
+          (((c.tailHead - 1 - j) % cap) + cap) % cap;
         const px = c.tailBuf[idx * 2];
         const py = c.tailBuf[idx * 2 + 1];
         if (j === jStart) ctx.moveTo(px, py);
@@ -1327,17 +1617,7 @@ export function drawMoon(card, ctx, w, h, moonStyleColors, moonCraters) {
   const moonRadius = sunBaseR * 0.85;
   const moonScale = moonRadius / 18;
   const useLightColors = !card._isThemeDark;
-  const rawMoonStyle = (card._config.celestial_moon_style || "").toLowerCase();
-  const isColoredStyle =
-    rawMoonStyle === "yellow" ||
-    rawMoonStyle === "blue" ||
-    rawMoonStyle === "purple" ||
-    rawMoonStyle === "grey";
-  const mStyleKey = isColoredStyle
-    ? rawMoonStyle
-    : useLightColors
-      ? "blue"
-      : "dark";
+  const mStyleKey = useLightColors ? "blue" : "dark";
   ctx.save();
   if (card._moonRotationRad) {
     ctx.translate(moonX, moonY);
@@ -1384,8 +1664,7 @@ export function drawMoon(card, ctx, w, h, moonStyleColors, moonCraters) {
     ctx.restore();
     ctx.beginPath();
     ctx.arc(moonX, moonY, moonRadius + 1.5, 0, TWO_PI);
-    const rsKey = moonStyleColors.ringStroke[mStyleKey] ? mStyleKey : "yellow";
-    const ringCfg = moonStyleColors.ringStroke[rsKey];
+    const ringCfg = moonStyleColors.ringStroke[mStyleKey];
     ctx.globalAlpha = ringCfg.op * fadeOpacity;
     ctx.strokeStyle = ringCfg._rgb || (ringCfg._rgb = `rgb(${ringCfg.rgb})`);
     ctx.lineWidth = 1.5;
@@ -1425,7 +1704,7 @@ export function drawMoon(card, ctx, w, h, moonStyleColors, moonCraters) {
   } else {
     ctx.save();
     ctx.globalAlpha = fadeOpacity;
-    ctx.fillStyle = moonStyleColors.lightDisc[mStyleKey] || "rgb(228,234,248)";
+    ctx.fillStyle = moonStyleColors.lightDisc[mStyleKey];
     fillCircle(ctx, moonX, moonY, moonRadius - 0.5);
     ctx.restore();
   }
@@ -1570,114 +1849,135 @@ export function drawMoon(card, ctx, w, h, moonStyleColors, moonCraters) {
   ctx.restore();
 }
 
-export function drawLightning(card, ctx, w, h, limits) {
+// Lightning is mostly a flash of the card; about every third strike also
+// shows a visible bolt.
+const BOLT_CHANCE = 0.3;
+
+// Midpoint displacement: a jagged, self-similar line like a real discharge.
+function boltLine(x0, y0, x1, y1, depth, spread, out) {
+  if (depth === 0) {
+    out.push(x1, y1);
+    return;
+  }
+  const len = Math.hypot(x1 - x0, y1 - y0);
+  const mx = (x0 + x1) / 2 + (Math.random() - 0.5) * len * spread;
+  const my = (y0 + y1) / 2 + (Math.random() - 0.5) * len * spread * 0.25;
+  boltLine(x0, y0, mx, my, depth - 1, spread, out);
+  boltLine(mx, my, x1, y1, depth - 1, spread, out);
+}
+
+function makeBolt(x, y, h) {
+  const endX = x + (Math.random() - 0.5) * h * 0.9;
+  const main = [x, y];
+  boltLine(x, y, endX, h + 4, 7, 0.45, main);
+  const branches = [];
+  const points = main.length / 2;
+  const count = 2 + Math.floor(Math.random() * 4);
+  for (let b = 0; b < count; b++) {
+    const i = 4 + Math.floor(Math.random() * (points * 0.65));
+    const bx = main[i * 2];
+    const by = main[i * 2 + 1];
+    const reach = (h - by) * (0.25 + Math.random() * 0.35);
+    const dir = Math.random() < 0.5 ? -1 : 1;
+    const line = [bx, by];
+    boltLine(bx, by, bx + dir * reach * (0.5 + Math.random() * 0.6), by + reach, 5, 0.55, line);
+    branches.push({ line, alpha: 0.35 + Math.random() * 0.35 });
+  }
+  return { main, branches };
+}
+
+function strokeLine(ctx, line) {
+  ctx.beginPath();
+  ctx.moveTo(line[0], line[1]);
+  for (let i = 2; i < line.length; i += 2) ctx.lineTo(line[i], line[i + 1]);
+  ctx.stroke();
+}
+
+function drawBolt(ctx, bolt, alpha, dark) {
+  ctx.save();
+  ctx.globalCompositeOperation = dark ? "lighter" : "source-over";
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  // Soft glow around the channel.
+  ctx.filter = "blur(5px)";
+  ctx.strokeStyle = "rgb(150,175,255)";
+  ctx.globalAlpha = alpha * 0.55;
+  ctx.lineWidth = 7;
+  strokeLine(ctx, bolt.main);
+  ctx.filter = "blur(1.5px)";
+  ctx.strokeStyle = "rgb(200,215,255)";
+  ctx.globalAlpha = alpha * 0.8;
+  ctx.lineWidth = 3;
+  strokeLine(ctx, bolt.main);
+  ctx.lineWidth = 1.6;
+  for (const br of bolt.branches) {
+    ctx.globalAlpha = alpha * br.alpha * 0.7;
+    strokeLine(ctx, br.line);
+  }
+  ctx.filter = "none";
+  // Thin white-hot core.
+  ctx.strokeStyle = "rgb(255,255,255)";
+  ctx.globalAlpha = alpha;
+  ctx.lineWidth = 1.3;
+  strokeLine(ctx, bolt.main);
+  ctx.lineWidth = 0.7;
+  for (const br of bolt.branches) {
+    ctx.globalAlpha = alpha * br.alpha;
+    strokeLine(ctx, br.line);
+  }
+  ctx.restore();
+}
+
+export function drawLightning(card, ctx, w, h) {
   if (!(card._params && card._params.thunder)) return;
   const frameScale = card._frameScale || 1;
   const fadeOpacity = card._layerFadeProgress.effects;
-  const isStandalone = card._config.card_style === "standalone";
-  if (
-    Math.random() < Math.min(1, 0.0072 * frameScale) &&
-    card._bolts.length < limits.MAX_BOLTS
-  ) {
-    card._flashOpacity = 0.92;
-    card._flashHold = card._isLightBackground ? 7 : 6;
-    card._bolts.push(card._createBolt(w, h));
-    if (Math.random() < 0.25 && card._bolts.length < limits.MAX_BOLTS)
-      card._bolts.push(card._createBolt(w, h));
-  }
-  if (!card._isLightBackground && isStandalone) {
+  const light = card._isLightBackground;
+  if (!light && !card._isImmersive) {
     ctx.save();
-    ctx.globalCompositeOperation = "source-over";
     ctx.globalAlpha = 0.18 * fadeOpacity;
     ctx.fillStyle = "rgb(0, 0, 10)";
     ctx.fillRect(0, 0, w, h);
     ctx.restore();
   }
-  if (card._flashOpacity > 0) {
-    if (card._flashHold > 0) card._flashHold -= frameScale;
-    else {
-      card._flashOpacity *= Math.pow(
-        card._isLightBackground ? 0.72 : 0.62,
-        frameScale,
-      );
-      if (
-        card._flashOpacity > 0.08 &&
-        card._flashOpacity < 0.45 &&
-        Math.random() < 0.12
-      ) {
-        card._flashOpacity = 0.5 + Math.random() * 0.25;
-        card._flashHold = 2;
-      }
-    }
-    if (isStandalone) {
-      ctx.save();
-      ctx.globalCompositeOperation = card._isThemeDark
-        ? "screen"
-        : "source-over";
-      ctx.globalAlpha =
-        card._flashOpacity *
-        fadeOpacity *
-        (card._isLightBackground ? 0.8 : 0.5);
-      ctx.fillStyle = card._isLightBackground
-        ? "rgb(255, 255, 255)"
-        : "rgb(220, 235, 255)";
-      ctx.fillRect(0, 0, w, h);
-      ctx.restore();
-    }
-    if (card._flashOpacity < 0.005) card._flashOpacity = 0;
+  if (card._flashOpacity <= 0 && Math.random() < Math.min(1, 0.0072 * frameScale)) {
+    card._flashOpacity = 1;
+    card._flashHold = 3;
+    card._flashX = w * (0.15 + Math.random() * 0.7);
+    card._flashY = h * (0.05 + Math.random() * 0.2);
+    card._flashGrad = null;
+    card._bolt = Math.random() < BOLT_CHANCE ? makeBolt(card._flashX, card._flashY + h * 0.08, h) : null;
   }
-  if (card._bolts.length > 0) {
-    ctx.save();
-    ctx.globalCompositeOperation = card._isThemeDark
-      ? "lighter"
-      : "source-over";
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    for (let i = card._bolts.length - 1; i >= 0; i--) {
-      const bolt = card._bolts[i];
-      const segs = bolt.segments;
-      const segLen = segs.length;
-      ctx.beginPath();
-      for (let j = 0; j < segLen; j++) {
-        const seg = segs[j];
-        if (!seg.branch) {
-          if (seg.y === 0) ctx.moveTo(seg.x, seg.y);
-          ctx.lineTo(seg.nx, seg.ny);
-        }
-      }
-      if (bolt.glow > 0) {
-        ctx.globalAlpha = bolt.glow * fadeOpacity * 0.15;
-        ctx.strokeStyle = bolt._glowStroke;
-        ctx.lineWidth = 24;
-        ctx.stroke();
-        ctx.globalAlpha = bolt.glow * fadeOpacity * 0.3;
-        ctx.lineWidth = 14;
-        ctx.stroke();
-      }
-      ctx.globalAlpha = bolt.alpha * 0.35 * fadeOpacity;
-      ctx.strokeStyle = bolt._outerStroke;
-      ctx.lineWidth = 8;
-      ctx.stroke();
-      ctx.globalAlpha = bolt.alpha * fadeOpacity;
-      ctx.strokeStyle = bolt._coreStroke;
-      ctx.lineWidth = 2.5;
-      ctx.stroke();
-      ctx.globalAlpha = bolt.alpha * 0.6 * fadeOpacity;
-      ctx.strokeStyle = bolt._branchStroke;
-      ctx.lineWidth = 1.5;
-      for (let j = 0; j < segLen; j++) {
-        const seg = segs[j];
-        if (seg.branch) {
-          ctx.beginPath();
-          ctx.moveTo(seg.x, seg.y);
-          ctx.lineTo(seg.nx, seg.ny);
-          ctx.stroke();
-        }
-      }
-      bolt.alpha -= 0.05 * frameScale;
-      if (bolt.glow > 0) bolt.glow -= 0.075 * frameScale;
-      if (bolt.alpha <= 0) card._bolts.splice(i, 1);
+  if (card._flashOpacity <= 0) return;
+  if (card._flashHold > 0) card._flashHold -= frameScale;
+  else {
+    card._flashOpacity *= Math.pow(0.8, frameScale);
+    if (card._flashOpacity > 0.15 && card._flashOpacity < 0.5 && Math.random() < 1 - Math.pow(0.9, frameScale)) {
+      card._flashOpacity = 0.6 + Math.random() * 0.25;
+      card._flashHold = 2;
     }
-    ctx.restore();
   }
+  if (card._flashOpacity < 0.01) {
+    card._flashOpacity = 0;
+    card._bolt = null;
+    return;
+  }
+  if (!card._flashGrad) {
+    const r = Math.max(w, h) * 1.1;
+    const g = ctx.createRadialGradient(card._flashX, card._flashY, 0, card._flashX, card._flashY, r);
+    const c = light ? "255,255,255" : "215,228,255";
+    g.addColorStop(0, `rgba(${c},0.9)`);
+    g.addColorStop(0.35, `rgba(${c},0.45)`);
+    g.addColorStop(1, `rgba(${c},0.12)`);
+    card._flashGrad = g;
+  }
+  ctx.save();
+  ctx.globalCompositeOperation = card._isThemeDark ? "screen" : "source-over";
+  ctx.globalAlpha = card._flashOpacity * fadeOpacity * (light ? 0.6 : 0.95);
+  ctx.fillStyle = card._flashGrad;
+  ctx.fillRect(0, 0, w, h);
+  ctx.restore();
+  // The channel only shows while the flash is bright, so it flickers with it.
+  if (card._bolt && card._flashOpacity > 0.3)
+    drawBolt(ctx, card._bolt, Math.min(1, (card._flashOpacity - 0.3) * 2) * fadeOpacity, card._isThemeDark);
 }

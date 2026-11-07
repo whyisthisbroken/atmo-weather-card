@@ -1,0 +1,20 @@
+{
+  "name": "atmo-weather-card",
+  "version": "2026.11",
+  "private": true,
+  "description": "Animated weather card for Home Assistant",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test --test-force-exit \"test/*.test.js\"",
+    "test:coverage": "node --test --test-force-exit --experimental-test-coverage --test-coverage-include=\"src/**\" --test-coverage-lines=90 --test-coverage-branches=80 \"test/*.test.js\""
+  },
+  "devDependencies": {
+    "@fontsource-variable/figtree": "5.3.0",
+    "@happy-dom/global-registrator": "21.0.4",
+    "esbuild": "0.28.2",
+    "happy-dom": "21.0.4",
+    "lit": "3.3.3"
+  }
+}
