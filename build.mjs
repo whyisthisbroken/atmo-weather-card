@@ -1,5 +1,6 @@
 import { build } from "esbuild";
 import { copyFile, cp, mkdir, readFile, rm } from "node:fs/promises";
+import { writeDocs } from "./scripts/build-docs.mjs";
 
 const FONT_DIR = "node_modules/@fontsource-variable/figtree";
 const FONT_FILES = [
@@ -32,5 +33,7 @@ await Promise.all(
 );
 await copyFile(`${FONT_DIR}/LICENSE`, "dist/figtree-LICENSE.txt");
 
-// docs/ is the GitHub Pages live demo. index.html is written by hand.
+// docs/ is the GitHub Pages site. index.html (the documentation) is built from
+// docs-src/; demo.html (the live demo) is written by hand.
 await cp("dist", "docs", { recursive: true });
+await writeDocs(version);

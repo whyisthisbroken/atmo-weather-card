@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atmo Weather Card — Live Demo</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --line: #30363d; --text: #e6edf3; --muted: #8b949e;
+    --accent: #2ea44f; --link: #58a6ff; --warn: #d29922;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .page { max-width: 1060px; margin: 0 auto; padding: 28px 16px 48px; }
+  header h1 { font-size: 22px; margin: 0 0 4px; }
+  header p { color: var(--muted); margin: 0 0 20px; }
+  header a { color: var(--link); text-decoration: none; }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 24px; align-items: start; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } .stage { position: static; } }
+  .stage { position: sticky; top: 16px; }
+  atmo-weather-card { display: block; width: 100%; }
+  .status { margin-top: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--muted); font-size: 12.5px; }
+  .status b { color: var(--text); font-weight: 600; }
+  .status .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .tag { padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); font-size: 12px; }
+  .tag.on { border-color: var(--accent); color: var(--text); background: rgba(46, 164, 79, 0.15); }
+  .note { margin-top: 10px; color: var(--muted); font-size: 12.5px; }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+  section h2 { font-size: 13px; margin: 0 0 2px; letter-spacing: 0.02em; }
+  section .desc { color: var(--muted); font-size: 12.5px; margin: 0 0 10px; }
+  .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 10px 0 6px; }
+  .buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+  button { background: #21262d; color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font-size: 13px; cursor: pointer; }
+  button:hover { background: #30363d; }
+  button.active { background: var(--accent); border-color: var(--accent); }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+  .control { padding: 8px 0; border-top: 1px solid rgba(48, 54, 61, 0.6); }
+  .control:first-of-type { border-top: 0; }
+  .control .head { display: flex; align-items: center; gap: 8px; }
+  .control .name { flex: 1; }
+  .control .value { font: 12px ui-monospace, SFMono-Regular, monospace; color: var(--link); }
+  .control .hint { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .control input[type=range] { width: 100%; margin-top: 6px; accent-color: var(--accent); }
+  .control.off .name, .control.off .value { opacity: 0.5; }
+  .control.off input[type=range] { opacity: 0.35; }
+  .switch { position: relative; width: 32px; height: 18px; flex: none; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch span { position: absolute; inset: 0; background: #30363d; border-radius: 999px; transition: background 0.15s; cursor: pointer; }
+  .switch span::after { content: ""; position: absolute; left: 2px; top: 2px; width: 14px; height: 14px; border-radius: 50%; background: #c9d1d9; transition: transform 0.15s; }
+  .switch input:checked + span { background: var(--accent); }
+  .switch input:checked + span::after { transform: translateX(14px); background: #fff; }
+  .message { color: var(--warn); font-size: 12.5px; min-height: 1.2em; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <h1>Atmo Weather Card — Live Demo</h1>
+    <p>The real card, running in your browser. Change the weather, the time of day and the measured data with the controls and watch the sky react. <a href="index.html">Documentation</a> · <a href="https://github.com/whyisthisbroken/atmo-weather-card">GitHub</a></p>
+  </header>
+
+  <div class="layout">
+    <div class="stage">
+      <div id="card-slot"></div>
+      <div class="status" id="status">Loading…</div>
+      <p class="note">Clouds fade in about a second after a change, on purpose, to keep the card light on slower devices.</p>
+    </div>
+
+    <div class="controls">
+      <section>
+        <h2>Scene</h2>
+        <p class="desc">The weather state and the sun, as Home Assistant reports them.</p>
+        <div class="label">Weather</div>
+        <div class="buttons" id="conditions"></div>
+        <div class="label">Time of day</div>
+        <div class="buttons" id="sun-presets">
+          <button data-v="35">Day</button>
+          <button data-v="15">Low sun</button>
+          <button data-v="6">Golden hour</button>
+          <button data-v="-2">Blue hour</button>
+          <button data-v="-5">Dusk</button>
+          <button data-v="-14">Night</button>
+        </div>
+        <div id="sun-slider"></div>
+      </section>
+
+      <section>
+        <h2>Measured weather data</h2>
+        <p class="desc">Optional values from your weather integration. Switch one off to see the card without it.</p>
+        <div id="data"></div>
+      </section>
+
+      <section>
+        <h2>Effects</h2>
+        <p class="desc">Every effect can be switched off on its own, in the editor under Performance &amp; effects.</p>
+        <div id="effects"></div>
+      </section>
+
+      <section>
+        <h2>Wind</h2>
+        <p class="desc">Always shown in windy weather; in rain, hail and snow from 40 km/h.</p>
+        <div class="label">Display</div>
+        <div class="buttons" id="wind-style">
+          <button data-v="lines">Wind lines</button>
+          <button data-v="flow">Flow field</button>
+          <button data-v="off">Off</button>
+        </div>
+        <div id="wind-speed"></div>
+        <div class="label">Wind from</div>
+        <div class="buttons" id="wind-from">
+          <button data-v="0">North</button>
+          <button data-v="90">East</button>
+          <button data-v="180">South</button>
+          <button data-v="225">South-west</button>
+          <button data-v="270">West</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>Night sky</h2>
+        <p class="desc">Shooting stars and comets appear on their own on clear nights. Switch them off, change how often they come, or spawn one right now.</p>
+        <div id="night-controls"></div>
+        <div class="label">Spawn now</div>
+        <div class="buttons">
+          <button id="spawn-star">Shooting star</button>
+          <button id="spawn-comet">Comet</button>
+        </div>
+        <div class="message" id="spawn-message"></div>
+      </section>
+
+      <section>
+        <h2>Birds &amp; planes</h2>
+        <p class="desc">Birds fly by day, planes by day and night. Near planes cross the sky faster than distant ones.</p>
+        <div id="fauna-controls"></div>
+        <div class="message" id="fauna-message"></div>
+      </section>
+
+      <section>
+        <h2>Display</h2>
+        <div class="label">Card height</div>
+        <div class="buttons" id="height">
+          <button data-v="140">Small</button>
+          <button data-v="200">Medium</button>
+          <button data-v="320">Large</button>
+        </div>
+        <div class="label">Performance</div>
+        <div class="buttons" id="perf">
+          <button data-v="low">Low · 24 fps</button>
+          <button data-v="default">Standard · 30 fps</button>
+          <button data-v="ultra">Ultra · 60 fps</button>
+        </div>
+        <div class="label">Reset</div>
+        <div class="buttons"><button id="reset">Back to the start</button></div>
+      </section>
+    </div>
+  </div>
+</div>
+<script type="module">
+  import './atmo-weather-card.js';
+
+  const CONDITIONS = [
+    ['sunny', 'Sunny / Clear'], ['partlycloudy', 'Partly cloudy'], ['cloudy', 'Cloudy'], ['fog', 'Fog'],
+    ['windy', 'Windy'], ['rainy', 'Rain'], ['pouring', 'Pouring'], ['lightning-rainy', 'Thunderstorm'],
+    ['lightning', 'Lightning'], ['hail', 'Hail'], ['snowy', 'Snow'], ['snowy-rainy', 'Sleet'],
+  ];
+  const DATA = {
+    cloud_coverage: { name: 'Cloud cover', unit: '%', min: 0, max: 100, step: 1, v: 40, hint: 'Sets how many clouds there are.' },
+    precipitation: { name: 'Rain sensor', unit: 'mm/h', min: 0, max: 10, step: 0.1, v: 1, hint: 'Optional precipitation_entity: rain and snow follow the amount.' },
+    visibility: { name: 'Visibility', unit: 'km', min: 0.5, max: 30, step: 0.5, v: 6, hint: 'Below 20 km a haze builds up.' },
+    humidity: { name: 'Humidity', unit: '%', min: 10, max: 100, step: 1, v: 70, hint: 'Very humid air looks a little hazy.' },
+    temperature: { name: 'Temperature', unit: '°C', min: -15, max: 35, step: 0.5, v: 12 },
+    dew_point: { name: 'Dew point', unit: '°C', min: -20, max: 30, step: 0.5, v: 11.5, hint: 'Close to the temperature, ground mist forms at night and in the morning.' },
+  };
+  const START = {
+    condition: 'partlycloudy', elevation: 35, height: 200, perf: 'ultra',
+    windStyle: 'lines', windSpeed: 25, windFrom: 270,
+    fx: { effect_blue_hour: true, effect_sun_rays: true, effect_haze: true, effect_ground_mist: true, effect_cloud_coverage: true, effect_shooting_stars: true, effect_comets: true },
+    shootingStarRate: 1, cometRate: 1,
+    birds: true, planes: true, birdDensity: 1.3, planeDensity: 1, planeSpeed: 1,
+    on: { cloud_coverage: false, precipitation: false, visibility: false, humidity: true, temperature: true, dew_point: false },
+    values: Object.fromEntries(Object.entries(DATA).map(([k, d]) => [k, d.v])),
+  };
+  let state = structuredClone(START);
+  const isNight = () => state.elevation < -0.833;
+  const fmt = (v, unit) => `${Number(v).toLocaleString('en-US', { maximumFractionDigits: 1 })}${unit ? ' ' + unit : ''}`;
+
+  function buildConfig() {
+    return {
+      type: 'custom:atmo-weather-card', weather_entity: 'weather.demo', sun_entity: 'sun.sun',
+      moon_phase_entity: 'sensor.moon_phase', theme_entity: 'sun.sun',
+      ...(state.on.precipitation ? { precipitation_entity: 'sensor.rain_rate' } : {}),
+      card_height: state.height, card_padding: '16px',
+      celestial_size: 60, celestial_alignment: 'right', celestial_x: 45, celestial_y: 'center',
+      perf_mode: state.perf, wind_style: state.windStyle,
+      perf_fauna: state.perf === 'low' ? 0 : 2,
+      fauna_birds: state.birds, fauna_planes: state.planes,
+      fauna_bird_density: state.birdDensity, fauna_plane_density: state.planeDensity, fauna_plane_speed: state.planeSpeed,
+      fauna_bird_flock_size: 8, fauna_birds_at_night: false,
+      ...state.fx, shooting_star_rate: state.shootingStarRate, comet_rate: state.cometRate,
+      chips: [{
+        position: 'custom', position_anchor: 'center', position_x: '16px', position_y: '16px',
+        text_size: state.height < 180 ? '34px' : '48px', padding: '0px 4px', hide_icon: true, fancy_unit: true,
+        entity: 'sensor.time', background: false, hide_label: true, value_weight: '600', label_overflow: 'marquee',
+      }],
+      grid_options: { rows: 'auto' },
+    };
+  }
+
+  function buildHass() {
+    const night = isNight();
+    const attrs = {
+      temperature_unit: '°C', wind_speed: state.windSpeed, wind_bearing: state.windFrom,
+      wind_speed_unit: 'km/h', visibility_unit: 'km', friendly_name: 'Demo',
+    };
+    for (const k of Object.keys(DATA)) if (k !== 'precipitation' && state.on[k]) attrs[k] = state.values[k];
+    if (attrs.temperature == null) attrs.temperature = 12;
+    return {
+      states: {
+        'weather.demo': { entity_id: 'weather.demo', state: state.condition, attributes: attrs },
+        'sun.sun': { entity_id: 'sun.sun', state: night ? 'below_horizon' : 'above_horizon', attributes: { elevation: state.elevation } },
+        'sensor.moon_phase': { entity_id: 'sensor.moon_phase', state: 'waxing_gibbous', attributes: {} },
+        'sensor.rain_rate': { entity_id: 'sensor.rain_rate', state: String(state.values.precipitation), attributes: { unit_of_measurement: 'mm/h' } },
+        'sensor.time': { entity_id: 'sensor.time', state: new Date().toISOString(), attributes: {} },
+      },
+      themes: { darkMode: night }, locale: { language: 'en' },
+      config: { latitude: 52.15, longitude: 7.32, unit_system: { temperature: '°C' } },
+      formatEntityState: (s) => s.state,
+      formatEntityAttributeValue: (s, a) => String(s.attributes[a]),
+    };
+  }
+
+  const card = document.createElement('atmo-weather-card');
+  card.setConfig(buildConfig());
+  document.getElementById('card-slot').appendChild(card);
+  let configNight = isNight();
+  const reconfigure = () => { configNight = isNight(); card.setConfig(buildConfig()); };
+  function update() {
+    if (isNight() !== configNight) reconfigure();
+    card.hass = buildHass();
+    syncButtons();
+  }
+
+  // A labelled slider, optionally with an on/off switch.
+  function slider(parent, { name, unit, min, max, step, hint }, get, set, toggle) {
+    const el = document.createElement('div');
+    el.className = 'control';
+    el.innerHTML = `<div class="head">${toggle ? '<label class="switch"><input type="checkbox"><span></span></label>' : ''}
+      <span class="name">${name}</span><span class="value"></span></div>
+      ${hint ? `<div class="hint">${hint}</div>` : ''}
+      <input type="range" min="${min}" max="${max}" step="${step}" aria-label="${name}">`;
+    const range = el.querySelector('input[type=range]');
+    const value = el.querySelector('.value');
+    const check = el.querySelector('input[type=checkbox]');
+    const refresh = () => {
+      range.value = get();
+      value.textContent = toggle && !toggle.get() ? 'off' : fmt(get(), unit);
+      if (check) check.checked = toggle.get();
+      el.classList.toggle('off', !!toggle && !toggle.get());
+    };
+    range.addEventListener('input', () => { value.textContent = fmt(range.value, unit); set(Number(range.value), false); });
+    range.addEventListener('change', () => set(Number(range.value), true));
+    if (check) check.addEventListener('change', () => { toggle.set(check.checked); refresh(); });
+    parent.appendChild(el);
+    refresh();
+    return refresh;
+  }
+
+  // A labelled on/off switch.
+  function toggle(parent, { name, hint }, get, set) {
+    const el = document.createElement('div');
+    el.className = 'control';
+    el.innerHTML = `<div class="head"><label class="switch"><input type="checkbox" aria-label="${name}"><span></span></label>
+      <span class="name">${name}</span></div>${hint ? `<div class="hint">${hint}</div>` : ''}`;
+    const check = el.querySelector('input');
+    const refresh = () => { check.checked = get(); el.classList.toggle('off', !get()); };
+    check.addEventListener('change', () => { set(check.checked); refresh(); });
+    parent.appendChild(el);
+    refresh();
+    return refresh;
+  }
+  // Config changes rebuild the scene, so sliders apply when they are let go.
+  const configSlider = (parent, spec, key) =>
+    slider(parent, spec, () => state[key], (v, done) => { state[key] = v; if (done) { reconfigure(); update(); } });
+
+  const refreshers = [];
+  const dataBox = document.getElementById('data');
+  // Cloud cover and rain rebuild the scene, so they apply when the slider is let go.
+  const REBUILD = new Set(['cloud_coverage', 'precipitation']);
+  for (const [k, d] of Object.entries(DATA)) {
+    refreshers.push(slider(dataBox, d, () => state.values[k], (v, done) => {
+      state.values[k] = v;
+      if (!state.on[k]) { state.on[k] = true; if (k === 'precipitation') reconfigure(); refreshers.forEach((r) => r()); }
+      if (!REBUILD.has(k) || done) update();
+    }, {
+      get: () => state.on[k],
+      set: (on) => { state.on[k] = on; if (k === 'precipitation') reconfigure(); update(); },
+    }));
+  }
+  const FX = [
+    ['effect_blue_hour', 'Blue hour', 'Deep blue sky after sunset and before sunrise.'],
+    ['effect_sun_rays', 'Sun rays', 'Beams through broken clouds in partly cloudy and cloudy weather.'],
+    ['effect_haze', 'Haze', 'A veil with poor visibility or humid air.'],
+    ['effect_ground_mist', 'Ground mist', 'Mist near the dew point, at night and in the morning.'],
+    ['effect_cloud_coverage', 'Cloud amount from data', 'Off: a fixed amount of clouds per weather state.'],
+  ];
+  const fxBox = document.getElementById('effects');
+  for (const [key, name, hint] of FX)
+    refreshers.push(toggle(fxBox, { name, hint }, () => state.fx[key], (on) => { state.fx[key] = on; reconfigure(); update(); }));
+
+  const nightBox = document.getElementById('night-controls');
+  refreshers.push(toggle(nightBox, { name: 'Shooting stars' }, () => state.fx.effect_shooting_stars,
+    (on) => { state.fx.effect_shooting_stars = on; reconfigure(); update(); }));
+  refreshers.push(configSlider(nightBox, { name: 'Frequency', unit: '×', min: 0.25, max: 3, step: 0.25, hint: '1× is about one every 12 seconds on Ultra.' }, 'shootingStarRate'));
+  refreshers.push(toggle(nightBox, { name: 'Comets' }, () => state.fx.effect_comets,
+    (on) => { state.fx.effect_comets = on; reconfigure(); update(); }));
+  refreshers.push(configSlider(nightBox, { name: 'Frequency', unit: '×', min: 0.25, max: 3, step: 0.25, hint: '1× is about one a minute on Ultra.' }, 'cometRate'));
+
+  const faunaBox = document.getElementById('fauna-controls');
+  refreshers.push(toggle(faunaBox, { name: 'Birds', hint: 'Only by day in this demo.' }, () => state.birds,
+    (on) => { state.birds = on; reconfigure(); update(); }));
+  refreshers.push(configSlider(faunaBox, { name: 'Bird frequency', unit: '×', min: 0.5, max: 2, step: 0.1 }, 'birdDensity'));
+  refreshers.push(toggle(faunaBox, { name: 'Planes' }, () => state.planes,
+    (on) => { state.planes = on; reconfigure(); update(); }));
+  refreshers.push(configSlider(faunaBox, { name: 'Plane frequency', unit: '×', min: 0.5, max: 2, step: 0.1 }, 'planeDensity'));
+  refreshers.push(configSlider(faunaBox, { name: 'Plane speed', unit: '×', min: 0.25, max: 3, step: 0.05 }, 'planeSpeed'));
+
+  refreshers.push(slider(document.getElementById('sun-slider'), { name: 'Sun elevation', unit: '°', min: -14, max: 60, step: 0.5, hint: 'Below −0.8° the sun has set.' },
+    () => state.elevation, (v) => { state.elevation = v; update(); }));
+  refreshers.push(slider(document.getElementById('wind-speed'), { name: 'Wind speed', unit: 'km/h', min: 0, max: 100, step: 1 },
+    () => state.windSpeed, (v) => { state.windSpeed = v; update(); }));
+
+  const conditionBox = document.getElementById('conditions');
+  for (const [value, label] of CONDITIONS) {
+    const b = document.createElement('button');
+    b.textContent = label; b.dataset.v = value;
+    conditionBox.appendChild(b);
+  }
+  const group = (id, key, cast, needsConfig) =>
+    document.querySelectorAll(`#${id} button`).forEach((b) => b.addEventListener('click', () => {
+      state[key] = cast(b.dataset.v);
+      if (needsConfig) reconfigure();
+      update();
+      refreshers.forEach((r) => r());
+    }));
+  group('conditions', 'condition', String);
+  group('sun-presets', 'elevation', Number);
+  group('wind-style', 'windStyle', String, true);
+  group('wind-from', 'windFrom', Number);
+  group('height', 'height', Number, true);
+  group('perf', 'perf', String, true);
+
+  const mark = (id, current) => document.querySelectorAll(`#${id} button`).forEach((b) => b.classList.toggle('active', b.dataset.v === String(current)));
+  const faunaMessage = document.getElementById('fauna-message');
+  function syncButtons() {
+    faunaMessage.textContent = state.perf === 'low' ? 'Low performance mode has no birds or planes.' : '';
+    mark('conditions', state.condition);
+    mark('sun-presets', state.elevation);
+    mark('wind-style', state.windStyle);
+    mark('wind-from', state.windFrom);
+    mark('height', state.height);
+    mark('perf', state.perf);
+  }
+
+  const message = document.getElementById('spawn-message');
+  const spawn = (flag) => {
+    const off = flag === '_forceShootingStar' ? !state.fx.effect_shooting_stars : !state.fx.effect_comets;
+    const blocked = off ? 'Switch it on above first.'
+      : state.perf === 'low' ? 'Low performance mode has no shooting stars or comets.'
+      : !isNight() ? 'Set the time of day to night first.'
+      : card._renderState && card._renderState.isBadWeatherForComets ? 'There are no shooting stars or comets in this weather.' : '';
+    message.textContent = blocked;
+    if (!blocked) card[flag] = true;
+  };
+  document.getElementById('spawn-star').addEventListener('click', () => spawn('_forceShootingStar'));
+  document.getElementById('spawn-comet').addEventListener('click', () => spawn('_forceComet'));
+
+  document.getElementById('reset').addEventListener('click', () => {
+    state = structuredClone(START);
+    message.textContent = '';
+    reconfigure();
+    update();
+    refreshers.forEach((r) => r());
+  });
+
+  // What the card is showing right now, in plain words.
+  const statusBox = document.getElementById('status');
+  setInterval(() => {
+    const a = card._atmo || {};
+    const label = (CONDITIONS.find(([v]) => v === state.condition) || [])[1] || state.condition;
+    const tags = [
+      ['Blue hour', a.twilight > 0.05], ['Haze', a.haze > 0.05], ['Ground mist', a.mist > 0.05],
+      ['Sun rays', a.rays > 0.05], ['Closed cloud deck', !!(card._params && card._params.overcast)],
+    ];
+    statusBox.innerHTML = `<b>${label}</b> · ${isNight() ? 'night' : 'day'} · sun ${fmt(state.elevation, '°')} · ` +
+      `${card._clouds ? card._clouds.length : 0} clouds · ${(card._rain || []).length + (card._snow || []).length} drops and flakes · wind ${state.windSpeed} km/h` +
+      `<div class="tags">${tags.map(([t, on]) => `<span class="tag${on ? ' on' : ''}">${t}</span>`).join('')}</div>`;
+  }, 400);
+
+  // The clock chip ticks every second.
+  setInterval(() => { card.hass = buildHass(); }, 1000);
+
+  update();
+</script>
+</body>
+</html>

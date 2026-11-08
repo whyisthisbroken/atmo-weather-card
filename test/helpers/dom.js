@@ -63,7 +63,10 @@ export function runFrames(count = 1, step = 34) {
   for (let i = 0; i < count; i++) {
     const queue = frameQueue;
     frameQueue = [];
-    frameClock += step;
+    // Like a browser, frame times never lag behind performance.now(): the card
+    // starts its frame timer with performance.now() and skips "early" frames.
+    // On a busy machine a pure fake clock fell behind and nothing was drawn.
+    frameClock = Math.max(frameClock + step, performance.now());
     for (const callback of queue) callback(frameClock);
   }
 }

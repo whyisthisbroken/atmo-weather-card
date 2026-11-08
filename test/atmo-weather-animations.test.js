@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 
 import {
   cometColors,
+  cometRate,
+  planeSpeedForScale,
+  shootingStarRate,
   drawComets,
   drawBirds,
   drawPlanes,
@@ -599,4 +602,35 @@ test("comets get colors for dark themes and ink tones for light ones", () => {
   for (const c of [dark, light]) assert.match(c._coreRgb, /^[0-9]+,[0-9]+,[0-9]+$/);
   assert.equal(light._coreRgb, "50,60,75");
   assert.notEqual(dark._coreRgb, light._coreRgb);
+});
+
+test("spawn rates follow the effect switches and sliders", () => {
+  assert.equal(shootingStarRate({}), 1);
+  assert.equal(cometRate({}), 1);
+  const fx = { shootingStars: true, shootingStarRate: 2, comets: false, cometRate: 3 };
+  assert.equal(shootingStarRate({ _fx: fx }), 2);
+  assert.equal(cometRate({ _fx: fx }), 0);
+});
+
+test("switched off shooting stars do not spawn", () => {
+  const card = baseCard();
+  card._layerFadeProgress.stars = 1;
+  card._renderState = { isBadWeatherForComets: false };
+  card._shootingStars = [];
+  card._perfEffects = 1;
+  card._fx = { shootingStars: false, shootingStarRate: 1 };
+  const originalRandom = Math.random;
+  Math.random = () => 0;
+  try {
+    drawShootingStars(card, createContext(), 100, 100, { MAX_SHOOTING_STARS: 1 }, 12);
+  } finally {
+    Math.random = originalRandom;
+  }
+  assert.equal(card._shootingStars.length, 0);
+});
+
+test("near planes fly faster than distant ones", () => {
+  assert.ok(Math.abs(planeSpeedForScale(0.5) - 0.5) < 1e-9);
+  assert.ok(Math.abs(planeSpeedForScale(0.9) - 1.2) < 1e-9);
+  assert.ok(planeSpeedForScale(0.7) > planeSpeedForScale(0.6));
 });

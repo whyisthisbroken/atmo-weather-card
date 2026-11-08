@@ -67,7 +67,10 @@ export function adjustParams(params, data) {
 }
 
 // Strength (0..1) of every sky light effect for the current conditions.
-export function computeAtmosphere(data, { state, isTimeNight, sunElev }) {
+export function computeAtmosphere(
+  data,
+  { state, isTimeNight, sunElev, effects },
+) {
   const out = {
     haze: 0,
     mist: 0,
@@ -107,6 +110,15 @@ export function computeAtmosphere(data, { state, isTimeNight, sunElev }) {
     const closed = data.coverage != null && data.coverage >= 95;
     if (base > 0 && !closed)
       out.rays = base * (elev == null || elev < 35 ? 1 : 0.6);
+  }
+  // Effects switched off in the config.
+  const fx = effects || {};
+  if (fx.haze === false) out.haze = 0;
+  if (fx.mist === false) out.mist = 0;
+  if (fx.sunRays === false) out.rays = 0;
+  if (fx.blueHour === false) {
+    out.twilight = 0;
+    out.starVisibility = 1;
   }
   return out;
 }

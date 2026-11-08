@@ -5,7 +5,9 @@ import {
   advanceWindAndPulse,
   CloudShapeGenerator,
   cometColors,
+  cometRate,
   drawBirds,
+  planeSpeedForScale,
   drawCelestialClouds,
   drawComets,
   drawClouds,
@@ -31,7 +33,12 @@ import {
   computeAtmosphere,
   readWeatherData,
 } from "./atmo-weather-atmosphere.js";
-import { CONFIG_DEFAULTS, migrateConfig } from "./atmo-weather-config.js";
+import {
+  CONFIG_DEFAULTS,
+  migrateConfig,
+  readFlag,
+  readNumber,
+} from "./atmo-weather-config.js";
 import {
   ACTIVE_STATES,
   ATMOSPHERE_CSS,
@@ -513,46 +520,47 @@ class AtmosphericWeatherCard extends HTMLElement {
       ? windStyle
       : CONFIG_DEFAULTS.wind_style;
     const rawAnimSpeed =
-      config.animation_speed != null ? parseFloat(config.animation_speed) : 1.0;
+      config.animation_speed != null
+        ? parseFloat(config.animation_speed)
+        : preset.animation_speed;
     this._animationSpeed = Number.isFinite(rawAnimSpeed)
       ? Math.max(0, Math.min(3.0, rawAnimSpeed))
       : 1.0;
     const rawBirdAnimSpeed =
       config.bird_animation_speed != null
         ? parseFloat(config.bird_animation_speed)
-        : 0.3;
+        : preset.bird_animation_speed;
     this._birdAnimationSpeed = Number.isFinite(rawBirdAnimSpeed)
       ? Math.max(0, Math.min(3.0, rawBirdAnimSpeed))
       : 0.3;
     const rawStarAnimSpeed =
       config.star_animation_speed != null
         ? parseFloat(config.star_animation_speed)
-        : 0.5;
+        : preset.star_animation_speed;
     this._starAnimationSpeed = Number.isFinite(rawStarAnimSpeed)
       ? Math.max(0, Math.min(2.0, rawStarAnimSpeed))
       : 0.5;
-    // Fauna density controls (Option C)
-    const rawBirdDensity =
-      config.fauna_bird_density != null
-        ? parseFloat(config.fauna_bird_density)
-        : 1.0;
-    this._faunaBirdDensity = Number.isFinite(rawBirdDensity)
-      ? Math.max(0.5, Math.min(2.0, rawBirdDensity))
-      : 1.0;
-    const rawPlaneDensity =
-      config.fauna_plane_density != null
-        ? parseFloat(config.fauna_plane_density)
-        : 1.0;
-    this._faunaPlaneDensity = Number.isFinite(rawPlaneDensity)
-      ? Math.max(0.5, Math.min(2.0, rawPlaneDensity))
-      : 1.0;
-    const rawFlockSize =
-      config.fauna_bird_flock_size != null
-        ? parseInt(config.fauna_bird_flock_size, 10)
-        : 6;
-    this._faunaBirdFlockSize = Number.isFinite(rawFlockSize)
-      ? Math.max(1, Math.min(20, rawFlockSize))
-      : 6;
+    // Fauna amounts: the preset unless the config sets its own value.
+    this._faunaBirdDensity = readNumber(
+      config.fauna_bird_density,
+      preset.fauna_bird_density,
+      0.5,
+      2.0,
+    );
+    this._faunaPlaneDensity = readNumber(
+      config.fauna_plane_density,
+      preset.fauna_plane_density,
+      0.5,
+      2.0,
+    );
+    this._faunaBirdFlockSize = Math.round(
+      readNumber(
+        config.fauna_bird_flock_size,
+        preset.fauna_bird_flock_size,
+        1,
+        20,
+      ),
+    );
     const rawBirdsAtNight = config.fauna_birds_at_night;
     if (rawBirdsAtNight === undefined || rawBirdsAtNight === null) {
       this._faunaBirdsAtNight = CONFIG_DEFAULTS.fauna_birds_at_night;
@@ -564,6 +572,21 @@ class AtmosphericWeatherCard extends HTMLElement {
     } else {
       this._faunaBirdsAtNight = rawBirdsAtNight !== false;
     }
+    this._faunaBirds = readFlag(config.fauna_birds, true);
+    this._faunaPlanes = readFlag(config.fauna_planes, true);
+    this._faunaPlaneSpeed = readNumber(config.fauna_plane_speed, 1, 0.25, 3);
+    // Single effects, each can be switched off.
+    this._fx = {
+      blueHour: readFlag(config.effect_blue_hour, true),
+      sunRays: readFlag(config.effect_sun_rays, true),
+      haze: readFlag(config.effect_haze, true),
+      mist: readFlag(config.effect_ground_mist, true),
+      cloudCoverage: readFlag(config.effect_cloud_coverage, true),
+      shootingStars: readFlag(config.effect_shooting_stars, true),
+      comets: readFlag(config.effect_comets, true),
+      shootingStarRate: readNumber(config.shooting_star_rate, 1, 0.25, 3),
+      cometRate: readNumber(config.comet_rate, 1, 0.25, 3),
+    };
     const rawDpr = config.perf_dpr != null ? config.perf_dpr : preset.perf_dpr;
     const parsedDpr = parseFloat(rawDpr);
     this._perfDpr = Number.isFinite(parsedDpr)
@@ -579,6 +602,8 @@ class AtmosphericWeatherCard extends HTMLElement {
     } else if (advancedCloudSettingsChanged && this._renderState) {
       this._requestAdvancedCloudBake();
     }
+    // Apply the new options right away instead of at the next state change.
+    if (this._hass) this.hass = this._hass;
   }
   set hass(hass) {
     if (!hass || !this._config) return;
@@ -783,7 +808,13 @@ class AtmosphericWeatherCard extends HTMLElement {
     }
     // Measured weather data refines the scene and drives the sky light.
     const weatherData = readWeatherData(wEntity.attributes, precipEntity);
-    newParams = adjustParams(newParams, weatherData);
+    // "Cloud amount from data" off keeps the fixed clouds of the weather state;
+    // the sky light still knows the real cover (no sun rays under a closed deck).
+    const sceneData =
+      this._fx && !this._fx.cloudCoverage
+        ? { ...weatherData, coverage: null }
+        : weatherData;
+    newParams = adjustParams(newParams, sceneData);
     const sunElev =
       sunEntity && sunEntity.attributes
         ? parseFloat(sunEntity.attributes.elevation)
@@ -792,6 +823,7 @@ class AtmosphericWeatherCard extends HTMLElement {
       state: weatherState,
       isTimeNight,
       sunElev: Number.isFinite(sunElev) ? sunElev : null,
+      effects: this._fx,
     });
     this._updateStandaloneStyles(isTimeNight, newParams);
     this._updateTextElements(hass, wEntity, lang, weatherState);
@@ -3248,10 +3280,10 @@ class AtmosphericWeatherCard extends HTMLElement {
       fx >= 1 &&
       this._isNight &&
       p.type === "stars" &&
-      Math.random() < (isUltra ? 0.0028 : 0.00154)
+      Math.random() < (isUltra ? 0.0028 : 0.00154) * cometRate(this)
     )
       this._comets.push(this._createComet(w, h));
-    if (this._perfFauna >= 2 && Math.random() < 0.25)
+    if (this._perfFauna >= 2 && this._faunaPlanes && Math.random() < 0.25)
       this._planes.push(this._createPlane(w, h));
     if (p.type === "fog" || p.foggy) this._initFogBanks(w, h);
     if ((p.count || 0) > 0 && p.type !== "stars" && p.type !== "fog")
@@ -3313,8 +3345,10 @@ class AtmosphericWeatherCard extends HTMLElement {
   }
   _createPlane(w, h) {
     const goingRight = Math.random() > 0.5,
-      baseSpeed = 0.6 + Math.random() * 0.5,
       dir = goingRight ? 1 : -1;
+    // Near (bigger) planes cross the sky faster than distant ones.
+    const scale = 0.5 + Math.random() * 0.4,
+      baseSpeed = planeSpeedForScale(scale) * (0.94 + Math.random() * 0.12);
     const climbAngle =
       Math.random() < 0.33 ? (1 + Math.random() * 4) * (Math.PI / 180) : 0;
     return {
@@ -3323,7 +3357,7 @@ class AtmosphericWeatherCard extends HTMLElement {
       vx: dir * Math.cos(climbAngle) * baseSpeed,
       vy: -Math.sin(climbAngle) * baseSpeed,
       climbAngle,
-      scale: 0.5 + Math.random() * 0.4,
+      scale,
       blinkPhase: Math.random() * 10,
       histBuf: new Float32Array(TRAIL_CAP_PLANE * 3),
       histHead: 0,

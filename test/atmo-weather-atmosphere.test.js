@@ -112,3 +112,21 @@ test("sun rays shine through broken clouds, strongest with a low sun", () => {
   assert.equal(sky({}, { state: "sunny", sunElev: 15 }).rays, 0);
   assert.equal(sky({}, { state: "partlycloudy", isTimeNight: true, sunElev: -3 }).rays, 0);
 });
+
+test("switched off effects stay off", () => {
+  const damp = { visibility: 2, temperature: 6, dewPoint: 5.5 };
+  const all = sky(damp, { state: "partlycloudy", sunElev: 5 });
+  assert.ok(all.haze > 0 && all.mist > 0 && all.rays > 0);
+  const off = sky(damp, {
+    state: "partlycloudy",
+    sunElev: 5,
+    effects: { haze: false, mist: false, sunRays: false },
+  });
+  assert.equal(off.haze, 0);
+  assert.equal(off.mist, 0);
+  assert.equal(off.rays, 0);
+
+  const dusk = sky({}, { isTimeNight: true, sunElev: -1.5, effects: { blueHour: false } });
+  assert.equal(dusk.twilight, 0);
+  assert.equal(dusk.starVisibility, 1);
+});

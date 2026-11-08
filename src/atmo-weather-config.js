@@ -12,8 +12,86 @@ export const CONFIG_DEFAULTS = Object.freeze({
   chip_area_align: "start",
   perf_mode: "default",
   fauna_birds_at_night: true,
+  fauna_birds: true,
+  fauna_planes: true,
+  fauna_plane_speed: 1,
   wind_style: "lines",
+  effect_blue_hour: true,
+  effect_sun_rays: true,
+  effect_haze: true,
+  effect_ground_mist: true,
+  effect_cloud_coverage: true,
+  effect_shooting_stars: true,
+  effect_comets: true,
+  shooting_star_rate: 1,
+  comet_rate: 1,
 });
+
+// Performance presets. Every value applies while the config does not set
+// that option itself; a value set in the editor or in YAML wins ("custom").
+export const PERF_PRESETS = Object.freeze({
+  low: Object.freeze({
+    perf_fps: 24,
+    perf_cloud_quality: 0.5,
+    perf_effects: 0,
+    perf_fauna: 0,
+    perf_dpr: 1.0,
+    animation_speed: 1.0,
+    bird_animation_speed: 0.3,
+    star_animation_speed: 0.5,
+    fauna_bird_density: 0.5,
+    fauna_plane_density: 0.5,
+    fauna_bird_flock_size: 4,
+    fauna_birds_at_night: true,
+  }),
+  default: Object.freeze({
+    perf_fps: 30,
+    perf_cloud_quality: 1.5,
+    perf_effects: 1,
+    perf_fauna: 2,
+    perf_dpr: 2.0,
+    animation_speed: 1.0,
+    bird_animation_speed: 0.3,
+    star_animation_speed: 0.5,
+    fauna_bird_density: 1.0,
+    fauna_plane_density: 1.0,
+    fauna_bird_flock_size: 8,
+    fauna_birds_at_night: true,
+  }),
+  ultra: Object.freeze({
+    perf_fps: 60,
+    perf_cloud_quality: 2.0,
+    perf_effects: 2,
+    perf_fauna: 2,
+    perf_dpr: 2.0,
+    animation_speed: 1.0,
+    bird_animation_speed: 0.3,
+    star_animation_speed: 0.5,
+    fauna_bird_density: 1.5,
+    fauna_plane_density: 1.5,
+    fauna_bird_flock_size: 12,
+    fauna_birds_at_night: true,
+  }),
+});
+// The preset named in the config, or the default one.
+export function perfPreset(config) {
+  const name = config && config.perf_mode;
+  return (typeof name === "string" && PERF_PRESETS[name]) || PERF_PRESETS.default;
+}
+
+// Reads a boolean option; "false", "0", "off" and "no" count as off.
+export function readFlag(value, fallback) {
+  if (value === undefined || value === null || value === "") return fallback;
+  if (typeof value === "string")
+    return !["false", "0", "off", "no"].includes(value.trim().toLowerCase());
+  return value !== false && value !== 0;
+}
+
+// Reads a number option clamped to [min, max].
+export function readNumber(value, fallback, min, max) {
+  const n = typeof value === "number" ? value : parseFloat(value);
+  return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : fallback;
+}
 
 // Read with string methods at runtime. A wrong YAML type falls back to the default.
 const STRING_ONLY_KEYS = Object.freeze([

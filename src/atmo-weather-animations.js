@@ -6,7 +6,11 @@ import {
 } from "./atmo-weather-atmosphere.js";
 export const TWO_PI = Math.PI * 2;
 
-export { drawBirds, drawPlanes } from "./atmo-weather-fauna.js";
+export {
+  drawBirds,
+  drawPlanes,
+  planeSpeedForScale,
+} from "./atmo-weather-fauna.js";
 
 export function fillCircle(ctx, x, y, r) {
   ctx.beginPath();
@@ -1209,12 +1213,15 @@ export function renderAnimationFrame(
     card._drawCelestialGlow(mid, w, h);
   if (fx >= 1) drawSunRays(card, mid, w, h);
   const birdsAtNightEnabled = card._faunaBirdsAtNight !== false;
-  const canDrawBirds = fauna >= 1 && (!card._isNight || birdsAtNightEnabled);
+  const canDrawBirds =
+    fauna >= 1 &&
+    card._faunaBirds !== false &&
+    (!card._isNight || birdsAtNightEnabled);
   if (canDrawBirds) card._drawBirds(mid, w, h);
-  else if (card._isNight && card._birds.length > 0) card._birds.length = 0;
+  else if (card._birds.length > 0) card._birds.length = 0;
   drawClouds(card, mid, card._fgClouds, w, h, effectiveWind);
   if (fx >= 1) drawMist(card, mid, w, h);
-  if (fauna >= 2) card._drawPlanes(mid, w, h);
+  if (fauna >= 2 && card._faunaPlanes !== false) card._drawPlanes(mid, w, h);
 
   card._drawLightning(fg, w, h);
   card._drawRain(fg, w, h, effectiveWind);
@@ -1378,7 +1385,7 @@ export function drawShootingStars(
   const frameScale = card._frameScale || 1;
   if (
     !badWeather &&
-    (card._forceShootingStar || Math.random() < 0.003003 * frameScale) &&
+    (card._forceShootingStar || Math.random() < 0.003003 * shootingStarRate(card) * frameScale) &&
     card._shootingStars.length < limits.MAX_SHOOTING_STARS
   ) {
     card._forceShootingStar = false;
@@ -1474,6 +1481,17 @@ export function drawShootingStars(
   ctx.globalAlpha = 1;
 }
 
+// Spawn rate factors from the config; 0 when the effect is switched off.
+export function shootingStarRate(card) {
+  const fx = card._fx;
+  if (!fx) return 1;
+  return fx.shootingStars ? fx.shootingStarRate : 0;
+}
+export function cometRate(card) {
+  const fx = card._fx;
+  if (!fx) return 1;
+  return fx.comets ? fx.cometRate : 0;
+}
 // Head, glow and tail colors of a new comet; ink tones on light themes.
 export function cometColors(card) {
   if (!card._isThemeDark)
@@ -1511,7 +1529,10 @@ export function drawComets(card, ctx, w, h, trailCapComet) {
     !badWeather &&
     card._comets.length === 0 &&
     (card._forceComet ||
-      Math.random() < (card._perfEffects >= 2 ? 0.0007 : 0.000382) * frameScale)
+      Math.random() <
+        (card._perfEffects >= 2 ? 0.0007 : 0.000382) *
+          cometRate(card) *
+          frameScale)
   ) {
     card._forceComet = false;
     const startX = Math.random() < 0.5 ? -60 : w + 60;

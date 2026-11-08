@@ -197,6 +197,12 @@ export function drawBirds(card, ctx, w, h) {
   ctx.restore();
 }
 
+// Planes are drawn at scale 0.5 (far) to 0.9 (near). Speed grows with the
+// scale, so near planes fly faster; the average stays at the old 0.85.
+export function planeSpeedForScale(scale) {
+  return 0.5 + (scale - 0.5) * 1.75;
+}
+
 export function drawPlanes(
   card,
   ctx,
@@ -209,7 +215,8 @@ export function drawPlanes(
   ctx.save();
   const dpr = card._cachedDimensions ? card._cachedDimensions.dpr : 1;
   const frameScale = card._frameScale || 1;
-  const animSpeed = card._animationSpeed * frameScale;
+  const animSpeed =
+    card._animationSpeed * (card._faunaPlaneSpeed || 1) * frameScale;
   if (
     card._planes.length === 0 &&
     Math.random() < 0.0025 * card._faunaPlaneDensity * frameScale

@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<!-- Template of the documentation page. npm run build fills the {{...}} placeholders from docs-src/documentation.md. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atmo Weather Card · Documentation</title>
+<style>
+  /* Layout: top bar; three columns (nav, reading column, sticky live card). Below 1180px the live card sits on top. */
+  @font-face { font-family: "Figtree"; src: url("figtree-latin-wght-normal.woff2") format("woff2"); font-weight: 300 900; font-display: swap; }
+  :root {
+    color-scheme: dark;
+    --bg: #0d1117; --panel: #151b23; --raised: #1c2430; --line: #2b3440; --text: #e6edf3; --muted: #8d99a6;
+    --accent: #f2b84b;      /* low sun */
+    --link: #6cb6ff; --code: #111821; --ok: #3fb950; --note: #4493f8; --tip: #3fb950; --warn: #d29922;
+    --f-body: "Figtree", "Segoe UI", system-ui, sans-serif;
+    --f-mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      color-scheme: light;
+      --bg: #f7f8fa; --panel: #ffffff; --raised: #f0f3f6; --line: #d8dee4; --text: #1f2328; --muted: #59636e;
+      --accent: #b8761a; --link: #0969da; --code: #f3f5f7; --ok: #1a7f37; --note: #0969da; --tip: #1a7f37; --warn: #9a6700;
+    }
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --bg: #f7f8fa; --panel: #ffffff; --raised: #f0f3f6; --line: #d8dee4; --text: #1f2328; --muted: #59636e;
+    --accent: #b8761a; --link: #0969da; --code: #f3f5f7; --ok: #1a7f37; --note: #0969da; --tip: #1a7f37; --warn: #9a6700;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-padding-top: 76px; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15.5px/1.6 var(--f-body); }
+  a { color: var(--link); text-decoration: none; } a:hover { text-decoration: underline; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .top { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+    padding: 10px max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px));
+    background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+  .brand { font-weight: 800; font-size: 17px; letter-spacing: -0.01em; color: var(--text); display: flex; align-items: center; gap: 10px; }
+  .brand .sun { width: 18px; height: 18px; border-radius: 50%; background: radial-gradient(circle at 40% 40%, #ffe7a3, var(--accent)); box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 60%, transparent); }
+  .ver { font: 500 12px var(--f-mono); color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; }
+  .top nav { display: flex; gap: 16px; margin-left: auto; font-size: 14px; flex-wrap: wrap; }
+  .top nav a { color: var(--muted); } .top nav a.here { color: var(--text); font-weight: 600; }
+
+  .shell { display: grid; grid-template-columns: 250px minmax(0, 1fr) 380px; gap: 32px; max-width: 1560px; margin: 0 auto;
+    padding: 24px max(16px, env(safe-area-inset-right, 0px)) 80px max(16px, env(safe-area-inset-left, 0px)); }
+  .side { position: sticky; top: 76px; align-self: start; max-height: calc(100vh - 92px); overflow: auto; padding-right: 6px; font-size: 14px; }
+  .search { position: relative; margin-bottom: 18px; }
+  .search input { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--text); font: inherit; }
+  .results { position: absolute; left: 0; right: 0; top: 100%; margin-top: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; z-index: 5; max-height: 320px; overflow: auto; }
+  .results a { display: block; padding: 6px 10px; font: 13px var(--f-mono); color: var(--text); }
+  .results a:hover, .results a.sel { background: var(--raised); text-decoration: none; }
+  .results .none { padding: 8px 10px; color: var(--muted); }
+  .nav-group { display: grid; gap: 1px; margin-bottom: 18px; }
+  .nav-title { font-size: 11.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .nav-group a { color: var(--text); padding: 3px 10px; border-left: 2px solid transparent; }
+  .nav-group a.nav-l3 { color: var(--muted); padding-left: 22px; font-size: 13.5px; }
+  .nav-group a.active { border-left-color: var(--accent); color: var(--text); background: var(--raised); text-decoration: none; }
+
+  main { min-width: 0; }
+  .intro { padding: 4px 0 8px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+  .intro h1 { font-size: 32px; line-height: 1.15; letter-spacing: -0.02em; margin: 0 0 8px; text-wrap: balance; }
+  .intro p { color: var(--muted); max-width: 66ch; margin: 0 0 6px; }
+  .doc-section h2 { font-size: 26px; letter-spacing: -0.01em; margin: 44px 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line); text-wrap: balance; }
+  .doc-section h3 { font-size: 19px; margin: 32px 0 10px; text-wrap: balance; }
+  .doc-section h4 { font-size: 16px; margin: 24px 0 8px; }
+  .doc-section p, .doc-section li { max-width: 72ch; }
+  h2 .anchor, h3 .anchor, h4 .anchor { color: var(--muted); opacity: 0; margin-left: -0.9em; padding-right: 0.25em; font-weight: 400; }
+  h2:hover .anchor, h3:hover .anchor, h4:hover .anchor { opacity: 1; text-decoration: none; }
+  img { max-width: 100%; height: auto; border-radius: 8px; }
+  code { font: 0.86em var(--f-mono); background: var(--code); padding: 0.12em 0.38em; border-radius: 5px; }
+  table { border-collapse: collapse; display: block; overflow-x: auto; margin: 14px 0; font-size: 14px; }
+  th, td { border-bottom: 1px solid var(--line); padding: 8px 12px; vertical-align: top; text-align: left; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); border-bottom-width: 2px; }
+  td:first-child { white-space: nowrap; }
+  td:target { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+  tr:has(td:target) td { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+  .code { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin: 14px 0; background: var(--code); }
+  .code.showing { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .code-bar { display: flex; justify-content: space-between; align-items: center; padding: 5px 8px 5px 12px; border-bottom: 1px solid var(--line); font: 12px var(--f-mono); color: var(--muted); }
+  .code-actions { display: flex; gap: 6px; }
+  .code pre { margin: 0; padding: 12px 14px; overflow: auto; max-height: 420px; font: 13px/1.55 var(--f-mono); }
+  .code pre code { background: none; padding: 0; font-size: inherit; }
+  button { font: 600 12.5px var(--f-body); border-radius: 6px; padding: 4px 10px; cursor: pointer; border: 1px solid var(--line); background: var(--raised); color: var(--text); }
+  button:hover { border-color: var(--muted); }
+  button.try { background: var(--accent); border-color: var(--accent); color: #1b1300; }
+  button.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+  blockquote { margin: 12px 0; padding: 2px 14px; border-left: 3px solid var(--line); color: var(--muted); }
+  .alert { border-left: 3px solid var(--note); background: color-mix(in srgb, var(--note) 8%, transparent); border-radius: 0 8px 8px 0; padding: 2px 16px; margin: 16px 0; }
+  .alert-tip { border-left-color: var(--tip); background: color-mix(in srgb, var(--tip) 8%, transparent); }
+  .alert-title { font-weight: 700; margin: 10px 0 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--note); }
+  .alert-tip .alert-title { color: var(--tip); }
+  pre:not(.code pre) { background: var(--code); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; overflow: auto; font: 13px/1.5 var(--f-mono); }
+
+  .live { position: sticky; top: 76px; align-self: start; display: grid; gap: 12px; }
+  .live-box { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; gap: 12px; }
+  .live-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .live-label { font-size: 11.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+  .live-title { font-weight: 700; font-size: 15px; }
+  #card-slot atmo-weather-card { display: block; }
+  .row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .live-note { color: var(--muted); font-size: 13px; margin: 0; }
+  .live-foot { display: flex; justify-content: space-between; font-size: 13px; }
+  .placeholder-card { border: 1px dashed var(--line); border-radius: 10px; padding: 10px; font-size: 12px; color: var(--muted); text-align: center; background: color-mix(in srgb, var(--panel) 70%, transparent); }
+
+  @media (max-width: 1180px) {
+    .shell { grid-template-columns: 220px minmax(0, 1fr); }
+    .live { grid-column: 2; grid-row: 1; position: static; }
+    main { grid-column: 2; }
+  }
+  @media (max-width: 760px) {
+    .shell { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+    .side { position: static; max-height: none; }
+    .side .nav-group { display: none; }
+    .live, main { grid-column: 1; }
+    .top nav { margin-left: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="#top"><span class="sun"></span>Atmo Weather Card</a>
+  <span class="ver">{{VERSION}}</span>
+  <nav>
+    <a class="here" href="index.html">Documentation</a>
+    <a href="demo.html">Live demo</a>
+    <a href="{{README}}#installation">Installation</a>
+    <a href="#troubleshooting">Troubleshooting</a>
+    <a href="{{README}}">GitHub</a>
+  </nav>
+</header>
+
+<div class="shell" id="top">
+  <aside class="side">
+    <div class="search">
+      <input id="search" type="search" placeholder="Find an option, e.g. perf_mode" autocomplete="off" aria-label="Find an option">
+      <div class="results" id="results" hidden></div>
+    </div>
+    {{NAV}}
+  </aside>
+
+  <main>
+    <div class="intro">
+      <h1>Documentation</h1>
+      <p>Every option of the card, with examples you can try right here. Press <b>Show live</b> on any example and the card on the right runs it with demo data.</p>
+      <p>New here? Install the card first, see <a href="{{README}}#installation">Installation</a>.</p>
+    </div>
+    {{CONTENT}}
+  </main>
+
+  <aside class="live" aria-label="Live card">
+    <div class="live-box">
+      <div class="live-head"><span class="live-label">Live</span><button type="button" id="reset">Reset</button></div>
+      <div class="live-title" id="live-title">Default card</div>
+      <div id="card-slot"></div>
+      <div class="row" id="conditions"></div>
+      <div class="row" id="time"></div>
+      <p class="live-note" id="live-note">Demo data: Home weather, sun and moon, a few sensors. Images and card-mod styles are left out.</p>
+    </div>
+    <div class="live-foot"><span class="live-note">Real card, version {{VERSION}}</span><a href="demo.html">Open the full demo</a></div>
+  </aside>
+</div>
+
+<script type="module">
+  const ICONS = {{ICONS}};
+  const ENTITIES = {{ENTITIES}};
+  const svg = (d) => `<svg viewBox="0 0 24 24" style="width:var(--mdc-icon-size,20px);height:var(--mdc-icon-size,20px);display:block;fill:currentColor"><path d="${d}"/></svg>`;
+  const iconFor = (name) => ICONS[String(name || "").replace(/^mdi:/, "")] || ICONS["help-circle-outline"];
+  const COND_ICON = { sunny: "weather-sunny", "clear-night": "weather-night", partlycloudy: "weather-partly-cloudy", cloudy: "weather-cloudy", rainy: "weather-rainy", pouring: "weather-pouring", "lightning-rainy": "weather-lightning-rainy", lightning: "weather-lightning", snowy: "weather-snowy", "snowy-rainy": "weather-snowy-rainy", hail: "weather-hail", fog: "weather-fog", windy: "weather-windy" };
+  customElements.define("ha-icon", class extends HTMLElement {
+    static get observedAttributes() { return ["icon"]; }
+    set icon(v) { this.setAttribute("icon", v); }
+    attributeChangedCallback() { this.innerHTML = svg(iconFor(this.getAttribute("icon"))); }
+    connectedCallback() { this.style.display = "inline-flex"; this.attributeChangedCallback(); }
+  });
+  customElements.define("ha-state-icon", class extends HTMLElement {
+    set stateObj(o) { this._s = o; this.render(); } get stateObj() { return this._s; }
+    set hass(h) {} set icon(v) { this._i = v; this.render(); }
+    render() { const s = this._s; const n = this._i || (s && s.attributes && s.attributes.icon) || (s && COND_ICON[s.state]) || (s && /temp/.test(s.entity_id) ? "thermometer" : s && /humid/.test(s.entity_id) ? "water-percent" : "help-circle-outline"); this.innerHTML = svg(iconFor(n)); this.style.display = "inline-flex"; }
+  });
+  customElements.define("ha-card", class extends HTMLElement { connectedCallback() { this.style.display = "block"; } });
+  window.loadCardHelpers = async () => ({
+    createCardElement: (c) => {
+      const el = document.createElement("div");
+      el.className = "placeholder-card";
+      el.textContent = `Embedded card: ${c.label || c.type} (shown in Home Assistant)`;
+      el.setConfig = () => {};
+      return el;
+    },
+  });
+  await import("./atmo-weather-card.js");
+
+  const state = { condition: "partlycloudy", night: false };
+  const CONDS = [["sunny", "Sunny"], ["partlycloudy", "Partly cloudy"], ["cloudy", "Cloudy"], ["rainy", "Rain"], ["lightning-rainy", "Storm"], ["snowy", "Snow"], ["fog", "Fog"], ["windy", "Windy"]];
+  const sensorFor = (id) => {
+    const m = (re) => re.test(id);
+    if (m(/moon/)) return { state: "waxing_gibbous", attributes: {} };
+    if (m(/humid/)) return { state: "58", attributes: { unit_of_measurement: "%", friendly_name: "Humidity" } };
+    if (m(/cpu/)) return { state: "64", attributes: { unit_of_measurement: "°C", friendly_name: "CPU" } };
+    if (m(/temp/)) return { state: "21.4", attributes: { unit_of_measurement: "°C", friendly_name: "Temperature" } };
+    if (m(/wind/)) return { state: "14", attributes: { unit_of_measurement: "km/h", friendly_name: "Wind" } };
+    if (m(/rain|precip/)) return { state: "0.8", attributes: { unit_of_measurement: "mm/h", friendly_name: "Rain" } };
+    if (m(/battery/)) return { state: "76", attributes: { unit_of_measurement: "%", friendly_name: "Battery" } };
+    return { state: "42", attributes: { friendly_name: id.split(".")[1].replace(/_/g, " ") } };
+  };
+  const UNITS = { humidity: "%", wind_speed: "km/h", precipitation_probability: "%", uv_index: "" };
+  const forecast = (type) => {
+    const conds = ["sunny", "partlycloudy", "rainy", "cloudy", "sunny", "lightning-rainy", "partlycloudy"];
+    const n = type === "hourly" ? 24 : 7, step = type === "hourly" ? 3600e3 : 86400e3;
+    return Array.from({ length: n }, (_, i) => ({ datetime: new Date(Date.now() + i * step).toISOString(), condition: conds[i % conds.length], temperature: 14 + ((i * 3) % 7), templow: 6 + (i % 4), precipitation_probability: (i * 17) % 90, humidity: 60 + (i % 5) * 4, uv_index: (i * 2) % 9 }));
+  };
+  function buildHass() {
+    const states = {
+      "weather.demo": { entity_id: "weather.demo", state: state.night && state.condition === "sunny" ? "clear-night" : state.condition,
+        attributes: { temperature: 14, humidity: 64, uv_index: 3, precipitation_probability: 20, wind_speed: state.condition === "windy" ? 45 : 12, wind_bearing: 250, wind_speed_unit: "km/h", temperature_unit: "°C", cloud_coverage: 45, friendly_name: "Home" } },
+      "sun.sun": { entity_id: "sun.sun", state: state.night ? "below_horizon" : "above_horizon", attributes: { elevation: state.night ? -12 : 32, azimuth: 200 } },
+      "sensor.moon_phase": { entity_id: "sensor.moon_phase", state: "waxing_gibbous", attributes: {} },
+      "sensor.time": { entity_id: "sensor.time", state: new Date().toISOString(), attributes: {} },
+    };
+    for (const id of ENTITIES) if (!states[id]) states[id] = { entity_id: id, ...sensorFor(id) };
+    return {
+      states, themes: { darkMode: state.night }, locale: { language: "en" }, language: "en", user: { name: "Demo" },
+      config: { latitude: 52.15, longitude: 7.32, unit_system: { temperature: "°C" } },
+      connection: { subscribeMessage: async (cb, msg) => { setTimeout(() => cb({ type: msg.forecast_type, forecast: forecast(msg.forecast_type) }), 0); return () => {}; } },
+      callWS: async () => ({}), callService: async () => ({}), callApi: async () => [], localize: (k) => k,
+      formatEntityState: (s) => (s.entity_id.startsWith("weather.") ? ({ partlycloudy: "Partly cloudy", "clear-night": "Clear night", "lightning-rainy": "Thunderstorm" })[s.state] || s.state[0].toUpperCase() + s.state.slice(1) : s.state + (s.attributes.unit_of_measurement ? " " + s.attributes.unit_of_measurement : "")),
+      formatEntityAttributeValue: (s, a) => { const v = s.attributes[a]; const u = UNITS[a]; return v == null ? "" : String(v) + (u ? (u === "%" ? " %" : " " + u) : ""); },
+    };
+  }
+  const BASE = { weather_entity: "weather.demo", sun_entity: "sun.sun", moon_phase_entity: "sensor.moon_phase", theme_entity: "sun.sun", card_height: 200, perf_mode: "ultra" };
+  const DEFAULT = { ...BASE, chips: [
+    { entity: "weather.demo", attribute: "temperature", position: "custom", position_anchor: "top-left", position_x: "16px", position_y: "16px", text_size: "40px", hide_icon: true, hide_label: true, background: false, fancy_unit: true, value_weight: "700" },
+    { entity: "weather.demo", attribute: "humidity", icon: "mdi:water-percent" },
+    { entity: "weather.demo", forecast: "daily", forecast_offset: 1, attribute: "temperature", icon: "weather", sub_value_attribute: "templow", sub_value_position: "beside", forecast_precision: 0 },
+  ] };
+  let current = DEFAULT, card = null;
+  const slot = document.getElementById("card-slot");
+  function mount(cfg) {
+    current = cfg;
+    if (card) card.remove();
+    card = document.createElement("atmo-weather-card");
+    card.setConfig({ type: "custom:atmo-weather-card", ...cfg });
+    slot.append(card);
+    card.hass = buildHass();
+  }
+  function refresh() { if (card) card.hass = buildHass(); syncButtons(); }
+
+  const condBox = document.getElementById("conditions"), timeBox = document.getElementById("time");
+  for (const [v, label] of CONDS) { const b = document.createElement("button"); b.type = "button"; b.textContent = label; b.dataset.v = v; b.onclick = () => { state.condition = v; refresh(); }; condBox.append(b); }
+  for (const [v, label] of [[false, "Day"], [true, "Night"]]) { const b = document.createElement("button"); b.type = "button"; b.textContent = label; b.dataset.v = String(v); b.onclick = () => { state.night = v; mount(current); syncButtons(); }; timeBox.append(b); }
+  function syncButtons() {
+    for (const b of condBox.children) b.classList.toggle("active", b.dataset.v === state.condition);
+    for (const b of timeBox.children) b.classList.toggle("active", b.dataset.v === String(state.night));
+  }
+  const title = document.getElementById("live-title");
+  const headingBefore = (el) => {
+    const all = [...document.querySelectorAll(".doc-section h2, .doc-section h3, .doc-section h4, .doc-section summary")];
+    let last = null;
+    for (const h of all) if (h.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING) last = h;
+    return last ? last.textContent.replace(/^#/, "").trim() : "Example";
+  };
+  document.addEventListener("click", (e) => {
+    const t = e.target.closest("button.try");
+    if (t) {
+      const { fragment, cfg } = JSON.parse(t.dataset.example);
+      document.querySelectorAll(".code.showing").forEach((c) => c.classList.remove("showing"));
+      t.closest(".code").classList.add("showing");
+      title.textContent = headingBefore(t);
+      mount(fragment ? { ...BASE, ...cfg } : { ...BASE, ...cfg });
+      if (window.innerWidth <= 1180) document.querySelector(".live").scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    const c = e.target.closest("button.copy");
+    if (c) {
+      navigator.clipboard?.writeText(c.closest(".code").querySelector("code").textContent).then(() => { c.textContent = "Copied"; setTimeout(() => (c.textContent = "Copy"), 1200); }, () => {});
+    }
+  });
+  document.getElementById("reset").onclick = () => { state.condition = "partlycloudy"; state.night = false; title.textContent = "Default card"; document.querySelectorAll(".code.showing").forEach((c) => c.classList.remove("showing")); mount(DEFAULT); syncButtons(); };
+  mount(DEFAULT); syncButtons();
+  setInterval(() => card && (card.hass = buildHass()), 1000);
+
+  // Option search over every option row (#opt-...).
+  const options = [...document.querySelectorAll('td[id^="opt-"]')].map((td) => ({ id: td.id, name: td.id.slice(4), where: headingBefore(td) }));
+  const unique = [...new Map(options.map((o) => [o.name, o])).values()];
+  const input = document.getElementById("search"), results = document.getElementById("results");
+  let sel = 0;
+  const show = () => {
+    const q = input.value.trim().toLowerCase().replace(/\s+/g, "_");
+    if (!q) { results.hidden = true; return; }
+    const hits = unique.filter((o) => o.name.includes(q)).slice(0, 12);
+    sel = 0;
+    results.innerHTML = hits.length ? hits.map((o, i) => `<a href="#${o.id}" class="${i === 0 ? "sel" : ""}">${o.name} <span style="color:var(--muted);font-family:var(--f-body)">· ${o.where}</span></a>`).join("") : '<div class="none">No option with this name.</div>';
+    results.hidden = false;
+  };
+  input.addEventListener("input", show);
+  input.addEventListener("keydown", (e) => {
+    const links = [...results.querySelectorAll("a")];
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); sel = (sel + (e.key === "ArrowDown" ? 1 : links.length - 1)) % Math.max(1, links.length); links.forEach((a, i) => a.classList.toggle("sel", i === sel)); }
+    if (e.key === "Enter" && links[sel]) { location.hash = links[sel].getAttribute("href"); results.hidden = true; }
+    if (e.key === "Escape") results.hidden = true;
+  });
+  results.addEventListener("click", () => (results.hidden = true));
+  document.addEventListener("click", (e) => { if (!e.target.closest(".search")) results.hidden = true; });
+
+  // Highlight the section in view.
+  const navLinks = [...document.querySelectorAll(".nav-group a")];
+  const byId = new Map(navLinks.map((a) => [a.getAttribute("href").slice(1), a]));
+  const heads = [...document.querySelectorAll(".doc-section h2[id], .doc-section h3[id]")].filter((h) => byId.has(h.id));
+  const spy = () => {
+    let active = heads[0];
+    for (const h of heads) if (h.getBoundingClientRect().top < 120) active = h;
+    navLinks.forEach((a) => a.classList.toggle("active", a === byId.get(active && active.id)));
+  };
+  addEventListener("scroll", spy, { passive: true }); spy();
+</script>
+</body>
+</html>

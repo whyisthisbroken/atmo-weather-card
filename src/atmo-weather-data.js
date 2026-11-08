@@ -873,29 +873,7 @@ export const PERFORMANCE_CONFIG = Object.freeze({
   MAX_PIXELS: 2073600,
   MAX_PIXELS_ULTRA: 4147200,
 });
-export const PERF_PRESETS = Object.freeze({
-  low: {
-    perf_fps: 24,
-    perf_cloud_quality: 0.5,
-    perf_effects: 0,
-    perf_fauna: 0,
-    perf_dpr: 1.0,
-  },
-  default: {
-    perf_fps: 30,
-    perf_cloud_quality: 1.5,
-    perf_effects: 1,
-    perf_fauna: 2,
-    perf_dpr: 2.0,
-  },
-  ultra: {
-    perf_fps: 60,
-    perf_cloud_quality: 2.0,
-    perf_effects: 2,
-    perf_fauna: 2,
-    perf_dpr: 2.0,
-  },
-});
+export { PERF_PRESETS } from "./atmo-weather-config.js";
 export const FILTER_PRESETS = Object.freeze({
   darken: "brightness(0.72) contrast(1.1)",
   vivid: "saturate(1.5) contrast(1.12) brightness(1.02)",

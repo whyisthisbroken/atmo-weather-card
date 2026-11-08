@@ -16,7 +16,9 @@ The original creator is now active again as [hazymorning](https://github.com/haz
 
 ## Development
 
-Source code lives in `src/`. `dist/` is generated and committed, because the Marketplace and manual installs use it. The build also copies it to `docs/`, the GitHub Pages live demo. Only `docs/index.html` is written by hand. Do not edit `dist/` by hand.
+Source code lives in `src/`. `dist/` is generated and committed, because the Marketplace and manual installs use it. The build also copies it to `docs/`, the GitHub Pages site. Do not edit `dist/` by hand.
+
+The documentation lives in `docs-src/documentation.md`. The build turns it into `docs/index.html`, the start page of the GitHub Pages site, with `docs-src/template.html` as the page around it. Every YAML example that configures the card gets a **Show live** button there. The build stops on a broken link or an example that is no valid YAML. Edit the Markdown, never `docs/index.html`. The live demo `docs/demo.html` is written by hand. The README keeps the overview, installation and quick start, and links into the documentation.
 
 ```bash
 npm ci          # install dependencies

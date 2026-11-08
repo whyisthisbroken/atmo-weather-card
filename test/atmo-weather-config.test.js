@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert";
 
-import { migrateConfig } from "../src/atmo-weather-config.js";
+import { migrateConfig, readFlag, readNumber } from "../src/atmo-weather-config.js";
 
 test("chip card_tap_action migrates to tap_action", () => {
   const action = { action: "more-info" };
@@ -141,4 +141,15 @@ test("wrong types on string options fall back to the default", () => {
 
   assert.deepEqual(output, {});
   assert.equal(migrateConfig({ chip_style: "stacked" }).chip_style, "stacked");
+});
+
+test("flags and numbers are read from YAML values", () => {
+  assert.equal(readFlag(undefined, true), true);
+  assert.equal(readFlag("off", true), false);
+  assert.equal(readFlag("yes", false), true);
+  assert.equal(readFlag(0, true), false);
+  assert.equal(readFlag(false, true), false);
+  assert.equal(readNumber("2.5", 1, 0, 3), 2.5);
+  assert.equal(readNumber(9, 1, 0, 3), 3);
+  assert.equal(readNumber("fast", 1, 0, 3), 1);
 });

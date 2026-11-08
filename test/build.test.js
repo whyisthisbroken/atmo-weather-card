@@ -40,6 +40,7 @@ test("the font files referenced by the card are shipped", () => {
 test("the live demo in docs uses the current bundle", () => {
   assert.equal(read("docs/atmo-weather-card.js"), card);
   assert.equal(read("docs/atmo-weather-card-editor.js"), editor);
+  assert.ok(read("docs/demo.html").includes("./atmo-weather-card.js"));
   assert.ok(read("docs/index.html").includes("./atmo-weather-card.js"));
   for (const old of ["animations", "config", "fauna"]) {
     assert.equal(

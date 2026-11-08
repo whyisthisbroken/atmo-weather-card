@@ -2,8 +2,35 @@
  * ATMO WEATHER CARD — VISUAL EDITOR
  * Visual editor for the atmo weather card.
  */
-import { LitElement, html, css } from "lit";
-import { CONFIG_DEFAULTS, migrateConfig } from "./atmo-weather-config.js";
+import { LitElement, html, css, svg } from "lit";
+import {
+  CONFIG_DEFAULTS,
+  PERF_PRESETS,
+  migrateConfig,
+  perfPreset,
+} from "./atmo-weather-config.js";
+import { editorLanguage, makeTranslator } from "./atmo-weather-i18n.js";
+// Editor texts follow the Home Assistant language, see useLanguage().
+let t = makeTranslator("en");
+let tLang = "en";
+function useLanguage(hass) {
+  const lang = editorLanguage(hass);
+  if (lang === tLang) return;
+  tLang = lang;
+  t = makeTranslator(lang);
+}
+const tOpts = (opts) => opts.map((o) => ({ ...o, label: t(o.label) }));
+// The documentation page; the help buttons link into it.
+const DOCS_URL = "https://whyisthisbroken.github.io/atmo-weather-card/";
+// Rain rate units the precipitation picker accepts.
+function isRainRateUnit(unit) {
+  const u = String(unit || "").replace(/\s+/g, "").toLowerCase();
+  return u === "mm/h" || u === "in/h";
+}
+// Keeps a user path usable inside url("...").
+function cssUrl(value) {
+  return String(value || "").replace(/["\\\n\r]/g, "");
+}
 const LABELS = Object.freeze({
   weather_entity: "Weather Entity",
   sun_entity: "Sun Entity",
@@ -74,7 +101,17 @@ const LABELS = Object.freeze({
   animation_speed: "Animation Speed",
   bird_animation_speed: "Bird Animation Speed",
   star_animation_speed: "Star Twinkle Speed",
-  fauna_birds_at_night: "Birds At Night",
+  fauna_birds_at_night: "Birds at night",
+  fauna_plane_speed: "Plane speed",
+  effect_blue_hour: "Blue hour",
+  effect_sun_rays: "Sun rays",
+  effect_haze: "Haze",
+  effect_ground_mist: "Ground mist",
+  effect_cloud_coverage: "Cloud amount from data",
+  effect_shooting_stars: "Shooting stars",
+  effect_comets: "Comets",
+  shooting_star_rate: "Frequency",
+  comet_rate: "Frequency",
   wind_style: "Wind Display",
 });
 const HELPERS = Object.freeze({
@@ -82,12 +119,11 @@ const HELPERS = Object.freeze({
   sun_entity: "Used for the day/night cycle.",
   moon_phase_entity: "Your moon phase sensor.",
   precipitation_entity:
-    "Optional. Rain intensity in mm/h, so rain and snow follow the measured amount.",
+    "Optional. Current rain intensity in mm/h or in/h, so rain and snow follow the measured amount. Only sensors with these units are listed.",
   theme_entity: "An entity whose state switches between light and dark mode.",
   card_height: "In pixels, e.g. 220. Use 'auto' for dashboard grid layouts.",
   card_padding: "Inner padding, e.g. 16px or 12px 20px.",
   card_offset: "",
-  card_stack_order: "",
   card_tap_action: "What happens when the card is tapped.",
   card_full_width: "Removes side margins so the card fills edge to edge.",
   card_mask_vertical: "Adds a soft fade to the top and bottom edges.",
@@ -118,7 +154,18 @@ const HELPERS = Object.freeze({
   bird_animation_speed:
     "Bird-only speed multiplier applied on top of animation speed.",
   star_animation_speed: "Twinkle speed multiplier for night stars.",
-  fauna_birds_at_night: "Disable this to let birds fly only during daytime.",
+  fauna_birds_at_night: "Turn off to let birds fly only during the day.",
+  fauna_plane_speed:
+    "Near planes fly faster than distant ones; the slider scales all of them.",
+  effect_blue_hour: "Deep blue sky after sunset and before sunrise.",
+  effect_sun_rays: "Beams of light through broken clouds.",
+  effect_haze: "A veil with poor visibility or high humidity.",
+  effect_ground_mist: "Mist near the dew point, at night and in the morning.",
+  effect_cloud_coverage:
+    "The cloud cover of the weather entity sets the amount of clouds. Off: a fixed amount per weather state.",
+  comet_rate:
+    "1× is about one shooting star every 12 s and a comet about once a minute (Ultra, clear night).",
+  card_stack_order: "Higher values sit in front of other cards.",
   wind_style:
     "Shows wind direction and strength in windy weather, and in rain, hail or snow from 40 km/h.",
 });
@@ -235,7 +282,19 @@ const KEY_ORDER = Object.freeze([
   "fauna_plane_density",
   "fauna_bird_flock_size",
   "fauna_birds_at_night",
+  "fauna_birds",
+  "fauna_planes",
+  "fauna_plane_speed",
   "wind_style",
+  "effect_blue_hour",
+  "effect_sun_rays",
+  "effect_haze",
+  "effect_ground_mist",
+  "effect_cloud_coverage",
+  "effect_shooting_stars",
+  "shooting_star_rate",
+  "effect_comets",
+  "comet_rate",
   "chips",
   "custom_cards",
 ]);
@@ -280,6 +339,9 @@ const TOP_LEVEL_NUMBER_FIELDS = Object.freeze([
   "fauna_bird_density",
   "fauna_plane_density",
   "fauna_bird_flock_size",
+  "fauna_plane_speed",
+  "shooting_star_rate",
+  "comet_rate",
 ]);
 const TOP_LEVEL_BOOLEAN_FIELDS = Object.freeze([
   "card_square",
@@ -294,6 +356,15 @@ const TOP_LEVEL_BOOLEAN_FIELDS = Object.freeze([
   "card_mask_horizontal",
   "chip_icon_background",
   "fauna_birds_at_night",
+  "fauna_birds",
+  "fauna_planes",
+  "effect_blue_hour",
+  "effect_sun_rays",
+  "effect_haze",
+  "effect_ground_mist",
+  "effect_cloud_coverage",
+  "effect_shooting_stars",
+  "effect_comets",
 ]);
 const CHIP_NUMBER_FIELDS = Object.freeze([
   "forecast_offset",
@@ -324,10 +395,18 @@ const CHIP_BOOLEAN_FIELDS = Object.freeze([
 const CHIP_CSS_SIZE_FIELDS = Object.freeze(["width", "height"]);
 const OPT = Object.freeze({
   color_mode: [
-    { value: "ha_theme", label: "Follow my Home Assistant theme" },
-    { value: "entity", label: "Follow another entity (e.g. the sun)" },
-    { value: "force_light", label: "Force light mode" },
-    { value: "force_dark", label: "Force dark mode" },
+    {
+      value: "ha_theme",
+      short: "HA theme",
+      label: "Follow my Home Assistant theme",
+    },
+    {
+      value: "entity",
+      short: "Entity",
+      label: "Follow another entity (e.g. the sun)",
+    },
+    { value: "force_light", short: "Light", label: "Force light mode" },
+    { value: "force_dark", short: "Dark", label: "Force dark mode" },
   ],
   card_filter_clouds: [
     { value: "none", label: "None" },
@@ -428,6 +507,13 @@ const PREPARED_POSITION_GRIDS = Object.freeze(
   ),
 );
 // data-mode values consumed by _onChipToggleChange / _onChipSegmentedSelect.
+// Runtime defaults of number options outside the performance presets.
+const SLIDER_DEFAULTS = Object.freeze({
+  image_scale: 100,
+  card_stack_order: 0,
+  // Sun and moon are drawn with a radius of 31 px when no size is set.
+  celestial_size: 62,
+});
 const TOGGLE_MODE = Object.freeze({
   TRUE_DELETE: "true-delete",
   FALSE_DELETE: "false-delete",
@@ -1824,6 +1910,316 @@ class AtmosphericWeatherCardEditor extends LitElement {
           --mdc-icon-size: 16px;
         }
       }
+      /* ── Panel titles with a subtitle ── */
+      .panel-title {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        line-height: 1.25;
+      }
+      .panel-sub {
+        font-size: var(--awc-e-f-meta);
+        font-weight: 400;
+        color: var(--secondary-text-color);
+      }
+      /* ── Help ── */
+      .help-row {
+        display: flex;
+        justify-content: flex-end;
+        margin: 0 0 var(--awc-e-s2);
+      }
+      .help-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        border: 0;
+        background: none;
+        color: var(--primary-color);
+        font-size: var(--awc-e-f-meta);
+        cursor: pointer;
+        padding: 2px 4px;
+        border-radius: var(--awc-e-r-inline);
+        & ha-icon {
+          --mdc-icon-size: 16px;
+        }
+        &.active,
+        &:hover {
+          background: rgba(var(--rgb-primary-color, 0, 120, 212), 0.1);
+        }
+      }
+      .help-box {
+        margin: 0 0 var(--awc-e-s3);
+        padding: var(--awc-e-s2) var(--awc-e-s3);
+        border-left: 3px solid var(--primary-color);
+        border-radius: var(--awc-e-r-inline);
+        background: rgba(var(--rgb-primary-color, 0, 120, 212), 0.08);
+        font-size: var(--awc-e-f-label);
+        line-height: 1.5;
+        color: var(--primary-text-color);
+        & a {
+          color: var(--primary-color);
+        }
+      }
+      /* ── Groups inside a panel ── */
+      .editor-group {
+        margin-top: var(--awc-e-s4);
+        padding-top: var(--awc-e-s3);
+        border-top: 1px solid var(--divider-color);
+      }
+      .editor-group-title {
+        font-size: var(--awc-e-f-meta);
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--secondary-text-color);
+        margin-bottom: var(--awc-e-s2);
+      }
+      .toggle-text {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+      .toggle-helper {
+        font-size: var(--awc-e-f-meta);
+        color: var(--secondary-text-color);
+        line-height: 1.35;
+        margin-top: 2px;
+      }
+      .indent {
+        margin: 0 0 var(--awc-e-s2) var(--awc-e-s3);
+        padding-left: var(--awc-e-s3);
+        border-left: 2px solid var(--divider-color);
+      }
+      .sub-box {
+        background: var(--secondary-background-color);
+        border-radius: var(--awc-e-r-box);
+        padding: 0 var(--awc-e-s3) var(--awc-e-s2);
+        margin-bottom: var(--awc-e-s2);
+      }
+      .sub-box-head {
+        padding-left: 0;
+        padding-right: 0;
+        & > span {
+          display: inline-flex;
+          align-items: center;
+          gap: var(--awc-e-s2);
+          font-weight: 500;
+        }
+        & ha-icon {
+          --mdc-icon-size: 18px;
+          color: var(--secondary-text-color);
+        }
+      }
+      /* ── Image ── */
+      .image-thumbs {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--awc-e-s2);
+      }
+      .image-thumb {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+      }
+      .image-thumb-pic {
+        height: 72px;
+        border-radius: var(--awc-e-r-ctrl);
+        border: 1px dashed var(--divider-color);
+        display: grid;
+        place-items: center;
+        font-size: var(--awc-e-f-meta);
+        color: var(--secondary-text-color);
+        background: center / contain no-repeat
+          rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.04);
+        margin-bottom: var(--awc-e-s1);
+        &.has {
+          border-style: solid;
+        }
+      }
+      .image-thumb-label {
+        font-size: var(--awc-e-f-meta);
+        color: var(--secondary-text-color);
+        margin-top: 2px;
+      }
+      .image-place {
+        display: flex;
+        gap: var(--awc-e-s3);
+        align-items: stretch;
+        flex-wrap: wrap;
+        & .grid-picker {
+          margin: 0;
+        }
+      }
+      .image-preview {
+        position: relative;
+        flex: 1;
+        min-width: 160px;
+        min-height: 96px;
+        border-radius: var(--awc-e-r-box);
+        overflow: hidden;
+        background: linear-gradient(#5b9fd6, #a9d2ef);
+      }
+      .image-preview-img {
+        position: absolute;
+        aspect-ratio: 1;
+        background: center / contain no-repeat;
+        &.v-top {
+          top: 6%;
+        }
+        &.v-middle {
+          top: 50%;
+          transform: translateY(-50%);
+        }
+        &.v-bottom {
+          bottom: 0;
+        }
+        &.h-left {
+          left: 4%;
+        }
+        &.h-center {
+          left: 50%;
+          translate: -50% 0;
+        }
+        &.h-right {
+          right: 4%;
+        }
+      }
+      .status-sentence {
+        font-size: var(--awc-e-f-body);
+        line-height: 1.5;
+        margin-bottom: var(--awc-e-s2);
+      }
+      /* ── Chips ── */
+      .chip-area-top {
+        display: flex;
+        gap: var(--awc-e-s3);
+        flex-wrap: wrap;
+        align-items: flex-start;
+        & .grid-picker {
+          margin: 0;
+        }
+      }
+      .chip-area-layout {
+        flex: 1;
+        min-width: 180px;
+      }
+      .layout-picker {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: var(--awc-e-s1);
+        & button {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+          padding: var(--awc-e-s2) 2px;
+          border: 1px solid var(--divider-color);
+          border-radius: var(--awc-e-r-ctrl);
+          background: none;
+          color: var(--primary-text-color);
+          font-size: var(--awc-e-f-meta);
+          cursor: pointer;
+          &.active {
+            border-color: var(--primary-color);
+            background: rgba(var(--rgb-primary-color, 0, 120, 212), 0.1);
+          }
+        }
+        & svg {
+          width: 44px;
+          height: 24px;
+          fill: currentColor;
+          opacity: 0.7;
+        }
+      }
+      .quick-add {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--awc-e-s1);
+        align-items: center;
+        margin-top: var(--awc-e-s2);
+      }
+      .quick-add-label {
+        font-size: var(--awc-e-f-meta);
+        color: var(--secondary-text-color);
+        margin-right: 2px;
+      }
+      .quick-add-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        border: 1px solid var(--divider-color);
+        border-radius: 999px;
+        background: var(--secondary-background-color);
+        color: var(--primary-text-color);
+        font-size: var(--awc-e-f-meta);
+        padding: 4px 10px 4px 6px;
+        cursor: pointer;
+        & ha-icon {
+          --mdc-icon-size: 14px;
+          color: var(--primary-color);
+        }
+        &:hover {
+          border-color: var(--primary-color);
+        }
+      }
+      .chip-tabs {
+        display: flex;
+        gap: 2px;
+        overflow-x: auto;
+        border-bottom: 1px solid var(--divider-color);
+        margin-bottom: var(--awc-e-s3);
+        scrollbar-width: none;
+      }
+      .chip-tab {
+        flex-shrink: 0;
+        border: 0;
+        border-bottom: 2px solid transparent;
+        background: none;
+        color: var(--secondary-text-color);
+        font-size: var(--awc-e-f-label);
+        padding: var(--awc-e-s2) var(--awc-e-s3);
+        cursor: pointer;
+        &.active {
+          color: var(--primary-color);
+          border-bottom-color: var(--primary-color);
+        }
+      }
+      .card-row-text {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        flex: 1;
+      }
+      .card-row-sub {
+        font-size: var(--awc-e-f-meta);
+        color: var(--secondary-text-color);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .tip-box {
+        display: flex;
+        align-items: center;
+        gap: var(--awc-e-s2);
+        margin-top: var(--awc-e-s3);
+        font-size: var(--awc-e-f-meta);
+        color: var(--secondary-text-color);
+        & ha-icon {
+          --mdc-icon-size: 16px;
+          flex-shrink: 0;
+        }
+        & a {
+          color: var(--primary-color);
+        }
+      }
+      .card-picker-box {
+        margin-top: var(--awc-e-s2);
+        max-height: 520px;
+        overflow: auto;
+        border: 1px solid var(--divider-color);
+        border-radius: var(--awc-e-r-box);
+        padding: var(--awc-e-s2);
+      }
     `;
   }
   setConfig(config) {
@@ -1895,12 +2291,12 @@ class AtmosphericWeatherCardEditor extends LitElement {
   _renderToggleGroup(toggles) {
     return html`<div class="toggle-group">
       ${toggles.map(
-        (t) =>
+        (tg) =>
           html`<label class="toggle-row">
-            <span>${t.label}</span>
+            <span>${t(tg.label)}</span>
             <ha-switch
-              data-key=${t.key}
-              .checked=${this._formData[t.key] === true}
+              data-key=${tg.key}
+              .checked=${this._formData[tg.key] === true}
               @change=${this._onToggleGroupChange}
             ></ha-switch
           ></label> `,
@@ -1918,9 +2314,10 @@ class AtmosphericWeatherCardEditor extends LitElement {
     if (chips.every((s) => s && typeof s === "object")) return chips;
     return chips.map((s) => (s && typeof s === "object" ? s : {}));
   }
+  // A copy: Home Assistant freezes the config it hands to the editor.
   _getCustomCards() {
     const cards = this._config && this._config.custom_cards;
-    return Array.isArray(cards) ? cards : [];
+    return Array.isArray(cards) ? [...cards] : [];
   }
   _imageStatusSchema() {
     const c = this._formData,
@@ -1943,11 +2340,11 @@ class AtmosphericWeatherCardEditor extends LitElement {
   }
   _computeLabel = (schema) => {
     if (!schema || !schema.name) return "";
-    return LABELS[schema.name] || schema.name;
+    return t(LABELS[schema.name] || schema.name);
   };
   _computeHelper = (schema) => {
     if (!schema || !schema.name) return undefined;
-    return HELPERS[schema.name] || undefined;
+    return HELPERS[schema.name] ? t(HELPERS[schema.name]) : undefined;
   };
   _isValidCardHeight(value) {
     if (value === null || value === undefined) return true;
@@ -2049,7 +2446,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
     if (Object.prototype.hasOwnProperty.call(incoming, "card_height")) {
       this._cardHeightError = this._isValidCardHeight(incoming.card_height)
         ? ""
-        : "Invalid height. Use auto, 160, 160px, 40vh, or 80%.";
+        : t("Invalid height. Use auto, 160, 160px, 40vh, or 80%.");
       incoming.card_height = this._normalizeCardHeight(incoming.card_height);
     }
     if (incoming._color_mode !== undefined) {
@@ -2183,7 +2580,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
         ? html`<button
             type="button"
             class="clear-btn"
-            title="Clear"
+            title=${t("Clear")}
             data-field=${name}
             @click=${this._onClearFieldClick}
           >
@@ -2208,7 +2605,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
       <summary>
         <ha-icon class="chevron" icon="mdi:chevron-right"></ha-icon>
         ${isAdvanced ? html`<ha-icon icon="mdi:cog-outline"></ha-icon>` : ""}
-        <span>${label}</span>
+        <span>${t(label)}</span>
       </summary>
       <div class="disclosure-body">${content}</div>
     </details>`;
@@ -2229,8 +2626,8 @@ class AtmosphericWeatherCardEditor extends LitElement {
     const { valueMap, reverseMap, cellsFlat: cells, disabledSet } = prepared;
     const stored = this._formData[field] || "",
       value = reverseMap[stored] || stored,
-      helper = HELPERS[field],
-      labelText = LABELS[field] || field;
+      helper = HELPERS[field] ? t(HELPERS[field]) : "",
+      labelText = t(LABELS[field] || field);
     return html`<div class="grid-picker">
       <div class="grid-picker-label">${labelText}</div>
       <div class="grid-3x3" role="radiogroup" aria-label=${labelText}>
@@ -2247,7 +2644,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
             ?disabled=${isDisabled}
             data-field=${field}
             data-value=${mappedValue}
-            title=${isDisabled ? `${val} (not supported here)` : val}
+            title=${isDisabled ? t("{value} (not supported here)", { value: val }) : val}
             aria-label=${val}
             @click=${this._onPositionGridSelect}
           ></button>`;
@@ -2265,7 +2662,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
                   data-value=${ex.value}
                   @click=${this._onPositionGridSelect}
                 >
-                  ${ex.label}
+                  ${t(ex.label)}
                 </button>`,
             )}
           </div>`
@@ -2293,7 +2690,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
     if (field === "card_height") {
       this._cardHeightError = this._isValidCardHeight(value)
         ? ""
-        : "Invalid height. Use auto, 160, 160px, 40vh, or 80%.";
+        : t("Invalid height. Use auto, 160, 160px, 40vh, or 80%.");
       value = this._normalizeCardHeight(value);
     }
     const isEmpty = value === null || value === undefined || value === "";
@@ -2384,7 +2781,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
       { value: "standalone", label: "Standalone" },
     ];
     return html`<div class="grid-picker">
-      <div class="segmented" role="radiogroup" aria-label=${LABELS.card_style}>
+      <div class="segmented" role="radiogroup" aria-label=${t(LABELS.card_style)}>
         ${opts.map(
           (o) =>
             html`<button
@@ -2394,14 +2791,14 @@ class AtmosphericWeatherCardEditor extends LitElement {
               class=${current === o.value ? "active" : ""}
               @click=${this._onCardStyleSelect}
             >
-              ${o.label}
+              ${t(o.label)}
             </button>`,
         )}
       </div>
       <div class="composite-helper">
         ${current === "immersive"
-          ? "The card uses no background at all."
-          : "Background color based on the weather."}
+          ? t("The card uses no background at all.")
+          : t("Background color based on the weather.")}
       </div>
       <div class="compact-fields">
         ${isSquare
@@ -2418,7 +2815,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
   }
   _renderCelestialOffsetPicker() {
     return html`<div class="composite">
-      <div class="composite-label">Offset from edge</div>
+      <div class="composite-label">${t("Offset from edge")}</div>
       ${this._renderOffsetXYRow(
         "celestial_x",
         "celestial_y",
@@ -2476,7 +2873,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
     const c = this._formData;
     if (!c.image_day && !c.image_night) return "";
     return html`<div class="composite">
-      <div class="composite-label">Image Offset</div>
+      <div class="composite-label">${t("Image Offset")}</div>
       ${this._renderOffsetXYRow(
         "image_x",
         "image_y",
@@ -2492,15 +2889,15 @@ class AtmosphericWeatherCardEditor extends LitElement {
           />`,
       )}
       <div class="composite-helper">
-        Fine-tune image position. Pixels or CSS values, e.g. -20 or 10%.
+        ${t("Fine-tune image position. Pixels or CSS values, e.g. -20 or 10%.")}
       </div>
     </div>`;
   }
   _renderOffsetPicker() {
     const parts = this._parseOffset(this._formData.card_offset),
-      edges = ["Top", "Right", "Bottom", "Left"];
+      edges = ["Top", "Right", "Bottom", "Left"].map((e) => t(e));
     return html`<div class="composite">
-      <div class="composite-label">${LABELS.card_offset}</div>
+      <div class="composite-label">${t(LABELS.card_offset)}</div>
       <div class="composite-grid-4">
         ${edges.map(
           (label, i) =>
@@ -2522,21 +2919,102 @@ class AtmosphericWeatherCardEditor extends LitElement {
   }
   _renderCustomCardsEditor() {
     const cards = this._getCustomCards();
+    if (this._openPanel === "cards" && this._cardEditorsReady === undefined)
+      this._loadCardEditors();
+    const picker =
+      this._cardPickerOpen && this._cardEditorsReady
+        ? html`<div class="card-picker-box">
+            <hui-card-picker
+              .hass=${this.hass}
+              .lovelace=${this._lovelace()}
+              @config-changed=${this._onCardPicked}
+            ></hui-card-picker>
+          </div>`
+        : "";
     return html`${cards.length === 0
-        ? html`<div class="cards-empty">No cards yet.</div>`
+        ? html`<div class="cards-empty">${t("No cards yet.")}</div>`
         : cards.map((card, idx) =>
             this._renderCardRow(card, idx, cards.length),
           )}
       <button type="button" class="add-card-btn" @click=${this._addBlankCard}>
-        <ha-icon icon="mdi:plus"></ha-icon>
-        <span>Add card</span>
-      </button>`;
+        <ha-icon icon=${this._cardPickerOpen ? "mdi:close" : "mdi:plus"}></ha-icon>
+        <span>${this._cardPickerOpen ? t("Cancel") : t("Add card")}</span>
+      </button>
+      ${picker}`;
+  }
+  // Home Assistant loads its card editors on demand. Creating a stack card
+  // editor pulls in hui-card-picker and hui-card-element-editor.
+  async _loadCardEditors() {
+    if (this._cardEditorsLoading) return this._cardEditorsLoading;
+    this._cardEditorsLoading = (async () => {
+      try {
+        if (!customElements.get("hui-card-element-editor")) {
+          const helpers =
+            typeof window.loadCardHelpers === "function"
+              ? await window.loadCardHelpers()
+              : null;
+          const stack =
+            helpers &&
+            (await helpers.createCardElement({
+              type: "vertical-stack",
+              cards: [],
+            }));
+          const ctor = stack && stack.constructor;
+          if (ctor && typeof ctor.getConfigElement === "function")
+            await ctor.getConfigElement();
+        }
+        return (
+          !!customElements.get("hui-card-element-editor") &&
+          !!customElements.get("hui-card-picker")
+        );
+      } catch (e) {
+        return false;
+      }
+    })();
+    this._cardEditorsReady = await this._cardEditorsLoading;
+    this.requestUpdate();
+    return this._cardEditorsReady;
+  }
+  // The card picker needs the dashboard config. Home Assistant does not hand
+  // it to card editors, so take it from the dashboard view (hui-root).
+  _lovelace() {
+    if (this.lovelace) return this.lovelace;
+    if (this._foundLovelace) return this._foundLovelace;
+    const find = (root, depth) => {
+      if (!root || depth > 12) return null;
+      for (const el of root.querySelectorAll("*")) {
+        if (el.localName === "hui-root") return el;
+        if (el.shadowRoot) {
+          const hit = find(el.shadowRoot, depth + 1);
+          if (hit) return hit;
+        }
+      }
+      return null;
+    };
+    const root = typeof document !== "undefined" ? find(document, 0) : null;
+    // The picker wants the dashboard config (with views), not the Lovelace object.
+    const config = root && root.lovelace && root.lovelace.config;
+    if (config) {
+      this._foundLovelace = config;
+      return config;
+    }
+    return { views: [] };
+  }
+  _onCardPicked(e) {
+    e.stopPropagation();
+    const config = e.detail && e.detail.config;
+    if (!config || typeof config !== "object") return;
+    const cards = [...this._getCustomCards(), config];
+    this._cardPickerOpen = false;
+    this._expandedCard = cards.length - 1;
+    this._updateField("custom_cards", cards);
   }
   _renderListRow({
     idx,
     total,
     expanded,
     title,
+    subtitle,
     badge,
     onToggle,
     onMoveUp,
@@ -2549,11 +3027,15 @@ class AtmosphericWeatherCardEditor extends LitElement {
       <div class="card-row-head" @click=${onToggle}>
         <ha-icon class="chevron" icon="mdi:chevron-right"></ha-icon>
         ${badge ? badge : ""}
-        <span class="card-row-title">${title}</span>
+        <span class="card-row-text"
+          ><span class="card-row-title">${title}</span>${subtitle
+            ? html`<span class="card-row-sub">${subtitle}</span>`
+            : ""}</span
+        >
         <div class="card-row-actions" @click=${this._onStopPropagation}>
           <button
             type="button"
-            title="Move up"
+            title=${t("Move up")}
             ?disabled=${idx === 0}
             @click=${onMoveUp}
           >
@@ -2561,7 +3043,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
           </button>
           <button
             type="button"
-            title="Move down"
+            title=${t("Move down")}
             ?disabled=${idx === total - 1}
             @click=${onMoveDown}
           >
@@ -2570,13 +3052,13 @@ class AtmosphericWeatherCardEditor extends LitElement {
           ${onDuplicate
             ? html`<button
                 type="button"
-                title="Duplicate"
+                title=${t("Duplicate")}
                 @click=${onDuplicate}
               >
                 <ha-icon icon="mdi:content-copy"></ha-icon>
               </button>`
             : ""}
-          <button type="button" title="Delete" @click=${onRemove}>
+          <button type="button" title=${t("Delete")} @click=${onRemove}>
             <ha-icon icon="mdi:delete-outline"></ha-icon>
           </button>
         </div>
@@ -2608,16 +3090,37 @@ class AtmosphericWeatherCardEditor extends LitElement {
       (e.detail && e.detail.value && e.detail.value._card) || {},
     );
   }
+  // The card config without our own size keys, for Home Assistant's editor.
+  _innerCard(card) {
+    const cache = this._innerCardCache || (this._innerCardCache = new WeakMap());
+    if (cache.has(card)) return cache.get(card);
+    const inner = { ...card };
+    delete inner.custom_width;
+    delete inner.custom_height;
+    cache.set(card, inner);
+    return inner;
+  }
+  _onCustomCardEditorChanged(e) {
+    e.stopPropagation();
+    const idx = Number(this._ds(e, "cardIdx") || NaN);
+    const config = e.detail && e.detail.config;
+    if (this._badIdx(idx) || !config || typeof config !== "object") return;
+    const prev = this._getCustomCards()[idx] || {};
+    const next = { ...config };
+    if (prev.custom_width) next.custom_width = prev.custom_width;
+    if (prev.custom_height) next.custom_height = prev.custom_height;
+    this._updateCardAt(idx, next);
+  }
   _renderCardRow(card, idx, total) {
     const expanded = this._expandedCard === idx;
     const title =
       card && card.type ? String(card.type).replace(/^custom:/, "") : "card";
     const body = html`<div class="card-size-row">
         <div class="offset-field">
-          <span class="offset-field-label">Custom Width</span>
+          <span class="offset-field-label">${t("Width")}</span>
           <input
             type="text"
-            placeholder="e.g. 140px or 60%"
+            placeholder=${t("e.g. 140px or 60%")}
             data-card-idx=${String(idx)}
             data-card-key="custom_width"
             .value=${card.custom_width || ""}
@@ -2625,10 +3128,10 @@ class AtmosphericWeatherCardEditor extends LitElement {
           />
         </div>
         <div class="offset-field">
-          <span class="offset-field-label">Custom Height</span>
+          <span class="offset-field-label">${t("Height")}</span>
           <input
             type="text"
-            placeholder="e.g. 110px"
+            placeholder=${t("e.g. 110px")}
             data-card-idx=${String(idx)}
             data-card-key="custom_height"
             .value=${card.custom_height || ""}
@@ -2636,14 +3139,22 @@ class AtmosphericWeatherCardEditor extends LitElement {
           />
         </div>
       </div>
-      <ha-form
-        .hass=${this.hass}
-        .data=${{ _card: card }}
-        .schema=${[{ name: "_card", selector: { object: {} } }]}
-        data-card-idx=${String(idx)}
-        .computeLabel=${() => ""}
-        @value-changed=${this._onCustomCardFormValueChanged}
-      ></ha-form>`;
+      ${this._cardEditorsReady
+        ? html`<hui-card-element-editor
+            .hass=${this.hass}
+            .lovelace=${this._lovelace()}
+            .value=${this._innerCard(card)}
+            data-card-idx=${String(idx)}
+            @config-changed=${this._onCustomCardEditorChanged}
+          ></hui-card-element-editor>`
+        : html`<ha-form
+            .hass=${this.hass}
+            .data=${{ _card: card }}
+            .schema=${[{ name: "_card", selector: { object: {} } }]}
+            data-card-idx=${String(idx)}
+            .computeLabel=${() => ""}
+            @value-changed=${this._onCustomCardFormValueChanged}
+          ></ha-form>`}`;
     return this._renderListRow({
       idx,
       total,
@@ -2686,6 +3197,12 @@ class AtmosphericWeatherCardEditor extends LitElement {
     this._updateField("custom_cards", cards);
   }
   _addBlankCard = () => {
+    if (this._cardEditorsReady) {
+      this._cardPickerOpen = !this._cardPickerOpen;
+      this._foundLovelace = null;
+      this.requestUpdate();
+      return;
+    }
     const cards = [
       ...this._getCustomCards(),
       { type: "entity", entity: "", custom_width: "100%" },
@@ -2697,22 +3214,23 @@ class AtmosphericWeatherCardEditor extends LitElement {
     const name = ((chip && chip.name) || "").toString().trim(),
       entity = ((chip && chip.entity) || "").toString().trim();
     const attribute = ((chip && chip.attribute) || "").toString().trim();
-    if (!entity) return name ? `${name} — (no entity)` : "(choose an entity)";
+    if (!entity)
+      return name ? `${name} — ${t("(no entity)")}` : t("(choose an entity)");
     const st = this.hass && this.hass.states && this.hass.states[entity],
       friendly = st && st.attributes && st.attributes.friendly_name;
     const label = friendly || entity;
     if (chip.forecast) {
-      const type = chip.forecast === "hourly" ? "Hourly" : "Daily",
+      const type = chip.forecast === "hourly" ? t("Hourly") : t("Daily"),
         offset = parseInt(chip.forecast_offset, 10) || 0;
       const offsetLabel =
         chip.forecast === "hourly"
           ? offset === 0
-            ? "now"
+            ? t("now")
             : `+${offset}h`
           : offset === 0
-            ? "today"
+            ? t("today")
             : offset === 1
-              ? "tomorrow"
+              ? t("tomorrow")
               : `+${offset}d`;
       const attrLabel = attribute || "condition";
       const base = `${label} · ${type} ${offsetLabel} [${attrLabel}]`;
@@ -2720,6 +3238,21 @@ class AtmosphericWeatherCardEditor extends LitElement {
     }
     const withAttr = attribute ? `${label} [${attribute}]` : label;
     return name ? `${name} — ${withAttr}` : withAttr;
+  }
+  // The live value shown under the chip title in the list.
+  _chipValuePreview(chip) {
+    if (!chip || !chip.entity) return "";
+    if (chip.forecast) return t("Forecast");
+    const st = this.hass && this.hass.states && this.hass.states[chip.entity];
+    if (!st) return t("Entity not found");
+    if (chip.attribute) {
+      const v = st.attributes ? st.attributes[chip.attribute] : undefined;
+      return v === undefined || v === null || typeof v === "object"
+        ? ""
+        : String(v);
+    }
+    const unit = (st.attributes && st.attributes.unit_of_measurement) || "";
+    return unit ? `${st.state} ${unit}` : String(st.state);
   }
   _cleanChip(chip) {
     const out = { ...chip };
@@ -2840,7 +3373,8 @@ class AtmosphericWeatherCardEditor extends LitElement {
     const kind = this._ds(e, "accKind") || "main";
     if (this._badIdx(idx) || !key) return;
     const prop = kind === "text" ? `_text_acc_${idx}` : `_acc_open_${idx}`;
-    this[prop] = this[prop] === key ? null : key;
+    if (kind === "main") this[prop] = key;
+    else this[prop] = this[prop] === key ? null : key;
     this.requestUpdate();
   }
   _onChipTypeModeSelect(e) {
@@ -2981,11 +3515,11 @@ class AtmosphericWeatherCardEditor extends LitElement {
   }
   _chipLabel = (schema) => {
     if (!schema || !schema.name) return "";
-    return CHIP_LABELS[schema.name] || schema.name;
+    return t(CHIP_LABELS[schema.name] || schema.name);
   };
   _chipHelper = (schema) => {
     if (!schema || !schema.name) return undefined;
-    return CHIP_HELPERS[schema.name] || undefined;
+    return CHIP_HELPERS[schema.name] ? t(CHIP_HELPERS[schema.name]) : undefined;
   };
   _renderChipRow(chip, idx, total) {
     const expanded = this._expandedChip === idx;
@@ -3008,6 +3542,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
         body: "",
         badge,
         title: this._chipTitle(chip),
+        subtitle: this._chipValuePreview(chip),
         onToggle: () => this._toggleChipExpanded(idx),
         onMoveUp: () => this._moveChip(idx, -1),
         onMoveDown: () => this._moveChip(idx, 1),
@@ -3051,10 +3586,10 @@ class AtmosphericWeatherCardEditor extends LitElement {
       ></ha-form>`;
     const cssField = (key, label, placeholder) =>
       html`<div class="css-field">
-        <span class="css-field-label">${label}</span>
+        <span class="css-field-label">${t(label)}</span>
         <input
           type="text"
-          placeholder=${placeholder}
+          placeholder=${t(placeholder)}
           .value=${chip[key] !== undefined ? String(chip[key]) : ""}
           @change=${(e) => {
             const v = e.target.value;
@@ -3067,23 +3602,6 @@ class AtmosphericWeatherCardEditor extends LitElement {
           }}
         />
       </div>`;
-    const acc = (key, icon, title, content) => {
-      const isOpen = accOpen === key;
-      return html`<div class="chip-accordion">
-        <div
-          class="chip-accordion-head ${isOpen ? "open" : ""}"
-          data-chip-idx=${idx}
-          data-acc-kind="main"
-          data-acc-key=${key}
-          @click=${this._onChipAccordionToggle}
-        >
-          <ha-icon class="chip-accordion-icon" icon="${icon}"></ha-icon>
-          <span class="chip-accordion-title">${title}</span>
-          <ha-icon class="chevron" icon="mdi:chevron-right"></ha-icon>
-        </div>
-        ${isOpen ? html`<div class="chip-accordion-body">${content}</div>` : ""}
-      </div>`;
-    };
     /* ── Data source (always visible) ── */
     const typePicker = html`<div class="chip-type-picker">
       <button
@@ -3098,8 +3616,8 @@ class AtmosphericWeatherCardEditor extends LitElement {
           icon="mdi:gauge"
         ></ha-icon>
         <div class="chip-type-text">
-          <span class="chip-type-name">Sensor</span
-          ><span class="chip-type-desc">Live entity value</span>
+          <span class="chip-type-name">${t("Sensor")}</span
+          ><span class="chip-type-desc">${t("Live entity value")}</span>
         </div>
       </button>
       <button
@@ -3114,8 +3632,8 @@ class AtmosphericWeatherCardEditor extends LitElement {
           icon="mdi:calendar-clock"
         ></ha-icon>
         <div class="chip-type-text">
-          <span class="chip-type-name">Forecast</span
-          ><span class="chip-type-desc">Weather forecast</span>
+          <span class="chip-type-name">${t("Forecast")}</span
+          ><span class="chip-type-desc">${t("Weather forecast")}</span>
         </div>
       </button>
     </div>`;
@@ -3138,7 +3656,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
             icon="mdi:information-outline"
             style="--mdc-icon-size:14px;flex-shrink:0"
           ></ha-icon>
-          Pick an entity for this chip.
+          ${t("Pick an entity for this chip.")}
         </div>`
       : "";
     const fcWarning = fcEntityMissing
@@ -3147,7 +3665,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
             icon="mdi:alert-circle-outline"
             style="--mdc-icon-size:14px;flex-shrink:0"
           ></ha-icon>
-          Forecast requires a weather entity.
+          ${t("Forecast requires a weather entity.")}
         </div>`
       : "";
     const fcAttr = chip.attribute || "condition";
@@ -3157,7 +3675,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
       (chip.icon || "").toString().trim().toLowerCase() === "weather";
     const iconSection = html`<div class="toggle-group">
         <label class="toggle-row">
-          <span>Hide icon</span>
+          <span>${t("Hide icon")}</span>
           <ha-switch
             data-chip-idx=${idx}
             data-key="hide_icon"
@@ -3175,9 +3693,9 @@ class AtmosphericWeatherCardEditor extends LitElement {
                     style="--mdc-icon-size:20px;color:var(--primary-color)"
                   ></ha-icon>
                   <div class="weather-icon-active-text">
-                    <span>Weather icon</span>
+                    <span>${t("Weather icon")}</span>
                     <span class="weather-icon-active-sub"
-                      >${isFc ? "Matches forecast" : "Matches weather"}</span
+                      >${isFc ? t("Matches forecast") : t("Matches weather")}</span
                     >
                   </div>
                   <button
@@ -3187,7 +3705,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
                     data-action="remove-icon"
                     @click=${this._onChipActionClick}
                   >
-                    Remove
+                    ${t("Remove")}
                   </button>
                 </div>`
               : html`<div class="icon-combo">
@@ -3210,7 +3728,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
                   <button
                     type="button"
                     class="icon-weather-btn"
-                    title="Use dynamic weather icon"
+                    title=${t("Use dynamic weather icon")}
                     data-chip-idx=${idx}
                     data-action="set-weather-icon"
                     @click=${this._onChipActionClick}
@@ -3227,7 +3745,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
                 ? html`<button
                     type="button"
                     class="clear-btn"
-                    title="Clear"
+                    title=${t("Clear")}
                     data-chip-idx=${idx}
                     data-action="clear-icon-path"
                     @click=${this._onChipActionClick}
@@ -3242,7 +3760,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
             </div>
             <div class="toggle-group">
               <label class="toggle-row">
-                <span>Icon background</span>
+                <span>${t("Icon background")}</span>
                 <ha-switch
                   data-chip-idx=${idx}
                   data-key="icon_background"
@@ -3283,7 +3801,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
           data-acc-key=${tKey}
           @click=${this._onChipAccordionToggle}
         >
-          <span class="chip-accordion-title">${title}</span>
+          <span class="chip-accordion-title">${t(title)}</span>
           <ha-icon class="chevron" icon="mdi:chevron-right"></ha-icon>
         </div>
         ${isOpen ? html`<div class="chip-accordion-body">${content}</div>` : ""}
@@ -3291,7 +3809,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
     };
     const labelContent = html`<div class="toggle-group">
         <label class="toggle-row">
-          <span>Hide</span>
+          <span>${t("Hide")}</span>
           <ha-switch
             data-chip-idx=${idx}
             data-key="hide_label"
@@ -3319,11 +3837,11 @@ class AtmosphericWeatherCardEditor extends LitElement {
                       {
                         name: "name_attribute",
                         selector: {
-                          select: { mode: "dropdown", options: FC_ATTRIBUTES },
+                          select: { mode: "dropdown", options: tOpts(FC_ATTRIBUTES) },
                         },
                       },
                     ]}
-                    .computeLabel=${() => "Forecast attribute"}
+                    .computeLabel=${() => t("Forecast attribute")}
                     @value-changed=${(e) => {
                       e.stopPropagation();
                       const v =
@@ -3343,7 +3861,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
             <div
               class="segmented segmented-compact"
               role="radiogroup"
-              aria-label="Weight"
+              aria-label=${t("Weight")}
             >
               ${[
                 { value: "", label: "Normal" },
@@ -3364,7 +3882,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
                     data-value=${o.value}
                     @click=${this._onChipSegmentedSelect}
                   >
-                    ${o.label}
+                    ${t(o.label)}
                   </button>`,
               )}
             </div>
@@ -3372,14 +3890,14 @@ class AtmosphericWeatherCardEditor extends LitElement {
               {
                 name: "label_overflow",
                 selector: {
-                  select: { mode: "dropdown", options: OPT.chip_overflow },
+                  select: { mode: "dropdown", options: tOpts(OPT.chip_overflow) },
                 },
               },
             ])}`
         : ""}`;
     const valueContent = html`<div class="toggle-group">
         <label class="toggle-row">
-          <span>Hide</span>
+          <span>${t("Hide")}</span>
           <ha-switch
             data-chip-idx=${idx}
             data-key="hide_value"
@@ -3398,7 +3916,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
             this.hass.states[entityId].attributes.unit_of_measurement || ""
           ).match(/^°/))
           ? html`<label class="toggle-row">
-              <span>Fancy unit</span>
+              <span>${t("Fancy unit")}</span>
               <ha-switch
                 data-chip-idx=${idx}
                 data-key="fancy_unit"
@@ -3425,7 +3943,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
                   const pct = Math.round((prec / 2) * 100);
                   return html`<div class="toggle-group">
                       <label class="toggle-row">
-                        <span>Auto (Home Assistant)</span>
+                        <span>${t("Auto (Home Assistant)")}</span>
                         <ha-switch
                           .checked=${!hasManualPrecision}
                           @change=${(e) => {
@@ -3442,14 +3960,14 @@ class AtmosphericWeatherCardEditor extends LitElement {
                     </div>
                     <div class="awc-slider">
                       <div class="awc-slider-head">
-                        <span class="awc-slider-label">Decimal places</span>
+                        <span class="awc-slider-label">${t("Decimal places")}</span>
                         <input
                           type="number"
                           class="awc-slider-num"
                           min="0"
                           max="2"
                           step="1"
-                          placeholder=${hasManualPrecision ? "" : "Auto"}
+                          placeholder=${hasManualPrecision ? "" : t("Auto")}
                           .value=${hasManualPrecision ? String(prec) : ""}
                           @change=${(e) => {
                             const raw = e.target.value.trim();
@@ -3505,8 +4023,8 @@ class AtmosphericWeatherCardEditor extends LitElement {
                       />
                       <div class="awc-slider-helper">
                         ${hasManualPrecision
-                          ? "Manual override"
-                          : "Following Home Assistant display precision"}
+                          ? t("Manual override")
+                          : t("Following Home Assistant display precision")}
                       </div>
                     </div>`;
                 })()}`
@@ -3517,7 +4035,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
             <div
               class="segmented segmented-compact"
               role="radiogroup"
-              aria-label="Weight"
+              aria-label=${t("Weight")}
             >
               ${[
                 { value: "", label: "Normal" },
@@ -3538,7 +4056,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
                     data-value=${o.value}
                     @click=${this._onChipSegmentedSelect}
                   >
-                    ${o.label}
+                    ${t(o.label)}
                   </button>`,
               )}
             </div>
@@ -3546,14 +4064,14 @@ class AtmosphericWeatherCardEditor extends LitElement {
               {
                 name: "overflow",
                 selector: {
-                  select: { mode: "dropdown", options: OPT.chip_overflow },
+                  select: { mode: "dropdown", options: tOpts(OPT.chip_overflow) },
                 },
               },
             ])}`
         : ""}`;
     const subValueContent = html`<div class="toggle-group">
         <label class="toggle-row">
-          <span>Hide</span>
+          <span>${t("Hide")}</span>
           <ha-switch
             data-chip-idx=${idx}
             data-key="hide_sub_value"
@@ -3584,11 +4102,11 @@ class AtmosphericWeatherCardEditor extends LitElement {
                     {
                       name: "sub_value_attribute",
                       selector: {
-                        select: { mode: "dropdown", options: FC_ATTRIBUTES },
+                        select: { mode: "dropdown", options: tOpts(FC_ATTRIBUTES) },
                       },
                     },
                   ]}
-                  .computeLabel=${() => "Forecast attribute"}
+                  .computeLabel=${() => t("Forecast attribute")}
                   @value-changed=${(e) => {
                     e.stopPropagation();
                     const v =
@@ -3610,7 +4128,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
                 <div
                   class="segmented segmented-compact"
                   role="radiogroup"
-                  aria-label="Weight"
+                  aria-label=${t("Weight")}
                 >
                   ${[
                     { value: "", label: "Normal" },
@@ -3631,7 +4149,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
                         data-value=${o.value}
                         @click=${this._onChipSegmentedSelect}
                       >
-                        ${o.label}
+                        ${t(o.label)}
                       </button>`,
                   )}
                 </div>
@@ -3652,7 +4170,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
                       data-value=${o.value}
                       @click=${this._onChipSegmentedSelect}
                     >
-                      ${o.label}
+                      ${t(o.label)}
                     </button>`;
                   })}
                 </div>
@@ -3660,7 +4178,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
                   {
                     name: "sub_value_overflow",
                     selector: {
-                      select: { mode: "dropdown", options: OPT.chip_overflow },
+                      select: { mode: "dropdown", options: tOpts(OPT.chip_overflow) },
                     },
                   },
                 ])}`
@@ -3672,7 +4190,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
       isValueMarquee || isLabelMarquee || isSubValueMarquee
         ? html`<div class="toggle-group">
               <label class="toggle-row">
-                <span>Right-to-left</span>
+                <span>${t("Right-to-left")}</span>
                 <ha-switch
                   data-chip-idx=${idx}
                   data-key="marquee_rtl"
@@ -3707,7 +4225,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
     const layoutSection = html`<div
         class="segmented"
         role="radiogroup"
-        aria-label="Chip layout"
+        aria-label=${t("Chip layout")}
       >
         ${[
           { value: "inline", label: "Inline" },
@@ -3725,7 +4243,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
               data-value=${o.value}
               @click=${this._onChipSegmentedSelect}
             >
-              ${o.label}
+              ${t(o.label)}
             </button>`,
         )}
       </div>
@@ -3747,13 +4265,13 @@ class AtmosphericWeatherCardEditor extends LitElement {
               data-value=${o.value}
               @click=${this._onChipSegmentedSelect}
             >
-              ${o.label}
+              ${t(o.label)}
             </button>`,
         )}
       </div>
       <div class="toggle-group">
         <label class="toggle-row">
-          <span>Round shape</span>
+          <span>${t("Round shape")}</span>
           <ha-switch
             data-chip-idx=${idx}
             data-key="chip_round"
@@ -3763,7 +4281,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
           ></ha-switch
         ></label>
         <label class="toggle-row">
-          <span>Background</span>
+          <span>${t("Background")}</span>
           <ha-switch
             data-chip-idx=${idx}
             data-key="background"
@@ -3786,7 +4304,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
           )
         : ""}
       <div class="settings-group">
-        <div class="settings-group-label">Chip Layout</div>
+        <div class="settings-group-label">${t("Chip Layout")}</div>
         <div class="css-field-row cols-2">
           ${cssField("width", "Width", "e.g. 200px")}
           ${cssField("height", "Height", "e.g. 40px")}
@@ -3796,7 +4314,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
         </div>
       </div>
       <div class="settings-group">
-        <div class="settings-group-label">Gaps</div>
+        <div class="settings-group-label">${t("Gaps")}</div>
         <div class="css-field-row cols-2">
           ${cssField("inner_gap", "Icon/text gap", "auto")}
           ${cssField("text_gap", "Label/value gap", "auto")}
@@ -3805,7 +4323,6 @@ class AtmosphericWeatherCardEditor extends LitElement {
     /* ── Type accordion (ring / bar gauge) ── */
     const gaugeFields = (prefix) => {
       const p = prefix + "_";
-      const label = prefix === "ring" ? "Ring" : "Bar";
       const thresholds = Array.isArray(chip[p + "thresholds"])
         ? chip[p + "thresholds"]
         : [];
@@ -3826,7 +4343,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
         </div>
         ${sizeFields}
         ${this._renderColorPicker(
-          `${label} color`,
+          prefix === "ring" ? "Ring color" : "Bar color",
           chip[p + "color"] || "",
           (h, o) => {
             const next = { ...chip };
@@ -3839,14 +4356,17 @@ class AtmosphericWeatherCardEditor extends LitElement {
           <summary>
             <ha-icon class="chevron" icon="mdi:chevron-right"></ha-icon>
             <ha-icon icon="mdi:cog-outline"></ha-icon>
-            <span>${label} entity</span>
+            <span>${t(prefix === "ring" ? "Ring entity" : "Bar entity")}</span>
           </summary>
           <div class="disclosure-body">
             <div
               style="font-size:var(--awc-e-f-meta);color:var(--secondary-text-color);line-height:1.4"
             >
-              Use a different entity for the ${prefix} value instead of the
-              chip's main entity.
+              ${t(
+                prefix === "ring"
+                  ? "Use a different entity for the ring value instead of the chip's main entity."
+                  : "Use a different entity for the bar value instead of the chip's main entity.",
+              )}
             </div>
             ${entityResetForm("gauge_entity", "gauge_attribute", {
               entity: {},
@@ -3866,11 +4386,11 @@ class AtmosphericWeatherCardEditor extends LitElement {
                       {
                         name: "gauge_attribute",
                         selector: {
-                          select: { mode: "dropdown", options: FC_ATTRIBUTES },
+                          select: { mode: "dropdown", options: tOpts(FC_ATTRIBUTES) },
                         },
                       },
                     ]}
-                    .computeLabel=${() => "Forecast attribute"}
+                    .computeLabel=${() => t("Forecast attribute")}
                     @value-changed=${(e) => {
                       e.stopPropagation();
                       const v =
@@ -3890,13 +4410,13 @@ class AtmosphericWeatherCardEditor extends LitElement {
           <summary>
             <ha-icon class="chevron" icon="mdi:chevron-right"></ha-icon>
             <ha-icon icon="mdi:cog-outline"></ha-icon>
-            <span>Color thresholds</span>
+            <span>${t("Color thresholds")}</span>
           </summary>
           <div class="disclosure-body">
             <div
               class="segmented"
               role="radiogroup"
-              aria-label="Threshold mode"
+              aria-label=${t("Threshold mode")}
             >
               ${[
                 { value: "solid", label: "Solid" },
@@ -3916,18 +4436,18 @@ class AtmosphericWeatherCardEditor extends LitElement {
                     data-value=${o.value}
                     @click=${this._onChipSegmentedSelect}
                   >
-                    ${o.label}
+                    ${t(o.label)}
                   </button>`,
               )}
             </div>
             ${thresholds.map(
-              (t, ti) =>
+              (th, ti) =>
                 html`<div class="ring-threshold-row">
                   <span class="threshold-label">≥</span>
                   <input
                     type="text"
-                    placeholder="value"
-                    .value=${String(t.value != null ? t.value : "")}
+                    placeholder=${t("value")}
+                    .value=${String(th.value != null ? th.value : "")}
                     @change=${(e) => {
                       const arr = [...thresholds];
                       arr[ti] = { ...arr[ti], value: e.target.value.trim() };
@@ -3937,7 +4457,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
                   <input
                     type="color"
                     class="chip-color-swatch"
-                    .value=${t.color || "#ff0000"}
+                    .value=${th.color || "#ff0000"}
                     @input=${(e) => {
                       const arr = [...thresholds];
                       arr[ti] = { ...arr[ti], color: e.target.value };
@@ -3973,7 +4493,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
               }}
             >
               <ha-icon icon="mdi:plus" style="--mdc-icon-size:14px"></ha-icon>
-              Add threshold
+              ${t("Add threshold")}
             </button>
           </div>
         </details>`;
@@ -3988,7 +4508,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
     const ringSection = html`<div
         class="segmented"
         role="radiogroup"
-        aria-label="Chip type"
+        aria-label=${t("Chip type")}
       >
         ${[
           { value: "", label: "Default" },
@@ -4016,7 +4536,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
                 update(n);
               }}
             >
-              ${o.label}
+              ${t(o.label)}
             </button>`,
         )}
       </div>
@@ -4037,7 +4557,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
     const currentAnchor = chip.position_anchor || "top-left";
     const positionSection = html`<div class="toggle-group">
         <label class="toggle-row">
-          <span>Free positioning</span>
+          <span>${t("Free positioning")}</span>
           <ha-switch
             .checked=${isFree}
             @change=${(e) => {
@@ -4058,7 +4578,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
           ></ha-switch
         ></label>
         <label class="toggle-row">
-          <span>Behind animations</span>
+          <span>${t("Behind animations")}</span>
           <ha-switch
             .checked=${chip.behind_effects === true}
             @change=${(e) => {
@@ -4074,7 +4594,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
         ? html`<div>
             <div class="free-pos-layout">
               <div>
-                <div class="settings-group-label">Position</div>
+                <div class="settings-group-label">${t("Position")}</div>
                 <div
                   class="anchor-grid"
                   role="radiogroup"
@@ -4098,7 +4618,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
                 </div>
               </div>
               <div>
-                <div class="settings-group-label">Offset</div>
+                <div class="settings-group-label">${t("Offset")}</div>
                 <div class="offset-fields">
                   <div class="offset-field">
                     <span class="offset-field-label">X</span>
@@ -4144,13 +4664,13 @@ class AtmosphericWeatherCardEditor extends LitElement {
       isFc && !fcEntityMissing
         ? html`<div class="chip-forecast-box">
             <div class="chip-forecast-header">
-              <ha-icon icon="mdi:weather-partly-cloudy"></ha-icon> Forecast
+              <ha-icon icon="mdi:weather-partly-cloudy"></ha-icon> ${t("Forecast")}
             </div>
             <div class="chip-forecast-body">
               <div
                 class="segmented"
                 role="radiogroup"
-                aria-label="Forecast type"
+                aria-label=${t("Forecast type")}
               >
                 ${[
                   { value: "daily", label: "Daily" },
@@ -4165,24 +4685,24 @@ class AtmosphericWeatherCardEditor extends LitElement {
                       data-forecast-type=${o.value}
                       @click=${this._onChipForecastTypeSelect}
                     >
-                      ${o.label}
+                      ${t(o.label)}
                     </button>`,
                 )}
               </div>
               ${(() => {
                 const fcMax = chip.forecast === "hourly" ? 23 : 6;
                 const fcLabel =
-                  chip.forecast === "hourly" ? "Hours ahead" : "Days ahead";
+                  chip.forecast === "hourly" ? t("Hours ahead") : t("Days ahead");
                 const fcHelper =
                   chip.forecast === "hourly"
                     ? fcOff === 0
-                      ? "Now"
+                      ? t("Now")
                       : `+${fcOff}h`
                     : fcOff === 0
-                      ? "Today"
+                      ? t("Today")
                       : fcOff === 1
-                        ? "Tomorrow"
-                        : `+${fcOff} days`;
+                        ? t("Tomorrow")
+                        : t("+{n} days", { n: fcOff });
                 return this._renderChipSlider(
                   chip,
                   update,
@@ -4203,11 +4723,11 @@ class AtmosphericWeatherCardEditor extends LitElement {
                   {
                     name: "attribute",
                     selector: {
-                      select: { mode: "dropdown", options: FC_ATTRIBUTES },
+                      select: { mode: "dropdown", options: tOpts(FC_ATTRIBUTES) },
                     },
                   },
                 ]}
-                .computeLabel=${() => "Show"}
+                .computeLabel=${() => t("Show")}
                 @value-changed=${(e) => {
                   e.stopPropagation();
                   const v =
@@ -4242,14 +4762,45 @@ class AtmosphericWeatherCardEditor extends LitElement {
       (k) => chip[k] !== undefined && chip[k] !== "",
     );
     /* ── Assemble body ── */
-    const body = html`${typePicker} ${entitySection} ${emptyNudge} ${fcWarning}
-    ${forecastBox || ""}
-    ${acc("ring", "mdi:circle-outline", "Type", ringSection)}
-    ${acc("layout", "mdi:view-compact-outline", "Layout", layoutSection)}
-    ${acc("text", "mdi:format-text", "Text", textSection)}
-    ${acc("icon", "mdi:image-outline", "Icon", iconSection)}
-    ${acc("position", "mdi:arrow-all", "Position", positionSection)}
-    ${acc("tap", "mdi:gesture-tap", "Tap Action", tapSection)}
+    const TABS = [
+      {
+        key: "data",
+        title: "Data",
+        body: html`${typePicker} ${entitySection} ${emptyNudge} ${fcWarning}
+        ${forecastBox || ""}`,
+      },
+      { key: "text", title: "Text", body: textSection },
+      { key: "icon", title: "Icon", body: iconSection },
+      {
+        key: "look",
+        title: "Look",
+        body: html`<div class="settings-group-label">${t("Type")}</div>
+          ${ringSection}
+          <div class="settings-group-label">${t("Layout")}</div>
+          ${layoutSection}`,
+      },
+      { key: "position", title: "Position", body: positionSection },
+      { key: "tap", title: "Tap", body: tapSection },
+    ];
+    const activeTab = TABS.find((x) => x.key === accOpen) || TABS[0];
+    const body = html`<div class="chip-tabs" role="tablist">
+        ${TABS.map(
+          (x) =>
+            html`<button
+              type="button"
+              role="tab"
+              class="chip-tab ${x === activeTab ? "active" : ""}"
+              aria-selected=${x === activeTab ? "true" : "false"}
+              data-chip-idx=${idx}
+              data-acc-kind="main"
+              data-acc-key=${x.key}
+              @click=${this._onChipAccordionToggle}
+            >
+              ${t(x.title)}
+            </button>`,
+        )}
+      </div>
+      <div class="chip-tab-body">${activeTab.body}</div>
     ${hasStyleOverrides
       ? html`<button
           type="button"
@@ -4259,7 +4810,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
           data-action="reset-styles"
           @click=${this._onChipActionClick}
         >
-          <ha-icon icon="mdi:restore"></ha-icon><span>Reset all styles</span>
+          <ha-icon icon="mdi:restore"></ha-icon><span>${t("Reset all styles")}</span>
         </button>`
       : ""}`;
     return this._renderListRow({
@@ -4269,6 +4820,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
       body,
       badge,
       title: this._chipTitle(chip),
+      subtitle: this._chipValuePreview(chip),
       onToggle: () => this._toggleChipExpanded(idx),
       onMoveUp: () => this._moveChip(idx, -1),
       onMoveDown: () => this._moveChip(idx, 1),
@@ -4306,7 +4858,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
           icon="mdi:palette-outline"
           style="--mdc-icon-size:15px;color:var(--secondary-text-color);flex-shrink:0"
         ></ha-icon>
-        <span class="chip-color-label">${label}</span>
+        <span class="chip-color-label">${t(label)}</span>
         <input
           type="color"
           class="chip-color-swatch"
@@ -4317,7 +4869,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
           ? html`<button
               type="button"
               class="chip-color-clear"
-              title="Clear color"
+              title=${t("Clear color")}
               @click=${() => onWrite("", 1)}
             >
               <ha-icon icon="mdi:close" style="--mdc-icon-size:14px"></ha-icon>
@@ -4326,7 +4878,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
       </div>
       ${hasColor
         ? html`<div class="chip-color-opacity-row">
-            <span class="chip-color-opacity-label">Opacity</span>
+            <span class="chip-color-opacity-label">${t("Opacity")}</span>
             <input
               type="range"
               min="0"
@@ -4350,10 +4902,18 @@ class AtmosphericWeatherCardEditor extends LitElement {
     });
   }
   _renderSlider(field, label, min, max, step, helper) {
-    const val =
-        parseFloat(
-          this._formData[field] != null ? this._formData[field] : min,
-        ) || min,
+    // Without a saved value the slider shows what the card uses.
+    const preset = perfPreset(this._config);
+    const raw =
+      this._formData[field] != null
+        ? this._formData[field]
+        : preset[field] != null
+          ? preset[field]
+          : SLIDER_DEFAULTS[field] != null
+            ? SLIDER_DEFAULTS[field]
+            : min;
+    const parsed = parseFloat(raw);
+    const val = Number.isFinite(parsed) ? parsed : min,
       pct = Math.round(((val - min) / (max - min)) * 100);
     return this._renderSliderMarkup({
       label,
@@ -4453,7 +5013,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
   }) {
     return html`<div class="awc-slider">
       <div class="awc-slider-head">
-        <span class="awc-slider-label">${label}</span>
+        <span class="awc-slider-label">${t(label)}</span>
         <input
           type="number"
           class="awc-slider-num"
@@ -4475,19 +5035,19 @@ class AtmosphericWeatherCardEditor extends LitElement {
         @input=${onRangeInput}
         @change=${onRangeChange}
       />
-      ${helper ? html`<div class="awc-slider-helper">${helper}</div>` : ""}
+      ${helper ? html`<div class="awc-slider-helper">${t(helper)}</div>` : ""}
     </div>`;
   }
   _renderCompactField(field, placeholder) {
     const current = String(this._formData[field] || ""),
-      label = LABELS[field] || field;
+      label = t(LABELS[field] || field);
     const isCardHeight = field === "card_height";
     const hasError = isCardHeight && !!this._cardHeightError;
     return html`<div class="compact-field ${hasError ? "invalid" : ""}">
       <span class="compact-field-label">${label}</span>
       <input
         type="text"
-        placeholder=${placeholder}
+        placeholder=${t(placeholder)}
         data-field=${field}
         .value=${current}
         @change=${this._onRawFieldChange}
@@ -4512,86 +5072,130 @@ class AtmosphericWeatherCardEditor extends LitElement {
       bgActive = !!c.chip_area_background;
     const sf = (key, label, placeholder) =>
       html`<div class="css-field">
-        <span class="css-field-label">${label}</span>
+        <span class="css-field-label">${t(label)}</span>
         <input
           type="text"
-          placeholder=${placeholder}
+          placeholder=${t(placeholder)}
           data-field=${key}
           .value=${String(c[key] || "")}
           @change=${this._onRawFieldChange}
         />
       </div>`;
-    const containerContent = html`<div class="settings-group">
-        <div class="section-title">Position &amp; Size</div>
-        <div style="display:flex;gap:var(--awc-e-s3);align-items:flex-start">
-          ${this._renderPositionGrid(
-            "chip_area_position",
-            POSITION_GRIDS.chip_area_position,
-          )}
-          <div
-            style="display:flex;flex-direction:column;gap:var(--awc-e-s2);align-self:center;flex:1;min-width:0"
-          >
-            <div class="css-field">
-              <span class="css-field-label">${LABELS.chip_area_width}</span>
-              <input
-                type="text"
-                placeholder="auto"
-                data-field="chip_area_width"
-                .value=${String(c.chip_area_width || "")}
-                @change=${this._onRawFieldChange}
-              />
-            </div>
-            <div class="css-field">
-              <span class="css-field-label">${LABELS.chip_area_height}</span>
-              <input
-                type="text"
-                placeholder="auto"
-                data-field="chip_area_height"
-                .value=${String(c.chip_area_height || "")}
-                @change=${this._onRawFieldChange}
-              />
-            </div>
+    const layoutIcon = {
+      wrap: svg`<rect x="2" y="4" width="10" height="6" rx="2"/><rect x="15" y="4" width="10" height="6" rx="2"/><rect x="28" y="4" width="10" height="6" rx="2"/><rect x="2" y="14" width="10" height="6" rx="2"/>`,
+      grid: svg`<rect x="2" y="4" width="12" height="6" rx="2"/><rect x="16" y="4" width="12" height="6" rx="2"/><rect x="30" y="4" width="12" height="6" rx="2"/><rect x="2" y="14" width="12" height="6" rx="2"/><rect x="16" y="14" width="12" height="6" rx="2"/>`,
+      "horizontal-scroll": svg`<rect x="2" y="10" width="10" height="6" rx="2"/><rect x="15" y="10" width="10" height="6" rx="2"/><rect x="28" y="10" width="10" height="6" rx="2"/><rect x="41" y="10" width="3" height="6" rx="1"/>`,
+      "vertical-scroll": svg`<rect x="16" y="2" width="12" height="6" rx="2"/><rect x="16" y="10" width="12" height="6" rx="2"/><rect x="16" y="18" width="12" height="3" rx="1"/>`,
+    };
+    const areaContent = html`<div class="chip-area-top">
+        ${this._renderPositionGrid(
+          "chip_area_position",
+          POSITION_GRIDS.chip_area_position,
+        )}
+        <div class="chip-area-layout">
+          <div class="grid-picker-label">${t(LABELS.chip_area_layout)}</div>
+          <div class="layout-picker" role="radiogroup">
+            ${OPT.chip_area_layout.map(
+              (o) =>
+                html`<button
+                  type="button"
+                  role="radio"
+                  class=${layout === o.value ? "active" : ""}
+                  data-field="chip_area_layout"
+                  data-value=${o.value}
+                  @click=${this._onSegmentedFieldSelect}
+                >
+                  <svg viewBox="0 0 44 24" aria-hidden="true">
+                    ${layoutIcon[o.value]}
+                  </svg>
+                  <span>${t(o.label)}</span>
+                </button>`,
+            )}
           </div>
         </div>
       </div>
+      ${isGrid
+        ? this._renderSlider(
+            "chip_area_columns",
+            LABELS.chip_area_columns,
+            1,
+            12,
+            1,
+          )
+        : ""}
+      ${isScroll
+        ? this._renderSlider(
+            "chip_area_scroll_count",
+            LABELS.chip_area_scroll_count,
+            1,
+            10,
+            1,
+          )
+        : ""}
       <div class="settings-group">
-        <div class="section-title">Layout</div>
-        <div class="segmented" role="radiogroup" aria-label="Layout">
-          ${OPT.chip_area_layout.map(
+        <div class="settings-group-label">${t(LABELS.chip_style)}</div>
+        <div class="segmented" role="radiogroup" aria-label=${t("Chip style")}>
+          ${[
+            { value: "inline", label: "Inline" },
+            { value: "stacked", label: "Stacked" },
+            { value: "vertical", label: "Vertical" },
+          ].map(
             (o) =>
               html`<button
                 type="button"
                 role="radio"
-                class=${layout === o.value ? "active" : ""}
-                data-field="chip_area_layout"
+                class=${chipFormat === o.value ? "active" : ""}
+                data-field="chip_style"
                 data-value=${o.value}
                 @click=${this._onSegmentedFieldSelect}
               >
-                ${o.label}
+                ${t(o.label)}
               </button>`,
           )}
         </div>
-        ${isGrid
-          ? this._renderSlider(
-              "chip_area_columns",
-              LABELS.chip_area_columns,
-              1,
-              12,
-              1,
-            )
-          : ""}
-        ${isScroll
-          ? this._renderSlider(
-              "chip_area_scroll_count",
-              LABELS.chip_area_scroll_count,
-              1,
-              10,
-              1,
-            )
-          : ""}
       </div>
       <div class="settings-group">
-        <div class="section-title">Arrangement</div>
+        <div class="settings-group-label">${t("Chip background")}</div>
+        <div class="segmented" role="radiogroup" aria-label=${t("Background")}>
+          <button
+            type="button"
+            role="radio"
+            class=${!bgActive ? "active" : ""}
+            data-bg-mode="off"
+            @click=${this._onChipAreaBackgroundModeSelect}
+          >
+            ${t("Off")}
+          </button>
+          ${[
+            { value: "frosted", label: "Frosted" },
+            { value: "contrast", label: "Contrast" },
+            { value: "theme", label: "Theme" },
+          ].map(
+            (o) =>
+              html`<button
+                type="button"
+                role="radio"
+                class=${bgActive && bgStyle === o.value ? "active" : ""}
+                data-bg-mode=${o.value}
+                @click=${this._onChipAreaBackgroundModeSelect}
+              >
+                ${t(o.label)}
+              </button>`,
+          )}
+        </div>
+        <div class="composite-helper">${t(HELPERS.card_background_style)}</div>
+      </div>`;
+    const fineContent = html`<div class="settings-group">
+        <div class="section-title">${t("Size")}</div>
+        <div class="css-field-row cols-2">
+          ${sf("chip_area_width", LABELS.chip_area_width, "auto")}
+          ${isScroll
+            ? sf("chip_area_height", LABELS.chip_area_height, "auto")
+            : ""}
+        </div>
+      </div>
+      <div class="settings-group">
+        <div class="section-title">${t("Arrangement")}</div>
         <div class="field-group">
           ${this._renderToggleGroup([
             { key: "chip_area_grouped", label: LABELS.chip_area_grouped },
@@ -4612,51 +5216,12 @@ class AtmosphericWeatherCardEditor extends LitElement {
                 },
               ])
             : ""}
-          <div class="css-field-row cols-2">
-            ${sf("chip_area_gap", LABELS.chip_area_gap, "8px")}
-            ${sf("chip_area_padding", LABELS.chip_area_padding, "0")}
-          </div>
         </div>
-      </div>
-      ${c.chip_area_grouped === true && c.chip_area_background === true
-        ? html`
-            <div class="settings-group">
-              <div class="section-title">Container Color</div>
-              ${this._renderGlobalColorPicker(
-                "chip_area_background_color",
-                "Container background color",
-              )}
-            </div>
-          `
-        : ""}`;
-    const chipsContent = html`<div class="settings-group">
-        <div class="section-title">Chip Layout</div>
-        <div class="segmented" role="radiogroup" aria-label="Chip style">
-          ${[
-            { value: "inline", label: "Inline" },
-            { value: "stacked", label: "Stacked" },
-            { value: "vertical", label: "Vertical" },
-          ].map(
-            (o) =>
-              html`<button
-                type="button"
-                role="radio"
-                class=${chipFormat === o.value ? "active" : ""}
-                data-field="chip_style"
-                data-value=${o.value}
-                @click=${this._onSegmentedFieldSelect}
-              >
-                ${o.label}
-              </button>`,
-          )}
-        </div>
-      </div>
-      <div class="settings-group">
-        <div class="settings-group-label">Content Alignment</div>
+        <div class="settings-group-label">${t("Content alignment")}</div>
         <div
           class="segmented"
           role="radiogroup"
-          aria-label="Chip content alignment"
+          aria-label=${t("Content alignment")}
           style="flex-wrap:nowrap"
         >
           ${OPT.chip_area_align.map(
@@ -4669,46 +5234,43 @@ class AtmosphericWeatherCardEditor extends LitElement {
                 data-value=${o.value}
                 @click=${this._onSegmentedFieldSelect}
               >
-                ${o.label}
+                ${t(o.label)}
               </button>`,
           )}
         </div>
       </div>
       <div class="settings-group">
-        <div class="section-title">Background</div>
-        <div class="settings-group-label">Chip background</div>
-        <div class="segmented" role="radiogroup" aria-label="Background">
-          <button
-            type="button"
-            role="radio"
-            class=${!bgActive ? "active" : ""}
-            data-bg-mode="off"
-            @click=${this._onChipAreaBackgroundModeSelect}
-          >
-            Off
-          </button>
-          ${[
-            { value: "frosted", label: "Frosted" },
-            { value: "contrast", label: "Contrast" },
-            { value: "theme", label: "Theme" },
-          ].map(
-            (o) =>
-              html`<button
-                type="button"
-                role="radio"
-                class=${bgActive && bgStyle === o.value ? "active" : ""}
-                data-bg-mode=${o.value}
-                @click=${this._onChipAreaBackgroundModeSelect}
-              >
-                ${o.label}
-              </button>`,
-          )}
+        <div class="section-title">${t("Gaps")}</div>
+        <div class="css-field-row cols-2">
+          ${sf("chip_area_gap", LABELS.chip_area_gap, "8px")}
+          ${sf("chip_area_padding", LABELS.chip_area_padding, "0")}
         </div>
-        <div class="settings-group-label">Icon background</div>
+        <div class="css-field-row cols-2">
+          ${sf("chip_gap", LABELS.chip_gap, "6px")}
+          ${sf("chip_text_gap", LABELS.chip_text_gap, "0.35em")}
+        </div>
+      </div>
+      <div class="settings-group">
+        <div class="section-title">${t("Sizes")}</div>
+        <div class="css-field-row cols-2">
+          ${sf("chip_text_size", LABELS.chip_text_size, "auto")}
+          ${sf("chip_label_size", LABELS.chip_label_size, "auto")}
+        </div>
+        <div class="css-field-row cols-2">
+          ${sf("chip_icon_size", LABELS.chip_icon_size, "auto")}
+          ${sf("chip_icon_padding", LABELS.chip_icon_padding, "auto")}
+        </div>
+        <div class="css-field-row cols-2">
+          ${sf("chip_padding", LABELS.chip_padding, "auto")}
+        </div>
+      </div>
+      <div class="settings-group">
+        <div class="section-title">${t("Colors")}</div>
+        <div class="settings-group-label">${t(LABELS.chip_icon_background)}</div>
         <div
           class="segmented"
           role="radiogroup"
-          aria-label=${LABELS.chip_icon_background}
+          aria-label=${t(LABELS.chip_icon_background)}
         >
           ${[
             { value: undefined, label: "Default" },
@@ -4728,11 +5290,10 @@ class AtmosphericWeatherCardEditor extends LitElement {
                 data-value-type=${o.value === undefined ? "empty" : "boolean"}
                 @click=${this._onSegmentedFieldSelect}
               >
-                ${o.label}
+                ${t(o.label)}
               </button>`,
           )}
         </div>
-        <div class="settings-group-label">Custom colors</div>
         ${this._renderGlobalColorPicker(
           "chip_background_color",
           "Background color (all chips)",
@@ -4741,102 +5302,93 @@ class AtmosphericWeatherCardEditor extends LitElement {
           "chip_icon_background_color",
           "Icon background color (all chips)",
         )}
-      </div>
-      <div class="settings-group">
-        <div class="section-title">Dimensions</div>
-        <div class="css-field-row cols-2">
-          ${sf("chip_text_size", LABELS.chip_text_size, "auto")}
-          ${sf("chip_label_size", LABELS.chip_label_size, "auto")}
-        </div>
-        <div class="css-field-row cols-2">
-          ${sf("chip_icon_size", LABELS.chip_icon_size, "auto")}
-          ${sf("chip_icon_padding", LABELS.chip_icon_padding, "auto")}
-        </div>
-        <div class="css-field-row cols-2">
-          ${sf("chip_gap", LABELS.chip_gap, "6px")}
-          ${sf("chip_text_gap", LABELS.chip_text_gap, "0.35em")}
-        </div>
-        <div class="css-field-row cols-2">
-          ${sf("chip_padding", LABELS.chip_padding, "auto")}
-        </div>
+        ${c.chip_area_grouped === true && c.chip_area_background === true
+          ? this._renderGlobalColorPicker(
+              "chip_area_background_color",
+              "Container background color",
+            )
+          : ""}
       </div>`;
+    const weather = (this._config && this._config.weather_entity) || "";
+    const QUICK = [
+      {
+        label: "Temperature",
+        chip: { entity: weather, attribute: "temperature", icon: "mdi:thermometer" },
+      },
+      {
+        label: "Humidity",
+        chip: { entity: weather, attribute: "humidity", icon: "mdi:water-percent" },
+      },
+      {
+        label: "Wind",
+        chip: { entity: weather, attribute: "wind_speed", icon: "mdi:weather-windy" },
+      },
+      {
+        label: "Rain chance",
+        chip: {
+          entity: weather,
+          forecast: "daily",
+          attribute: "precipitation_probability",
+          icon: "mdi:umbrella-outline",
+        },
+      },
+      {
+        label: "Tomorrow",
+        chip: {
+          entity: weather,
+          forecast: "daily",
+          forecast_offset: 1,
+          attribute: "temperature",
+          sub_value_attribute: "templow",
+          icon: "weather",
+        },
+      },
+    ];
     return html` <div class="sensor-list">
         ${list.map((chip, idx) => this._renderChipRow(chip, idx, list.length))}
       </div>
       <button type="button" class="add-chip-btn" @click=${this._addChip}>
-        <ha-icon icon="mdi:plus"></ha-icon> <span>Add chip</span>
+        <ha-icon icon="mdi:plus"></ha-icon> <span>${t("Add chip")}</span>
       </button>
-      ${this._renderDisclosure("Chip Area Settings", containerContent)}
-      ${this._renderDisclosure("Chip Style Settings", chipsContent)}
-      <div
-        class="fc-box"
-        style="background:rgba(var(--rgb-primary-text-color,0,0,0),0.03)"
-      >
-        <div
-          style="display:flex;align-items:center;gap:var(--awc-e-s2);font-size:var(--awc-e-f-meta);color:var(--secondary-text-color)"
+      ${weather
+        ? html`<div class="quick-add">
+            <span class="quick-add-label">${t("Quick add:")}</span>
+            ${QUICK.map(
+              (q) =>
+                html`<button
+                  type="button"
+                  class="quick-add-btn"
+                  @click=${() =>
+                    this._addQuickChip({ name: t(q.label), ...q.chip })}
+                >
+                  <ha-icon icon="mdi:plus"></ha-icon>${t(q.label)}
+                </button>`,
+            )}
+          </div>`
+        : ""}
+      ${this._renderGroup("Chip area", areaContent)}
+      ${this._renderDisclosure("Fine tuning (gaps, sizes, colors)", fineContent)}
+      <div class="tip-box">
+        <ha-icon icon="mdi:lightbulb-outline"></ha-icon>
+        <span
+          >${t("SVG icons:")}
+          <a
+            href="https://github.com/shpongledsummer/atmo-weather-card#weather-icons"
+            target="_blank"
+            rel="noopener"
+            >${t("How to add them")}</a
+          ></span
         >
-          <ha-icon
-            icon="mdi:lightbulb-outline"
-            style="--mdc-icon-size:16px;flex-shrink:0"
-          ></ha-icon>
-          <span
-            >SVG icons:
-            <a
-              href="https://github.com/shpongledsummer/atmo-weather-card#weather-icons"
-              target="_blank"
-              rel="noopener"
-              style="color:var(--primary-color)"
-              >How to add them</a
-            ></span
-          >
-        </div>
       </div>`;
   }
+  _addQuickChip(chip) {
+    const next = [...this._getChips(), chip];
+    this._expandedChip = null;
+    this._commitChips(next);
+  }
   _renderPerformancePanel() {
-    const PRESETS = {
-      low: {
-        perf_fps: 24,
-        perf_cloud_quality: 0.5,
-        perf_effects: 0,
-        perf_fauna: 0,
-        perf_dpr: 1.0,
-        animation_speed: 1.0,
-        bird_animation_speed: 0.3,
-        star_animation_speed: 0.5,
-        fauna_bird_density: 0.5,
-        fauna_plane_density: 0.5,
-        fauna_bird_flock_size: 4,
-        fauna_birds_at_night: true,
-      },
-      default: {
-        perf_fps: 30,
-        perf_cloud_quality: 1.5,
-        perf_effects: 1,
-        perf_fauna: 2,
-        perf_dpr: 2.0,
-        animation_speed: 1.0,
-        bird_animation_speed: 0.3,
-        star_animation_speed: 0.5,
-        fauna_bird_density: 1.0,
-        fauna_plane_density: 1.0,
-        fauna_bird_flock_size: 8,
-        fauna_birds_at_night: true,
-      },
-      ultra: {
-        perf_fps: 60,
-        perf_cloud_quality: 2.0,
-        perf_effects: 2,
-        perf_fauna: 2,
-        perf_dpr: 2.0,
-        animation_speed: 1.0,
-        bird_animation_speed: 0.3,
-        star_animation_speed: 0.5,
-        fauna_bird_density: 1.5,
-        fauna_plane_density: 1.5,
-        fauna_bird_flock_size: 12,
-        fauna_birds_at_night: true,
-      },
-    };
+    const PRESETS = PERF_PRESETS;
+    const cfg = this._config || {};
     const keys = [
       "perf_fps",
       "animation_speed",
@@ -4851,7 +5403,6 @@ class AtmosphericWeatherCardEditor extends LitElement {
       "fauna_bird_flock_size",
       "fauna_birds_at_night",
     ];
-    const cfg = this._config || {};
     const presetName =
       typeof cfg.perf_mode === "string" && PRESETS[cfg.perf_mode]
         ? cfg.perf_mode
@@ -4866,12 +5417,13 @@ class AtmosphericWeatherCardEditor extends LitElement {
       ["low", "default", "ultra"].find((p) =>
         keys.every((k) => val(k) === PRESETS[p][k]),
       ) || "custom";
+    // A preset writes only perf_mode; the card takes every value from it.
+    // Own values are removed, and birds and planes come back on.
     const onPreset = (name) => {
-      const p = PRESETS[name],
-        changes = {};
-      for (const k of keys) changes[k] = p[k];
-      changes.perf_mode = name;
-      this._patch(changes);
+      this._patch(
+        { perf_mode: name },
+        { strip: [...keys, "fauna_birds", "fauna_planes"] },
+      );
     };
     const DESCS = {
       perf_fps: {
@@ -4891,11 +5443,6 @@ class AtmosphericWeatherCardEditor extends LitElement {
         1: "Rain, snow, lightning, stars",
         2: "Extra shooting stars and comets",
       },
-      perf_fauna: {
-        0: "No fauna",
-        1: "Birds only",
-        2: "Birds and planes",
-      },
       perf_dpr: {
         0.5: "Low resolution",
         1: "Standard resolution",
@@ -4907,8 +5454,8 @@ class AtmosphericWeatherCardEditor extends LitElement {
       const v = val(field);
       const desc = (DESCS[field] && DESCS[field][v]) || "";
       return html`<div class="settings-group">
-        <div class="settings-group-label">${label}</div>
-        <div class="segmented" role="radiogroup" aria-label=${label}>
+        <div class="settings-group-label">${t(label)}</div>
+        <div class="segmented" role="radiogroup" aria-label=${t(label)}>
           ${options.map(
             (o) =>
               html`<button
@@ -4920,15 +5467,25 @@ class AtmosphericWeatherCardEditor extends LitElement {
                 data-value-type="number"
                 @click=${this._onSegmentedFieldSelect}
               >
-                ${o.label}
+                ${t(o.label)}
               </button>`,
           )}
         </div>
-        ${desc ? html`<div class="composite-helper">${desc}</div>` : ""}
+        ${desc ? html`<div class="composite-helper">${t(desc)}</div>` : ""}
       </div>`;
     };
-    return html`<div class="grid-picker">
-        <div class="grid-picker-label">${LABELS.perf_mode}</div>
+    const effectsOff = val("perf_effects") < 1;
+    const fauna = val("perf_fauna");
+    const birdsOn = fauna >= 1 && cfg.fauna_birds !== false;
+    const planesOn = fauna >= 2 && cfg.fauna_planes !== false;
+    const c = this._formData;
+    return html`${this._renderIntro(
+        "performance",
+        "“Low” saves battery and helps older tablets, “Ultra” shows everything at full quality. Every effect can be switched off on its own; anything that is off costs nothing.",
+        "performance",
+      )}
+      <div class="grid-picker">
+        <div class="grid-picker-label">${t(LABELS.perf_mode)}</div>
         <div class="segmented">
           ${[
             { v: "low", l: "Low" },
@@ -4941,358 +5498,674 @@ class AtmosphericWeatherCardEditor extends LitElement {
                 class=${matched === o.v ? "active" : ""}
                 @click=${() => onPreset(o.v)}
               >
-                ${o.l}
+                ${t(o.l)}
               </button>`,
           )}
         </div>
-      </div>
-      <div class="settings-group">
-        <div class="settings-group-label">${LABELS.wind_style}</div>
-        <div class="segmented" role="radiogroup" aria-label=${LABELS.wind_style}>
-          ${[
-            { v: "lines", l: "Wind lines" },
-            { v: "flow", l: "Flow field" },
-            { v: "off", l: "Off" },
-          ].map(
-            (o) =>
-              html`<button
-                type="button"
-                role="radio"
-                class=${(cfg.wind_style || "lines") === o.v ? "active" : ""}
-                data-field="wind_style"
-                data-value=${o.v}
-                @click=${this._onSegmentedFieldSelect}
-              >
-                ${o.l}
-              </button>`,
-          )}
+        <div class="composite-helper">
+          ${matched === "custom"
+            ? t("Custom: you changed values of the preset.")
+            : t(HELPERS.perf_mode)}
         </div>
-        <div class="composite-helper">${HELPERS.wind_style}</div>
       </div>
-      ${this._renderDisclosure(
-        "Advanced Settings",
-        html`
-          ${perfButtons("perf_fps", LABELS.perf_fps, [
-            { value: 24, label: "24" },
-            { value: 30, label: "30" },
-            { value: 45, label: "45" },
-            { value: 60, label: "60" },
-          ])}
-          ${this._renderSlider(
-            "animation_speed",
-            LABELS.animation_speed,
-            0.0,
-            3.0,
-            0.1,
-          )}
-          ${this._renderSlider(
-            "bird_animation_speed",
-            LABELS.bird_animation_speed,
-            0.0,
-            3.0,
-            0.1,
-          )}
+      ${this._renderGroup(
+        "Graphics",
+        html`${perfButtons("perf_fps", LABELS.perf_fps, [
+          { value: 24, label: "24" },
+          { value: 30, label: "30" },
+          { value: 45, label: "45" },
+          { value: 60, label: "60" },
+        ])}
+        ${perfButtons("perf_cloud_quality", LABELS.perf_cloud_quality, [
+          { value: 0.5, label: "Low" },
+          { value: 1, label: "Medium" },
+          { value: 1.5, label: "High" },
+          { value: 2, label: "Ultra" },
+        ])}
+        ${perfButtons("perf_effects", LABELS.perf_effects, [
+          { value: 0, label: "Off" },
+          { value: 1, label: "Default" },
+          { value: 2, label: "Ultra" },
+        ])}
+        ${perfButtons("perf_dpr", LABELS.perf_dpr, [
+          { value: 0.5, label: "Low" },
+          { value: 1, label: "Medium" },
+          { value: 1.5, label: "High" },
+          { value: 2, label: "Full" },
+        ])}`,
+      )}
+      ${this._renderGroup(
+        "Sky & light",
+        html`<div class="settings-group">
+            <div class="settings-group-label">${t(LABELS.wind_style)}</div>
+            <div
+              class="segmented"
+              role="radiogroup"
+              aria-label=${t(LABELS.wind_style)}
+            >
+              ${[
+                { v: "lines", l: "Wind lines" },
+                { v: "flow", l: "Flow field" },
+                { v: "off", l: "Off" },
+              ].map(
+                (o) =>
+                  html`<button
+                    type="button"
+                    role="radio"
+                    class=${(cfg.wind_style || "lines") === o.v
+                      ? "active"
+                      : ""}
+                    data-field="wind_style"
+                    data-value=${o.v}
+                    @click=${this._onSegmentedFieldSelect}
+                  >
+                    ${t(o.l)}
+                  </button>`,
+              )}
+            </div>
+            <div class="composite-helper">${t(HELPERS.wind_style)}</div>
+          </div>
+          ${effectsOff
+            ? html`<div class="info">
+                ${t(
+                  "Effect Quality is Off: sun rays, haze and ground mist are not drawn. Blue hour and cloud amount still work.",
+                )}
+              </div>`
+            : ""}
+          <div class="toggle-group">
+            ${[
+              "effect_blue_hour",
+              "effect_sun_rays",
+              "effect_haze",
+              "effect_ground_mist",
+              "effect_cloud_coverage",
+            ].map((k) => this._renderSwitch(k, true))}
+          </div>`,
+      )}
+      ${this._renderGroup(
+        "Night sky",
+        html`${effectsOff
+            ? html`<div class="info">
+                ${t(
+                  "Effect Quality is Off, so there are no shooting stars or comets.",
+                )}
+              </div>`
+            : ""}
+          <div class="toggle-group">
+            ${this._renderSwitch("effect_shooting_stars", true)}
+          </div>
+          ${c.effect_shooting_stars !== false
+            ? html`<div class="indent">
+                ${this._renderSlider(
+                  "shooting_star_rate",
+                  t(LABELS.shooting_star_rate),
+                  0.25,
+                  3,
+                  0.25,
+                )}
+              </div>`
+            : ""}
+          <div class="toggle-group">
+            ${this._renderSwitch("effect_comets", true)}
+          </div>
+          ${c.effect_comets !== false
+            ? html`<div class="indent">
+                ${this._renderSlider(
+                  "comet_rate",
+                  t(LABELS.comet_rate),
+                  0.25,
+                  3,
+                  0.25,
+                  t(HELPERS.comet_rate),
+                )}
+              </div>`
+            : ""}
           ${this._renderSlider(
             "star_animation_speed",
-            LABELS.star_animation_speed,
+            t(LABELS.star_animation_speed),
             0.0,
             2.0,
             0.1,
-          )}
-          ${perfButtons("perf_cloud_quality", LABELS.perf_cloud_quality, [
-            { value: 0.5, label: "Low" },
-            { value: 1, label: "Medium" },
-            { value: 1.5, label: "High" },
-            { value: 2, label: "Ultra" },
-          ])}
-          ${perfButtons("perf_effects", LABELS.perf_effects, [
-            { value: 0, label: "Off" },
-            { value: 1, label: "Default" },
-            { value: 2, label: "Ultra" },
-          ])}
-          ${perfButtons("perf_fauna", LABELS.perf_fauna, [
-            { value: 0, label: "Off" },
-            { value: 1, label: "Birds" },
-            { value: 2, label: "All" },
-          ])}
-          ${perfButtons("perf_dpr", LABELS.perf_dpr, [
-            { value: 0.5, label: "Low" },
-            { value: 1, label: "Medium" },
-            { value: 1.5, label: "High" },
-            { value: 2, label: "Full" },
-          ])}
-          <div
-            class="settings-group"
-            style="margin-top: var(--awc-e-s4); padding-top: var(--awc-e-s4); border-top: 1px solid var(--divider-color);"
-          >
-            <div class="settings-group-label">🦅 Fauna Customization</div>
-            ${this._renderSlider(
-              "fauna_bird_density",
-              "Bird spawn rate",
-              0.5,
-              2.0,
-              0.1,
-            )}
-            ${this._renderSlider(
-              "fauna_plane_density",
-              "Plane spawn rate",
-              0.5,
-              2.0,
-              0.1,
-            )}
-            ${this._renderSlider(
-              "fauna_bird_flock_size",
-              "Birds per flock",
-              1,
-              20,
-              1,
-            )}
-            ${this._renderToggleGroup([
-              {
-                key: "fauna_birds_at_night",
-                label: "Birds at night",
-              },
-            ])}
+          )}`,
+      )}
+      ${this._renderGroup(
+        "Birds & planes",
+        html`<div class="sub-box">
+            <label class="toggle-row sub-box-head">
+              <span
+                ><ha-icon icon="mdi:bird"></ha-icon> ${t("Birds")}</span
+              >
+              <ha-switch
+                data-fauna="birds"
+                .checked=${birdsOn}
+                @change=${this._onFaunaToggle}
+              ></ha-switch>
+            </label>
+            ${birdsOn
+              ? html`${this._renderSlider(
+                  "fauna_bird_density",
+                  t("Frequency"),
+                  0.5,
+                  2.0,
+                  0.1,
+                )}
+                ${this._renderSlider(
+                  "bird_animation_speed",
+                  t("Speed"),
+                  0.0,
+                  3.0,
+                  0.1,
+                  t(HELPERS.bird_animation_speed),
+                )}
+                ${this._renderSlider(
+                  "fauna_bird_flock_size",
+                  t("Birds per flock"),
+                  1,
+                  20,
+                  1,
+                )}
+                <div class="toggle-group">
+                  ${this._renderSwitch("fauna_birds_at_night", true)}
+                </div>`
+              : ""}
           </div>
-        `,
+          <div class="sub-box">
+            <label class="toggle-row sub-box-head">
+              <span
+                ><ha-icon icon="mdi:airplane"></ha-icon> ${t("Planes")}</span
+              >
+              <ha-switch
+                data-fauna="planes"
+                .checked=${planesOn}
+                @change=${this._onFaunaToggle}
+              ></ha-switch>
+            </label>
+            ${planesOn
+              ? html`${this._renderSlider(
+                  "fauna_plane_density",
+                  t("Frequency"),
+                  0.5,
+                  2.0,
+                  0.1,
+                )}
+                ${this._renderSlider(
+                  "fauna_plane_speed",
+                  t("Speed"),
+                  0.25,
+                  3,
+                  0.05,
+                  t(HELPERS.fauna_plane_speed),
+                )}`
+              : ""}
+          </div>`,
+      )}
+      ${this._renderGroup(
+        "Animation",
+        this._renderSlider(
+          "animation_speed",
+          t(LABELS.animation_speed),
+          0.0,
+          3.0,
+          0.1,
+          t(HELPERS.animation_speed),
+        ),
       )}`;
+  }
+  // Birds and planes: perf_fauna sets what may fly at all, fauna_birds and
+  // fauna_planes switch each one off on its own.
+  _onFaunaToggle(e) {
+    const which = this._ds(e, "fauna");
+    const on = e.target.checked === true;
+    const cfg = this._config || {};
+    const raw = parseInt(cfg.perf_fauna, 10);
+    const level = Number.isFinite(raw) ? raw : perfPreset(cfg).perf_fauna;
+    const birdsOn = level >= 1 && cfg.fauna_birds !== false;
+    const changes = {},
+      strip = [];
+    if (which === "birds") {
+      if (on) {
+        strip.push("fauna_birds");
+        if (level < 1) changes.perf_fauna = 1;
+      } else changes.fauna_birds = false;
+    } else if (which === "planes") {
+      if (on) {
+        strip.push("fauna_planes");
+        if (level < 2) {
+          changes.perf_fauna = 2;
+          if (!birdsOn) changes.fauna_birds = false;
+        }
+      } else changes.fauna_planes = false;
+    } else return;
+    this._patch(changes, { strip });
+  }
+  _renderSwitch(key, defaultOn) {
+    const v = this._formData[key];
+    const checked = defaultOn ? v !== false : v === true;
+    const helper = HELPERS[key];
+    return html`<label class="toggle-row">
+      <span class="toggle-text"
+        ><span>${t(LABELS[key] || key)}</span>${helper
+          ? html`<span class="toggle-helper">${t(helper)}</span>`
+          : ""}</span
+      >
+      <ha-switch
+        data-key=${key}
+        .checked=${checked}
+        @change=${this._onToggleGroupChange}
+      ></ha-switch>
+    </label>`;
+  }
+  _renderGroup(title, body) {
+    return html`<div class="editor-group">
+      <div class="editor-group-title">${t(title)}</div>
+      ${body}
+    </div>`;
+  }
+  // A short help text behind an (i) button, with a link into the README.
+  _renderIntro(id, text, anchor) {
+    const open = !!(this._helpOpen && this._helpOpen[id]);
+    return html`<div class="help-row">
+        <button
+          type="button"
+          class="help-btn ${open ? "active" : ""}"
+          data-help=${id}
+          aria-expanded=${open ? "true" : "false"}
+          @click=${this._onHelpToggle}
+        >
+          <ha-icon icon="mdi:information-outline"></ha-icon>
+          <span>${t("Help")}</span>
+        </button>
+      </div>
+      ${open
+        ? html`<div class="help-box">
+            ${t(text)}
+            ${anchor
+              ? html` <a
+                  href="${DOCS_URL}#${anchor}"
+                  target="_blank"
+                  rel="noopener"
+                  >${t("More in the docs")} →</a
+                >`
+              : ""}
+          </div>`
+        : ""}`;
+  }
+  _onHelpToggle(e) {
+    const id = this._ds(e, "help");
+    if (!id) return;
+    this._helpOpen = { ...(this._helpOpen || {}), [id]: !this._helpOpen?.[id] };
+    this.requestUpdate();
+  }
+  _panel(id, icon, title, sub, body) {
+    return html`<ha-expansion-panel
+      outlined
+      data-panel=${id}
+      .expanded=${this._openPanel === id}
+      @expanded-changed=${this._onPanelExpandedChanged}
+    >
+      <div slot="header" class="panel-header">
+        <ha-icon icon=${icon}></ha-icon>
+        <div class="panel-title">
+          <span>${t(title)}</span>
+          <span class="panel-sub">${t(sub)}</span>
+        </div>
+      </div>
+      ${body}
+    </ha-expansion-panel>`;
+  }
+  // Sensors that report a rain rate (mm/h or in/h). The picker shows only these.
+  _precipitationSensors() {
+    const states = (this.hass && this.hass.states) || {};
+    const current = (this._config && this._config.precipitation_entity) || "";
+    const cache = this._precipCache;
+    if (cache && cache.states === states && cache.current === current)
+      return cache.list;
+    const list = Object.keys(states).filter(
+      (id) =>
+        id.startsWith("sensor.") &&
+        isRainRateUnit(
+          states[id] &&
+            states[id].attributes &&
+            states[id].attributes.unit_of_measurement,
+        ),
+    );
+    if (current && !list.includes(current)) list.push(current);
+    this._precipCache = { states, current, list };
+    return list;
+  }
+  _setColorMode(mode) {
+    this._valueChanged({
+      stopPropagation() {},
+      detail: { value: { ...this._formData, _color_mode: mode } },
+    });
+  }
+  _renderSunMoonPanel() {
+    const mode = this._formData.celestial_position || "fixed";
+    return html`${this._renderIntro(
+        "sun_moon",
+        "The sun entity (sun.sun) decides between day and night and provides the elevation for twilight, blue hour and sun rays. With “Fixed” the sun or moon stays where you put it.",
+        "sun--moon",
+      )}
+      ${this._renderForm([
+        { name: "sun_entity", selector: { entity: { domain: "sun" } } },
+        {
+          name: "moon_phase_entity",
+          selector: { entity: { domain: "sensor" } },
+        },
+      ])}
+      ${this._renderGroup(
+        "Position & size",
+        html`<div class="settings-group">
+            <div class="segmented" role="radiogroup">
+              ${[
+                { v: "fixed", l: "Fixed" },
+                { v: "dynamic_sun", l: "Moving sun" },
+                { v: "dynamic_both", l: "Moving sun & moon" },
+              ].map(
+                (o) =>
+                  html`<button
+                    type="button"
+                    role="radio"
+                    class=${mode === o.v ? "active" : ""}
+                    data-field="celestial_position"
+                    data-value=${o.v}
+                    @click=${this._onSegmentedFieldSelect}
+                  >
+                    ${t(o.l)}
+                  </button>`,
+              )}
+            </div>
+            <div class="composite-helper">
+              ${t(
+                "“Moving” follows the real position of the sun throughout the day.",
+              )}
+            </div>
+          </div>
+          ${mode === "fixed" || mode === "dynamic_sun"
+            ? html`<div class="field-group">
+                ${this._renderPositionGrid(
+                  "celestial_alignment",
+                  POSITION_GRIDS.celestial_alignment,
+                )}
+                ${this._renderCelestialOffsetPicker()}
+              </div>`
+            : ""}
+          ${this._renderSlider(
+            "celestial_size",
+            t(LABELS.celestial_size),
+            20,
+            200,
+            1,
+          )}`,
+      )}`;
+  }
+  _renderAppearancePanel() {
+    const c = this._formData;
+    const immersive = (c.card_style || "standalone") !== "standalone";
+    return html`${this._renderIntro(
+        "appearance",
+        "In the “Immersive” style the card has no sky or background of its own and works as a dashboard header. Full width and edge fades are only available there.",
+        "appearance",
+      )}
+      ${this._renderGroup(
+        "Color mode",
+        html`<div class="segmented" role="radiogroup">
+            ${OPT.color_mode.map(
+              (o) =>
+                html`<button
+                  type="button"
+                  role="radio"
+                  class=${c._color_mode === o.value ? "active" : ""}
+                  @click=${() => this._setColorMode(o.value)}
+                >
+                  ${t(o.short)}
+                </button>`,
+            )}
+          </div>
+          <div class="composite-helper">
+            ${t(
+              (OPT.color_mode.find((o) => o.value === c._color_mode) || {})
+                .label || "",
+            )}
+          </div>
+          ${c._color_mode === "entity"
+            ? this._renderForm([
+                { name: "theme_entity", selector: { entity: {} } },
+              ])
+            : ""}`,
+      )}
+      ${this._renderGroup("Card style", this._renderCardStyleSegmented())}
+      ${this._renderGroup(
+        "Frame & layers",
+        html`${this._renderToggleGroup([
+          { key: "card_hide_text", label: LABELS.card_hide_text },
+          { key: "card_square", label: LABELS.card_square },
+          ...(immersive
+            ? [
+                { key: "card_full_width", label: LABELS.card_full_width },
+                { key: "card_mask_vertical", label: LABELS.card_mask_vertical },
+                {
+                  key: "card_mask_horizontal",
+                  label: LABELS.card_mask_horizontal,
+                },
+              ]
+            : []),
+        ])}
+        ${this._renderSlider(
+          "card_stack_order",
+          t(LABELS.card_stack_order),
+          -10,
+          10,
+          1,
+          t(HELPERS.card_stack_order),
+        )}
+        ${this._renderOffsetPicker()}`,
+      )}
+      ${this._renderGroup(
+        "Color filters",
+        this._renderForm([
+          {
+            name: "card_filter_clouds",
+            selector: {
+              select: { mode: "dropdown", options: tOpts(OPT.card_filter_clouds) },
+            },
+          },
+          {
+            name: "card_filter_sun",
+            selector: {
+              select: { mode: "dropdown", options: tOpts(OPT.card_filter_sun) },
+            },
+          },
+        ]),
+      )}`;
+  }
+  _renderImagePanel() {
+    const c = this._formData;
+    const thumb = (field) =>
+      html`<div class="image-thumb">
+        <div
+          class="image-thumb-pic ${c[field] ? "has" : ""}"
+          style=${c[field] ? `background-image:url("${cssUrl(c[field])}")` : ""}
+        >
+          ${c[field] ? "" : t("No image")}
+        </div>
+        ${this._renderClearableText(field)}
+      </div>`;
+    const [v, h] = (c.image_alignment || "top-right").split("-");
+    const vPos = v === "top" ? "top" : v === "bottom" ? "bottom" : "middle";
+    const hPos = (h || v) === "left" ? "left" : (h || v) === "right" ? "right" : "center";
+    const rawScale = parseFloat(c.image_scale);
+    const scale = Math.max(0, Math.min(200, Number.isFinite(rawScale) ? rawScale : 100));
+    const src = c.image_day || c.image_night;
+    return html`${this._renderIntro(
+        "image",
+        "Put your images in /config/www/ and enter them as /local/house-day.png. Transparent PNGs look best. Without a night image the day image is used.",
+        "custom-images",
+      )}
+      <div class="image-thumbs">
+        ${thumb("image_day")} ${thumb("image_night")}
+      </div>
+      ${src
+        ? this._renderGroup(
+            "Placement",
+            html`<div class="image-place">
+                ${this._renderPositionGrid(
+                  "image_alignment",
+                  POSITION_GRIDS.image_alignment,
+                )}
+                <div class="image-preview" aria-hidden="true">
+                  <div
+                    class="image-preview-img v-${vPos} h-${hPos}"
+                    style="height:${scale}%;background-image:url(&quot;${cssUrl(
+                      src,
+                    )}&quot;)"
+                  ></div>
+                </div>
+              </div>
+              ${this._renderSlider(
+                "image_scale",
+                t(LABELS.image_scale),
+                0,
+                200,
+                1,
+                t(HELPERS.image_scale),
+              )}
+              ${this._renderImageOffsetPicker()}`,
+          )
+        : ""}
+      ${this._renderGroup(
+        "Switch image by state",
+        html`<div class="status-sentence">
+            ${t(
+              "When this entity is on, open or home, the card shows other images:",
+            )}
+          </div>
+          ${this._renderForm(this._imageStatusSchema())}
+          <div class="composite-helper">
+            ${t(
+              "For example a picture with the garage door open while the door is open.",
+            )}
+          </div>`,
+      )}`;
+  }
+  _renderCardsPanel() {
+    return html`${this._renderIntro(
+        "cards",
+        "Add any Home Assistant card, for example an entities or history card. The cards are shown on top of the sky. Grids and stacks work too.",
+        "embedded-cards",
+      )}
+      ${this._renderPositionGrid(
+        "custom_cards_position",
+        POSITION_GRIDS.custom_cards_position,
+      )}
+      ${this._renderCustomCardsEditor()}
+      ${this._renderDisclosure(
+        "Advanced options",
+        this._renderClearableText("custom_cards_css_class"),
+      )}`;
+  }
+  _renderChipsPanel() {
+    const c = this._formData;
+    if (c.card_hide_text === true)
+      return html`<div class="info inline-action">
+        <span
+          >${t(
+            "Chips are hidden by Hide all text in Appearance. Your settings are kept.",
+          )}</span
+        >
+        <button
+          type="button"
+          class="inline-action-btn"
+          data-field="card_hide_text"
+          @click=${this._onClearFieldClick}
+        >
+          ${t("Show again")}
+        </button>
+      </div>`;
+    return html`${this._renderIntro(
+        "chips",
+        "A chip shows one value, for example the temperature, the wind or tomorrow's forecast. All chips share one area whose position and layout you set below. Single chips can be placed freely.",
+        "chips-in-the-editor",
+      )}
+      ${this._renderChipsEditor()}`;
   }
   render() {
     if (!this.hass || !this._config) return html``;
-    const c = this._formData;
+    useLanguage(this.hass);
     return html`${this._renderForm([
         { name: "weather_entity", selector: { entity: { domain: "weather" } } },
         {
           name: "precipitation_entity",
-          selector: { entity: { domain: "sensor" } },
+          selector: {
+            entity: {
+              domain: "sensor",
+              include_entities: this._precipitationSensors(),
+            },
+          },
         },
       ])}
-      <ha-expansion-panel
-        outlined
-        data-panel="sun_moon"
-        .expanded=${this._openPanel === "sun_moon"}
-        @expanded-changed=${this._onPanelExpandedChanged}
-      >
-        <div slot="header" class="panel-header">
-          <ha-icon icon="mdi:theme-light-dark"></ha-icon>
-          <span>Sun &amp; Moon</span>
-        </div>
-        ${this._renderForm([
-          {
-            type: "grid",
-            name: "",
-            schema: [
-              { name: "sun_entity", selector: { entity: { domain: "sun" } } },
-              {
-                name: "moon_phase_entity",
-                selector: { entity: { domain: "sensor" } },
-              },
-            ],
-          },
-        ])}
-        ${this._renderDisclosure(
-          "Position & Size",
-          (() => {
-            const mode = this._formData.celestial_position || "fixed";
-            return html` ${this._renderForm([
-              {
-                name: "celestial_position",
-                selector: {
-                  select: {
-                    mode: "dropdown",
-                    options: [
-                      { value: "fixed", label: "Fixed Sun & Moon" },
-                      { value: "dynamic_sun", label: "Dynamic Sun" },
-                      { value: "dynamic_both", label: "Dynamic Sun & Moon" },
-                    ],
-                  },
-                },
-              },
-            ])}
-            ${mode === "fixed" || mode === "dynamic_sun"
-              ? html`<div class="field-group">
-                  ${this._renderPositionGrid(
-                    "celestial_alignment",
-                    POSITION_GRIDS.celestial_alignment,
-                  )}
-                  ${this._renderCelestialOffsetPicker()}
-                </div> `
-              : ""}
-            ${this._renderSlider(
-              "celestial_size",
-              LABELS.celestial_size,
-              20,
-              200,
-              1,
-            )}`;
-          })(),
-        )}
-      </ha-expansion-panel>
-      <ha-expansion-panel
-        outlined
-        data-panel="color_mode"
-        .expanded=${this._openPanel === "color_mode"}
-        @expanded-changed=${this._onPanelExpandedChanged}
-      >
-        <div slot="header" class="panel-header">
-          <ha-icon icon="mdi:palette-outline"></ha-icon>
-          <span>Color Mode</span>
-        </div>
-        ${this._renderForm(this._colorModeSchema())}
-        ${this._renderDisclosure(
-          "Advanced options",
-          this._renderForm([
-            {
-              name: "card_filter_clouds",
-              selector: {
-                select: {
-                  mode: "dropdown",
-                  options: OPT.card_filter_clouds,
-                },
-              },
-            },
-            {
-              name: "card_filter_sun",
-              selector: {
-                select: { mode: "dropdown", options: OPT.card_filter_sun },
-              },
-            },
-          ]),
-        )}</ha-expansion-panel
-      >
-      <ha-expansion-panel
-        outlined
-        data-panel="layout"
-        .expanded=${this._openPanel === "layout"}
-        @expanded-changed=${this._onPanelExpandedChanged}
-      >
-        <div slot="header" class="panel-header">
-          <ha-icon icon="mdi:page-layout-body"></ha-icon>
-          <span>Card Style</span>
-        </div>
-        ${this._renderCardStyleSegmented()}
-        ${this._renderDisclosure(
-          "Advanced options",
-          html`${this._renderToggleGroup([
-            { key: "card_hide_text", label: LABELS.card_hide_text },
-            { key: "card_square", label: LABELS.card_square },
-            ...(!((this._formData.card_style || "standalone") === "standalone")
-              ? [
-                  { key: "card_full_width", label: LABELS.card_full_width },
-                  {
-                    key: "card_mask_vertical",
-                    label: LABELS.card_mask_vertical,
-                  },
-                  {
-                    key: "card_mask_horizontal",
-                    label: LABELS.card_mask_horizontal,
-                  },
-                ]
-              : []),
-          ])}
-          ${this._renderSlider(
-            "card_stack_order",
-            LABELS.card_stack_order,
-            -10,
-            10,
-            1,
-            HELPERS.card_stack_order,
-          )}
-          ${this._renderOffsetPicker()}`,
-        )}</ha-expansion-panel
-      >
-      <ha-expansion-panel
-        outlined
-        data-panel="text"
-        .expanded=${this._openPanel === "text"}
-        @expanded-changed=${this._onPanelExpandedChanged}
-      >
-        <div slot="header" class="panel-header">
-          <ha-icon icon="mdi:layers-outline"></ha-icon>
-          <span>Overlays</span>
-        </div>
-        ${c.card_hide_text === true
-          ? html`<div class="info inline-action">
-              <span
-                >Chips are hidden by <b>Hide All Text</b> in Card Style →
-                Advanced options. Your settings are preserved.</span
-              >
-              <button
-                type="button"
-                class="inline-action-btn"
-                data-field="card_hide_text"
-                @click=${this._onClearFieldClick}
-              >
-                Show again
-              </button>
-            </div>`
-          : html`${this._renderDisclosure("Chips", this._renderChipsEditor())}`}
-        ${this._renderDisclosure(
-          "Image",
-          html`<div class="settings-group">
-              ${this._renderClearableText("image_day")}
-              ${this._renderClearableText("image_night")}
-            </div>
-            ${this._renderSlider(
-              "image_scale",
-              LABELS.image_scale,
-              0,
-              200,
-              1,
-              HELPERS.image_scale,
-            )}
-            ${this._renderPositionGrid(
-              "image_alignment",
-              POSITION_GRIDS.image_alignment,
-            )}
-            ${this._renderImageOffsetPicker()}
-            ${this._renderDisclosure(
-              "Status Override",
-              this._renderForm(this._imageStatusSchema()),
-            )}`,
-        )}
-        ${this._renderDisclosure(
-          "Cards",
-          html`<div class="info">
-              Add any Home Assistant card here. You can also use grids or stacks
-              if you need a specific layout.
-            </div>
-            ${this._renderPositionGrid(
-              "custom_cards_position",
-              POSITION_GRIDS.custom_cards_position,
-            )}
-            ${this._renderClearableText("custom_cards_css_class")}
-            ${this._renderCustomCardsEditor()}`,
-        )}</ha-expansion-panel
-      >
-      <ha-expansion-panel
-        outlined
-        .expanded=${this._openPanel === "performance"}
-        @expanded-changed=${(e) =>
-          this._onPanelToggle("performance", e.detail.expanded)}
-      >
-        <div slot="header" class="panel-header">
-          <ha-icon icon="mdi:speedometer"></ha-icon>
-          <span>Performance</span>
-        </div>
-        ${this._renderPerformancePanel()}</ha-expansion-panel
-      >
-      <ha-expansion-panel
-        outlined
-        .expanded=${this._openPanel === "card_tap_action"}
-        @expanded-changed=${(e) =>
-          this._onPanelToggle("card_tap_action", e.detail.expanded)}
-      >
-        <div slot="header" class="panel-header">
-          <ha-icon icon="mdi:gesture-tap"></ha-icon>
-          <span>Tap Action</span>
-        </div>
-        ${this._renderForm([
+      ${this._panel(
+        "sun_moon",
+        "mdi:theme-light-dark",
+        "Sun & Moon",
+        "Day and night, moon phase, position and size",
+        this._renderSunMoonPanel(),
+      )}
+      ${this._panel(
+        "appearance",
+        "mdi:palette-outline",
+        "Appearance",
+        "Color mode, card style, edges and filters",
+        this._renderAppearancePanel(),
+      )}
+      ${this._panel(
+        "chips",
+        "mdi:label-multiple-outline",
+        "Chips",
+        "Small info tiles with sensor values or the forecast",
+        this._renderChipsPanel(),
+      )}
+      ${this._panel(
+        "image",
+        "mdi:image-outline",
+        "Image",
+        "Your own picture for day and night, e.g. your house",
+        this._renderImagePanel(),
+      )}
+      ${this._panel(
+        "cards",
+        "mdi:card-multiple-outline",
+        "Embedded cards",
+        "Other Home Assistant cards inside this card",
+        this._renderCardsPanel(),
+      )}
+      ${this._panel(
+        "performance",
+        "mdi:speedometer",
+        "Performance & effects",
+        "Preset, frame rate, effects, birds and planes",
+        this._renderPerformancePanel(),
+      )}
+      ${this._panel(
+        "card_tap_action",
+        "mdi:gesture-tap",
+        "Tap action",
+        "What happens when the card is tapped",
+        this._renderForm([
           { name: "card_tap_action", selector: { ui_action: {} } },
-        ])}</ha-expansion-panel
-      >`;
+        ]),
+      )}`;
   }
 }
+// Every fixed text of the editor, for the translation tests.
+export const EDITOR_TEXT_TABLES = Object.freeze({
+  LABELS,
+  HELPERS,
+  CHIP_LABELS,
+  CHIP_HELPERS,
+  OPT,
+  FC_ATTRIBUTES,
+});
 if (!customElements.get("atmo-weather-card-editor")) {
   customElements.define(
     "atmo-weather-card-editor",

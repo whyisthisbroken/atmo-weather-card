@@ -639,3 +639,78 @@ test("the dynamic sun stays at the horizon while Home Assistant rolls over sunse
   // Just before sunset the state flipped early: the moon starts on the left.
   assert.equal(place("below_horizon", 15 * h, 5 * 60e3), 0);
 });
+
+test("effect switches reach the scene", () => {
+  const hass = makeHass({ weather: "partlycloudy" });
+  Object.assign(hass.states["weather.home"].attributes, { cloud_coverage: 0, visibility: 2 });
+  const on = mountCard({ perf_mode: "ultra" }, hass);
+  assert.equal(on._params.cloud, 0, "cloud cover from data");
+  assert.ok(on._atmo.haze > 0);
+  assert.ok(on._atmo.rays > 0);
+
+  const off = mountCard(
+    { perf_mode: "ultra", effect_cloud_coverage: false, effect_haze: "false", effect_sun_rays: false },
+    hass,
+  );
+  assert.ok(off._params.cloud > 0, "fixed cloud amount of the weather state");
+  assert.equal(off._atmo.haze, 0);
+  assert.equal(off._atmo.rays, 0);
+});
+
+test("birds and planes can be switched off on their own", () => {
+  const card = mountCard({ perf_mode: "ultra", fauna_birds: false, fauna_plane_speed: 2 });
+  assert.equal(card._faunaBirds, false);
+  assert.equal(card._faunaPlanes, true);
+  assert.equal(card._faunaPlaneSpeed, 2);
+  card._birds.push({ x: 0, y: 0 });
+  runFrames(2);
+  assert.equal(card._birds.length, 0);
+
+  const plane = card._createPlane(400, 200);
+  const near = Math.abs(plane.vx) / Math.cos(plane.climbAngle);
+  assert.ok(near > 0.4 && near < 1.4);
+
+  const noPlanes = mountCard({ perf_mode: "ultra", fauna_planes: false });
+  noPlanes._planes.push(noPlanes._createPlane(400, 200));
+  const x = noPlanes._planes[0].x;
+  runFrames(2);
+  assert.equal(noPlanes._planes[0].x, x, "planes are not drawn or moved");
+});
+
+test("new options apply at once, without waiting for a state change", () => {
+  const hass = makeHass({ weather: "partlycloudy" });
+  Object.assign(hass.states["weather.home"].attributes, { cloud_coverage: 0 });
+  const card = mountCard({ perf_mode: "ultra" }, hass);
+  assert.equal(card._params.cloud, 0);
+  card.setConfig({ weather_entity: "weather.home", sun_entity: "sun.sun", perf_mode: "ultra", effect_cloud_coverage: false });
+  assert.ok(card._params.cloud > 0);
+});
+
+test("without cloud amount from data, a closed deck still blocks the sun rays", () => {
+  const hass = makeHass({ weather: "cloudy" });
+  hass.states["sun.sun"].attributes.elevation = 15;
+  Object.assign(hass.states["weather.home"].attributes, { cloud_coverage: 100 });
+  const card = mountCard({ perf_mode: "ultra", effect_cloud_coverage: false }, hass);
+  assert.equal(card._atmo.rays, 0);
+});
+
+test("the performance preset sets the amount of birds and planes unless the config does", () => {
+  const ultra = mountCard({ perf_mode: "ultra" });
+  assert.equal(ultra._faunaBirdDensity, 1.5);
+  assert.equal(ultra._faunaPlaneDensity, 1.5);
+  assert.equal(ultra._faunaBirdFlockSize, 12);
+  const low = mountCard({ perf_mode: "low" });
+  assert.equal(low._faunaBirdDensity, 0.5);
+  assert.equal(low._faunaBirdFlockSize, 4);
+  const plain = mountCard({});
+  assert.equal(plain._faunaBirdFlockSize, 8);
+  const custom = mountCard({ perf_mode: "ultra", fauna_bird_density: 0.7, fauna_bird_flock_size: 3 });
+  assert.equal(custom._faunaBirdDensity, 0.7);
+  assert.equal(custom._faunaBirdFlockSize, 3);
+});
+
+test("shooting star and comet rates stay between 0.25 and 3", () => {
+  const card = mountCard({ shooting_star_rate: 0, comet_rate: 9 });
+  assert.equal(card._fx.shootingStarRate, 0.25);
+  assert.equal(card._fx.cometRate, 3);
+});
