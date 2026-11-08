@@ -51,6 +51,16 @@ export function escapeHtml(value) {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 }
+// Removes a trailing unit (with any space before it) from a formatted value.
+// Home Assistant formats weather temperatures as "12 °C"; fancy_unit draws
+// the unit itself.
+export function stripTrailingUnit(text, unit) {
+  const value = String(text);
+  if (!unit) return value;
+  const trimmed = value.replace(/[\s\u00a0\u202f]+$/, "");
+  if (!trimmed.endsWith(unit) || trimmed.length === unit.length) return value;
+  return trimmed.slice(0, -unit.length).replace(/[\s\u00a0\u202f]+$/, "");
+}
 export function escapeHtmlAttr(value) {
   return escapeHtml(value);
 }

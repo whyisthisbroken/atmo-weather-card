@@ -714,3 +714,21 @@ test("shooting star and comet rates stay between 0.25 and 3", () => {
   assert.equal(card._fx.shootingStarRate, 0.25);
   assert.equal(card._fx.cometRate, 3);
 });
+
+test("fancy_unit shows the unit once when Home Assistant formats it with a unit", async () => {
+  const { stripTrailingUnit } = await import("../src/atmo-weather-helpers.js");
+  assert.equal(stripTrailingUnit("12 °C", "°C"), "12");
+  assert.equal(stripTrailingUnit("12 °F", "°F"), "12");
+  assert.equal(stripTrailingUnit("12", "°C"), "12");
+  assert.equal(stripTrailingUnit("°C", "°C"), "°C");
+  assert.equal(stripTrailingUnit("12 °C", ""), "12 °C");
+
+  // Like Home Assistant: weather temperatures come formatted with their unit.
+  const hass = makeHass();
+  hass.formatEntityAttributeValue = (entity, attribute) =>
+    attribute === "temperature" ? `${entity.attributes.temperature} ${entity.attributes.temperature_unit}` : `${entity.attributes[attribute]}`;
+  const card = mountCard({ chips: [{ entity: "weather.home", attribute: "temperature", fancy_unit: true }] }, hass);
+  const html = chips(card)[0].innerHTML;
+  assert.equal((html.match(/°C/g) || []).length, 1, html);
+  assert.match(html, /<span class="fancy-unit">°C<\/span>/);
+});

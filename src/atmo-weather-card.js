@@ -90,6 +90,7 @@ import {
   parseAnchor,
   parseCSSVal,
   resolveBackgroundStyle,
+  stripTrailingUnit,
   thresholdSig,
 } from "./atmo-weather-helpers.js";
 import { buildStyles } from "./atmo-weather-styles.js";
@@ -2588,7 +2589,7 @@ class AtmosphericWeatherCard extends HTMLElement {
         ? hass.formatEntityAttributeValue(sensor, "temperature")
         : formatted;
       const fancyHaFormatted = isWeather || mainHaFormatted;
-      const fancyVal =
+      const fancyVal = stripTrailingUnit(
         rawTemp != null
           ? this._resolveChipValueFormatted(
               chip,
@@ -2597,7 +2598,9 @@ class AtmosphericWeatherCard extends HTMLElement {
               fancyBaseFormatted,
               fancyHaFormatted,
             )
-          : formatted;
+          : formatted,
+        rawUnit,
+      );
       const systemTempUnit =
         hass && hass.config && hass.config.unit_system
           ? hass.config.unit_system.temperature || ""

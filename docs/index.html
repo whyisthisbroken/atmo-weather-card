@@ -2509,11 +2509,12 @@ star_animation_speed: 0.6 # Stars only; twinkle speed (0.0-2.0)</code></pre></di
     if (m(/battery/)) return { state: "76", attributes: { unit_of_measurement: "%", friendly_name: "Battery" } };
     return { state: "42", attributes: { friendly_name: id.split(".")[1].replace(/_/g, " ") } };
   };
-  const UNITS = { humidity: "%", wind_speed: "km/h", precipitation_probability: "%", uv_index: "" };
+  // Like Home Assistant: attribute values come formatted with their unit.
+  const UNITS = { temperature: "°C", templow: "°C", humidity: "%", wind_speed: "km/h", precipitation_probability: "%", uv_index: "" };
   const forecast = (type) => {
     const conds = ["sunny", "partlycloudy", "rainy", "cloudy", "sunny", "lightning-rainy", "partlycloudy"];
     const n = type === "hourly" ? 24 : 7, step = type === "hourly" ? 3600e3 : 86400e3;
-    return Array.from({ length: n }, (_, i) => ({ datetime: new Date(Date.now() + i * step).toISOString(), condition: conds[i % conds.length], temperature: 14 + ((i * 3) % 7), templow: 6 + (i % 4), precipitation_probability: (i * 17) % 90, humidity: 60 + (i % 5) * 4, uv_index: (i * 2) % 9 }));
+    return Array.from({ length: n }, (_, i) => ({ datetime: new Date(Date.now() + i * step).toISOString(), condition: conds[i % conds.length], temperature: 14 + ((i * 3) % 7), templow: 6 + (i % 4), precipitation_probability: [20, 10, 70, 40, 5, 80, 30][i % 7], humidity: 60 + (i % 5) * 4, uv_index: [3, 5, 2, 4, 6, 1, 3][i % 7] }));
   };
   function buildHass() {
     const states = {
@@ -2568,11 +2569,13 @@ star_animation_speed: 0.6 # Stars only; twinkle speed (0.0-2.0)</code></pre></di
   document.addEventListener("click", (e) => {
     const t = e.target.closest("button.try");
     if (t) {
-      const { fragment, cfg } = JSON.parse(t.dataset.example);
+      // data-example holds the example config (see scripts/build-docs.mjs).
+      const cfg = JSON.parse(t.dataset.example);
       document.querySelectorAll(".code.showing").forEach((c) => c.classList.remove("showing"));
       t.closest(".code").classList.add("showing");
       title.textContent = headingBefore(t);
-      mount(fragment ? { ...BASE, ...cfg } : { ...BASE, ...cfg });
+      // Examples without chips of their own keep the chips of the default card.
+      mount({ ...DEFAULT, ...cfg });
       if (window.innerWidth <= 1180) document.querySelector(".live").scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
