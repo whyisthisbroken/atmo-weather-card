@@ -351,6 +351,138 @@ test("clouds are baked with a slight blur against the gradient grid", () => {
   assert.equal(card._cloudBakeFilter(1), "blur(1.35px) saturate(0.55) brightness(1.08)");
 });
 
+test("breathing re-bakes only the changed clouds in their own cells, a few per frame", () => {
+  const card = mountCard({ perf_mode: "ultra" }, makeHass({ weather: "cloudy" }));
+  runFrames(5);
+  assert.equal(card._cloudBreathingShapes, true);
+  const clouds = card._clouds.filter((c) => c._bakedCanvas);
+  const cell = (c) => [c._bakedCanvas, c._atlasX, c._atlasY, c._atlasW, c._atlasH];
+  const cells = clouds.map(cell);
+  let fullBakes = 0;
+  const fullBake = card._doBakeAllClouds;
+  card._doBakeAllClouds = function () {
+    fullBakes++;
+    return fullBake.call(this);
+  };
+  for (const cloud of clouds) card._breatheCloudShape(cloud);
+  card._requestAdvancedCloudBake(clouds);
+  assert.equal(card._pendingCloudBakes.size, clouds.length);
+  // The first frame takes clouds until about 120 puffs are re-baked.
+  let firstFrame = 0;
+  for (let puffs = 0; puffs < 120 && firstFrame < clouds.length; firstFrame++)
+    puffs += clouds[firstFrame].puffs.length;
+  assert.ok(firstFrame < clouds.length);
+  runFrames(1);
+  assert.equal(card._pendingCloudBakes.size, clouds.length - firstFrame);
+  runFrames(clouds.length);
+  assert.equal(card._pendingCloudBakes.size, 0);
+  assert.equal(fullBakes, 0);
+  // The breathing range is part of the bake box, so every cloud keeps its cell.
+  assert.deepEqual(clouds.map(cell), cells);
+});
+
+test("a cloud that no longer fits its cell falls back to a full bake", () => {
+  const card = mountCard({ perf_mode: "ultra" }, makeHass({ weather: "cloudy" }));
+  runFrames(5);
+  const [first, second] = card._clouds.filter((c) => c._bakedCanvas);
+  let fullBakes = 0;
+  card._doBakeAllClouds = () => fullBakes++;
+  card._lastBakeTime = null;
+  first._atlasW = 1;
+  card._requestAdvancedCloudBake([first, second]);
+  runFrames(1);
+  assert.equal(fullBakes, 1);
+  // The full bake covers the rest of the queue.
+  assert.equal(card._pendingCloudBakes.size, 0);
+  assert.equal(card._rebakeCloudInPlace({ puffs: [] }), false);
+});
+
+test("clouds are blurred once each, not once per puff", () => {
+  const card = mountCard({ perf_mode: "ultra" }, makeHass({ weather: "cloudy" }));
+  runFrames(5);
+  const atlas = card._cloudAtlases[0];
+  const scratch = card._getCloudScratch(1, 1);
+  const filters = [];
+  for (const ctx of [atlas.ctx, scratch.ctx]) {
+    let value = "none";
+    Object.defineProperty(ctx, "filter", {
+      configurable: true,
+      get: () => value,
+      set: (v) => {
+        value = v;
+        filters.push([ctx === atlas.ctx ? "atlas" : "scratch", v]);
+      },
+    });
+  }
+  const cloud = card._clouds.find((c) => c._bakedCanvas === atlas.canvas);
+  assert.ok(cloud.puffs.length > 3);
+  assert.equal(card._rebakeCloudInPlace(cloud), true);
+  assert.deepEqual(filters, [["atlas", card._cloudBakeFilter(card._cachedDimensions.dpr)]]);
+  // A larger cloud grows the scratch canvas, a smaller one reuses it.
+  const grown = card._getCloudScratch(scratch.canvas.width + 10, 1);
+  assert.notEqual(grown, scratch);
+  assert.equal(card._getCloudScratch(1, 1), grown);
+});
+
+test("starting the card bakes the clouds once, without a second bake queued", () => {
+  const card = mountCard({ perf_mode: "ultra" }, makeHass({ weather: "cloudy" }));
+  runFrames(5);
+  assert.ok(card._clouds.some((c) => c._bakedCanvas));
+  // The first bake remembers the light direction, so the first frame finds
+  // nothing to re-bake.
+  assert.notEqual(card._lastSunAngleBucket, null);
+  assert.equal(card._pendingBakeTimer, null);
+  assert.equal(card._pendingBakeRequested, false);
+  assert.equal(card._pendingCloudBakes.size, 0);
+});
+
+test("a new light direction re-bakes the clouds in place, not all at once", () => {
+  const card = mountCard({ perf_mode: "ultra" }, makeHass({ weather: "cloudy" }));
+  runFrames(5);
+  const bucket = card._lastSunAngleBucket;
+  let fullBakes = 0;
+  card._doBakeAllClouds = () => fullBakes++;
+  card._lastSunAngleBucket = bucket + 10;
+  runFrames(1);
+  assert.equal(card._lastSunAngleBucket, bucket);
+  assert.ok(card._pendingCloudBakes.size > 0);
+  runFrames(card._clouds.length);
+  assert.equal(card._pendingCloudBakes.size, 0);
+  assert.equal(fullBakes, 0);
+});
+
+test("the sun corona is blurred once into sprites, not on every frame", () => {
+  const card = mountCard({ perf_mode: "ultra" }, makeHass({ weather: "sunny" }));
+  runFrames(5);
+  const sprites = card._coronaSprites;
+  assert.equal(sprites.list.length, 10);
+  // Each frame only draws the sprites; the blur stays on the sprite canvases.
+  const blurs = [];
+  const layers = Object.values(card._ctxs);
+  for (const ctx of layers)
+    Object.defineProperty(ctx, "filter", {
+      configurable: true,
+      get: () => "none",
+      set: (v) => blurs.push(v),
+    });
+  runFrames(5);
+  for (const ctx of layers) delete ctx.filter;
+  assert.ok(blurs.length > 0);
+  assert.equal(card._coronaSprites, sprites);
+  assert.ok(!blurs.some((v) => String(v).includes("blur")));
+  assert.ok(sprites.list[0].canvas.context.filter.startsWith("blur("));
+  // A new pixel density builds new sprites.
+  card._cachedDimensions.dpr = 3;
+  runFrames(1);
+  assert.notEqual(card._coronaSprites, sprites);
+});
+
+test("low mode draws the sun without a corona", () => {
+  const card = mountCard({ perf_mode: "low" }, makeHass({ weather: "sunny" }));
+  runFrames(5);
+  assert.equal(card._coronaSprites, undefined);
+});
+
 test("ultra keeps large cards sharp, other modes cap the pixels", () => {
   const ratio = window.devicePixelRatio;
   window.devicePixelRatio = 2;

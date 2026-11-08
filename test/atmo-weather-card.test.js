@@ -209,6 +209,7 @@ test("cloud bake debounce queues a rapid follow-up request", () => {
   card._lastBakeTime = null;
   card._pendingBakeRequested = false;
   card._pendingBakeTimer = null;
+  card._pendingCloudBakes = new Set();
   let bakeCount = 0;
   card._doBakeAllClouds = () => {
     bakeCount++;

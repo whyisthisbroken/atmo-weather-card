@@ -99,6 +99,10 @@ try {
 } catch (_) {}
 // Blur radius in atlas pixels used while baking clouds, see _cloudBakeFilter.
 const CLOUD_BAKE_SMOOTH = 1.35;
+// Breathing moves each puff by up to this share of its radius.
+const CLOUD_BREATH_AMOUNT = 0.04;
+// Puffs re-baked per frame while clouds breathe, see _processPendingCloudBakes.
+const CLOUD_REBAKE_PUFFS_PER_FRAME = 120;
 // Forecast helpers
 const _fcCache = new Map(); // module-level: survives HA editor destroy/recreate cycles
 class AtmosphericWeatherCard extends HTMLElement {
@@ -161,8 +165,6 @@ class AtmosphericWeatherCard extends HTMLElement {
     this._cloudBreathingShapes = false;
     this._lastSunAngleBucket = null;
     this._lastBakeTime = null;
-    this._pendingAdvancedCloudBake = false;
-    this._pendingFullCloudBake = false;
     this._pendingCloudBakes = new Set();
     this._pendingBakeRequested = false;
     this._pendingBakeTimer = null;
@@ -257,8 +259,6 @@ class AtmosphericWeatherCard extends HTMLElement {
       clearTimeout(this._pendingBakeTimer);
       this._pendingBakeTimer = null;
     }
-    this._pendingAdvancedCloudBake = false;
-    this._pendingFullCloudBake = false;
     this._pendingCloudBakes.clear();
     this._isVisible = false;
     this.removeEventListener("click", this._boundTap);
@@ -569,7 +569,6 @@ class AtmosphericWeatherCard extends HTMLElement {
     this._configureCloudBreathingTimer();
     if (filtersChanged && this._renderState) {
       this._bakeAllClouds();
-      this._updateLastSunAngleBucket();
     } else if (advancedCloudSettingsChanged && this._renderState) {
       this._requestAdvancedCloudBake();
     }
@@ -1681,6 +1680,7 @@ class AtmosphericWeatherCard extends HTMLElement {
       }
       this._cloudAtlases = null;
     }
+    this._cloudScratch = null;
     for (const key of PARTICLE_ARRAYS) this[key] = [];
     this._flashHold = 0;
     this._aurora = null;
@@ -4240,6 +4240,8 @@ class AtmosphericWeatherCard extends HTMLElement {
     };
   }
   _bakeAllClouds() {
+    // A full bake repacks the atlases, so queued single-cloud re-bakes are void.
+    this._pendingCloudBakes.clear();
     const now = performance.now();
     const minInterval = 2000;
     if (this._lastBakeTime != null && now - this._lastBakeTime < minInterval) {
@@ -4274,6 +4276,7 @@ class AtmosphericWeatherCard extends HTMLElement {
       );
     }
     const atlases = this._cloudAtlases,
+      res = this._perfCloudRes,
       alloc = () => this._allocCloudAtlas();
     const packer = {
       atlases,
@@ -4297,6 +4300,18 @@ class AtmosphericWeatherCard extends HTMLElement {
         this.y = 0;
         this.rowHeight = 0;
         return true;
+      },
+      reserve(physW, physH, cellGap) {
+        if (this.x + physW + cellGap > res) {
+          this.x = 0;
+          this.y += this.rowHeight + cellGap;
+          this.rowHeight = 0;
+        }
+        if (this.y + physH > res && !this.advance()) return null;
+        const cell = { x: this.x, y: this.y };
+        this.x += physW + cellGap;
+        if (physH > this.rowHeight) this.rowHeight = physH;
+        return cell;
       },
     };
     for (let i = 0; i < this._clouds.length; i++) {
@@ -4323,6 +4338,8 @@ class AtmosphericWeatherCard extends HTMLElement {
         console.error("ATMO-WEATHER-CARD: failed to bake celestial cloud", e);
       }
     }
+    // The clouds now carry the current light direction.
+    this._updateLastSunAngleBucket();
   }
   _getCloudSunAngleBucket(w, h) {
     if (!this._cloudSunAngleLighting || !w || !h) return null;
@@ -4356,21 +4373,58 @@ class AtmosphericWeatherCard extends HTMLElement {
       return;
     }
     const bucket = this._getCloudSunAngleBucket(w, h);
-    if (bucket !== null && bucket !== this._lastSunAngleBucket)
-      this._requestAdvancedCloudBake();
+    if (bucket === null || bucket === this._lastSunAngleBucket) return;
+    this._lastSunAngleBucket = bucket;
+    // The light direction does not change a cloud's size, so every cloud is
+    // re-baked in its own cell over the next frames.
+    this._requestAdvancedCloudBake([...this._clouds, ...this._fgClouds]);
   }
+  // With a cloud list, only those clouds are re-baked in their own atlas cells,
+  // spread over the next frames. Without one, everything is baked again.
   _requestAdvancedCloudBake(clouds) {
-    this._pendingAdvancedCloudBake = true;
     if (clouds) {
-      for (const cloud of clouds) this._pendingCloudBakes.add(cloud);
-    } else {
-      this._pendingFullCloudBake = true;
+      // Clouds too large for the atlas were never baked and stay that way.
+      for (const cloud of clouds)
+        if (cloud._bakedCanvas) this._pendingCloudBakes.add(cloud);
+      return;
     }
-    this._pendingAdvancedCloudBake = false;
-    this._pendingFullCloudBake = false;
-    this._pendingCloudBakes.clear();
     this._bakeAllClouds();
-    this._updateLastSunAngleBucket();
+  }
+  // Re-bakes queued clouds a few per frame, at least one, so breathing never
+  // stalls a frame. Puffs set the cost; the GPU work behind them only shows up
+  // later, so a time budget measured here would not see it.
+  _processPendingCloudBakes() {
+    let puffs = 0;
+    for (const cloud of this._pendingCloudBakes) {
+      this._pendingCloudBakes.delete(cloud);
+      if (!this._rebakeCloudInPlace(cloud)) {
+        this._bakeAllClouds();
+        return;
+      }
+      puffs += cloud.puffs ? cloud.puffs.length : 0;
+      if (puffs >= CLOUD_REBAKE_PUFFS_PER_FRAME) return;
+    }
+  }
+  // Bakes a cloud again into the atlas cell it already owns. Returns false
+  // when the cell is gone or too small, then the caller falls back to a full bake.
+  _rebakeCloudInPlace(cloud) {
+    const atlas = (this._cloudAtlases || []).find(
+      (a) => a.canvas === cloud._bakedCanvas,
+    );
+    if (!atlas || !this._renderState) return false;
+    const cellX = cloud._atlasX,
+      cellY = cloud._atlasY,
+      cellW = cloud._atlasW,
+      cellH = cloud._atlasH;
+    return this._bakeCloud(cloud, {
+      canvas: atlas.canvas,
+      ctx: atlas.ctx,
+      reserve(physW, physH) {
+        if (physW > cellW || physH > cellH) return null;
+        atlas.ctx.clearRect(cellX, cellY, cellW, cellH);
+        return { x: cellX, y: cellY };
+      },
+    });
   }
   _clearCloudBreathingTimer() {
     if (!this._cloudBreathingTimer) return;
@@ -4422,7 +4476,7 @@ class AtmosphericWeatherCard extends HTMLElement {
         puff._breathBaseX = puff.offsetX;
         puff._breathBaseY = puff.offsetY;
       }
-      const offset = puff.rad * 0.04;
+      const offset = puff.rad * CLOUD_BREATH_AMOUNT;
       puff.offsetX = puff._breathBaseX + (Math.random() * 2 - 1) * offset;
       puff.offsetY = puff._breathBaseY + (Math.random() * 2 - 1) * offset;
     }
@@ -4457,9 +4511,25 @@ class AtmosphericWeatherCard extends HTMLElement {
     const smooth = `blur(${CLOUD_BAKE_SMOOTH * Math.min(1, dpr)}px)`;
     return preset ? `${smooth} ${preset}` : smooth;
   }
+  // Reusable canvas a cloud is drawn on before it is blurred into the atlas.
+  _getCloudScratch(width, height) {
+    const scratch = this._cloudScratch;
+    if (
+      scratch &&
+      scratch.canvas.width >= width &&
+      scratch.canvas.height >= height
+    )
+      return scratch;
+    this._cloudScratch = this._allocCloudAtlas(
+      Math.max(width, scratch ? scratch.canvas.width : 0),
+      Math.max(height, scratch ? scratch.canvas.height : 0),
+    );
+    return this._cloudScratch;
+  }
+  // Returns false only when the packer has no room for the cloud.
   _bakeCloud(cloud, packer) {
     const puffs = cloud.puffs;
-    if (!puffs || puffs.length === 0) return;
+    if (!puffs || puffs.length === 0) return true;
     const rs = this._renderState;
     const cp = rs.cp,
       isLightBg = this._isLightBackground,
@@ -4490,10 +4560,17 @@ class AtmosphericWeatherCard extends HTMLElement {
       maxX = -Infinity,
       minY = Infinity,
       maxY = -Infinity;
+    // Breathing clouds are measured around their rest shape plus the breathing
+    // range, so the box stays the same and a re-bake fits into the old cell.
+    const breath = this._cloudBreathingShapes ? CLOUD_BREATH_AMOUNT : 0;
     for (let j = 0; j < puffs.length; j++) {
       const p = puffs[j],
-        px = p.offsetX * hStretch,
-        py = p.offsetY * vCompress,
+        px =
+          (p._breathBaseX !== undefined ? p._breathBaseX : p.offsetX) *
+          hStretch,
+        py =
+          (p._breathBaseY !== undefined ? p._breathBaseY : p.offsetY) *
+          vCompress,
         sq = p.squash !== undefined ? p.squash : 1.0;
       const a = p.rad * hStretch * maxRadMul,
         b = p.rad * sq * vCompress * maxRadMul,
@@ -4502,8 +4579,12 @@ class AtmosphericWeatherCard extends HTMLElement {
         sinT = Math.sin(theta);
       // Rotated-ellipse AABB — must include rotation or the bake box undershoots
       // and later crops the puff (or bleeds into the neighboring atlas cell).
-      const radH = Math.sqrt((a * cosT) ** 2 + (b * sinT) ** 2),
-        radV = Math.sqrt((a * sinT) ** 2 + (b * cosT) ** 2);
+      const radH =
+          Math.sqrt((a * cosT) ** 2 + (b * sinT) ** 2) +
+          p.rad * breath * hStretch,
+        radV =
+          Math.sqrt((a * sinT) ** 2 + (b * cosT) ** 2) +
+          p.rad * breath * vCompress;
       if (px - radH < minX) minX = px - radH;
       if (px + radH > maxX) maxX = px + radH;
       if (py - radV < minY) minY = py - radV;
@@ -4516,44 +4597,23 @@ class AtmosphericWeatherCard extends HTMLElement {
     maxY += margin;
     const bakeW = Math.ceil(maxX - minX),
       bakeH = Math.ceil(maxY - minY);
-    if (bakeW <= 0 || bakeH <= 0) return;
+    if (bakeW <= 0 || bakeH <= 0) return true;
     const physW = Math.ceil(bakeW * dpr);
     const physH = Math.ceil(bakeH * dpr);
-    if (physW > this._perfCloudRes || physH > this._perfCloudRes) return;
-    if (!packer) {
-      const atlas = this._allocCloudAtlas(physW, physH);
-      packer = {
-        canvas: atlas.canvas,
-        ctx: atlas.ctx,
-        x: 0,
-        y: 0,
-        rowHeight: 0,
-        advance() {
-          return false;
-        },
-      };
-    }
-    const cellGap = Math.max(2, Math.ceil(2 * dpr));
-    if (packer.x + physW + cellGap > this._perfCloudRes) {
-      packer.x = 0;
-      packer.y += packer.rowHeight + cellGap;
-      packer.rowHeight = 0;
-    }
-    if (packer.y + physH > this._perfCloudRes) {
-      if (!packer.advance()) return;
-    }
-    const atlasX = packer.x,
-      atlasY = packer.y;
-    packer.x += physW + cellGap;
-    if (physH > packer.rowHeight) packer.rowHeight = physH;
-    const oc = packer.ctx;
+    if (physW > this._perfCloudRes || physH > this._perfCloudRes) return true;
+    const cell = packer.reserve(physW, physH, Math.max(2, Math.ceil(2 * dpr)));
+    if (!cell) return false;
+    const atlasX = cell.x,
+      atlasY = cell.y;
+    // Puffs are drawn unfiltered on a scratch canvas, then the whole cloud is
+    // blurred into the atlas in one pass. Filtering every puff on its own
+    // costs several times as much.
+    const scratch = this._getCloudScratch(physW, physH);
+    const oc = scratch.ctx;
+    oc.setTransform(1, 0, 0, 1, 0, 0);
+    oc.clearRect(0, 0, physW, physH);
     oc.save();
-    oc.translate(atlasX, atlasY);
     oc.scale(dpr, dpr);
-    // Hard confinement so any future estimation error can't bleed into neighbor cells.
-    oc.beginPath();
-    oc.rect(0, 0, bakeW, bakeH);
-    oc.clip();
     const t = spec.tint;
     const litR = cp.litR + t[0],
       litG = cp.litG + t[1],
@@ -4571,7 +4631,6 @@ class AtmosphericWeatherCard extends HTMLElement {
     // and a quadratic bottom-fade is applied post-modifier to prevent stacked-halo mush.
     const isImmersiveLight = isLightBg && this._isImmersive;
     const simpleGrad = this._perfCloudQuality <= 1.0;
-    oc.filter = this._cloudBakeFilter(dpr);
     for (let j = 0; j < puffs.length; j++) {
       const puff = puffs[j],
         sq = puff.squash !== undefined ? puff.squash : 1.0,
@@ -4738,8 +4797,26 @@ class AtmosphericWeatherCard extends HTMLElement {
       oc.fill();
       oc.restore();
     }
-    oc.filter = "none";
     oc.restore();
+    const atlasCtx = packer.ctx;
+    atlasCtx.save();
+    // Hard confinement so the blur can't bleed into neighbor cells.
+    atlasCtx.beginPath();
+    atlasCtx.rect(atlasX, atlasY, physW, physH);
+    atlasCtx.clip();
+    atlasCtx.filter = this._cloudBakeFilter(dpr);
+    atlasCtx.drawImage(
+      scratch.canvas,
+      0,
+      0,
+      physW,
+      physH,
+      atlasX,
+      atlasY,
+      physW,
+      physH,
+    );
+    atlasCtx.restore();
     cloud._bakedCanvas = packer.canvas;
     cloud._atlasX = atlasX;
     cloud._atlasY = atlasY;
@@ -4749,6 +4826,7 @@ class AtmosphericWeatherCard extends HTMLElement {
     cloud._bakeOffY = minY;
     cloud._bakeLogicalW = bakeW;
     cloud._bakeLogicalH = bakeH;
+    return true;
   }
   _bakeCelestialCloud(cloud, cp) {
     const puffs = cloud.puffs;
@@ -4951,6 +5029,49 @@ class AtmosphericWeatherCard extends HTMLElement {
     return mc;
   }
   // RENDERING (PER-FRAME)
+  // One blurred sprite per corona tongue, rebuilt when size, color, filter or
+  // pixel density change.
+  _getCoronaSprites(specs, auraR, color, sunFilter) {
+    const dpr = this._cachedDimensions.dpr || 1;
+    const key = `${auraR}|${color}|${sunFilter}|${dpr}`;
+    if (this._coronaSprites && this._coronaSprites.key === key)
+      return this._coronaSprites.list;
+    const [gR, gG, gB] = color;
+    // The main canvas is scaled by dpr but filter lengths are not, so the blur
+    // is given in physical pixels here as it was on the card.
+    const blur = Math.max(2, auraR * 0.06);
+    const pad = Math.ceil(blur * 3);
+    const filter =
+      sunFilter === "none" ? `blur(${blur}px)` : `blur(${blur}px) ${sunFilter}`;
+    const list = specs.map(([angle, lengthRatio, widthRatio, alpha]) => {
+      const length = auraR * lengthRatio,
+        width = auraR * widthRatio;
+      const physW = Math.ceil(length * 2 * dpr) + pad * 2,
+        physH = Math.ceil(width * 2 * dpr) + pad * 2;
+      const { canvas, ctx } = this._allocCloudAtlas(physW, physH);
+      ctx.filter = filter;
+      ctx.translate(physW / 2, physH / 2);
+      ctx.scale(dpr, dpr);
+      const gradient = ctx.createLinearGradient(-length, 0, length, 0);
+      gradient.addColorStop(0, `rgba(${gR},${gG},${gB},0)`);
+      gradient.addColorStop(0.28, `rgba(${gR},${gG},${gB},${alpha * 0.7})`);
+      gradient.addColorStop(0.58, `rgba(${gR},${gG},${gB},${alpha})`);
+      gradient.addColorStop(1, `rgba(${gR},${gG},${gB},0)`);
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, length, width, 0, 0, TWO_PI);
+      ctx.fill();
+      return {
+        canvas,
+        angle,
+        lengthRatio,
+        width: physW / dpr,
+        height: physH / dpr,
+      };
+    });
+    this._coronaSprites = { key, list };
+    return list;
+  }
   _drawCelestialGlow(ctx, w, h) {
     const glow = this._renderState.glow;
     if (!glow) return;
@@ -4989,36 +5110,41 @@ class AtmosphericWeatherCard extends HTMLElement {
       ctx.globalAlpha =
         fadeOpacity *
         Math.min(1, glow.intensity * 0.82 * (glow.auraOpacityMul || 1));
-      // The blurred corona is the costly part; low mode keeps only the disc.
-      const corona = this._perfEffects >= 1 ? coronaSpecs : [];
-      for (const [angle, lengthRatio, widthRatio, alpha] of corona) {
-        const tonguePhase = auraPhase * 1.35 + angle * 1.7;
-        const tongueScale = 1 + Math.sin(tonguePhase) * 0.075;
-        const length = auraR * lengthRatio * auraScale * tongueScale,
-          width =
-            auraR * widthRatio * auraScale * (1 + Math.cos(tonguePhase) * 0.04),
-          centerOffset =
-            auraR * (0.2 + lengthRatio * 0.28) * auraScale * tongueScale,
-          gradient = ctx.createLinearGradient(-length, 0, length, 0);
-        gradient.addColorStop(0, `rgba(${gR},${gG},${gB},0)`);
-        gradient.addColorStop(0.28, `rgba(${gR},${gG},${gB},${alpha * 0.7})`);
-        gradient.addColorStop(0.58, `rgba(${gR},${gG},${gB},${alpha})`);
-        gradient.addColorStop(1, `rgba(${gR},${gG},${gB},0)`);
-        ctx.save();
-        ctx.translate(
-          Math.cos(angle) * centerOffset + auraX,
-          Math.sin(angle) * centerOffset + auraY,
+      // The corona tongues are blurred once into sprites; each frame only
+      // moves, turns and stretches them. Low mode keeps only the disc.
+      if (this._perfEffects >= 1) {
+        const sprites = this._getCoronaSprites(
+          coronaSpecs,
+          auraR,
+          glow.color,
+          sunFilter,
         );
-        ctx.rotate(angle);
-        const blurFilter = `blur(${Math.max(2, auraR * 0.06)}px)`;
-        ctx.filter =
-          sunFilter === "none" ? blurFilter : `${blurFilter} ${sunFilter}`;
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.ellipse(0, 0, length, width, 0, 0, TWO_PI);
-        ctx.fill();
+        ctx.filter = "none";
+        for (const sprite of sprites) {
+          const tonguePhase = auraPhase * 1.35 + sprite.angle * 1.7;
+          const tongueScale = 1 + Math.sin(tonguePhase) * 0.075;
+          const centerOffset =
+            auraR * (0.2 + sprite.lengthRatio * 0.28) * auraScale * tongueScale;
+          ctx.save();
+          ctx.translate(
+            Math.cos(sprite.angle) * centerOffset + auraX,
+            Math.sin(sprite.angle) * centerOffset + auraY,
+          );
+          ctx.rotate(sprite.angle);
+          ctx.scale(
+            auraScale * tongueScale,
+            auraScale * (1 + Math.cos(tonguePhase) * 0.04),
+          );
+          ctx.drawImage(
+            sprite.canvas,
+            -sprite.width / 2,
+            -sprite.height / 2,
+            sprite.width,
+            sprite.height,
+          );
+          ctx.restore();
+        }
         ctx.filter = sunFilter;
-        ctx.restore();
       }
       if (!this._sunDiscGrad || this._sunDiscGradR !== sunBaseR) {
         const g = ctx.createRadialGradient(0, 0, 0, 0, 0, sunBaseR * 3.0);
@@ -5169,6 +5295,7 @@ class AtmosphericWeatherCard extends HTMLElement {
       this._animID = requestAnimationFrame(this._boundAnimate);
       return;
     }
+    if (this._pendingCloudBakes.size) this._processPendingCloudBakes();
     const effectiveWind = advanceWindAndPulse(this);
     try {
       renderAnimationFrame(this, bg, mid, fg, w, h, dpr, effectiveWind);
