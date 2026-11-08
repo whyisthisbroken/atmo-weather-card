@@ -8,6 +8,7 @@ const LABELS = Object.freeze({
   weather_entity: "Weather Entity",
   sun_entity: "Sun Entity",
   moon_phase_entity: "Moon Phase Entity",
+  precipitation_entity: "Precipitation Sensor",
   theme_entity: "Theme Entity",
   _color_mode: "Color Mode",
   card_style: "Card Style",
@@ -80,6 +81,8 @@ const HELPERS = Object.freeze({
   weather_entity: "",
   sun_entity: "Used for the day/night cycle.",
   moon_phase_entity: "Your moon phase sensor.",
+  precipitation_entity:
+    "Optional. Rain intensity in mm/h, so rain and snow follow the measured amount.",
   theme_entity: "An entity whose state switches between light and dark mode.",
   card_height: "In pixels, e.g. 220. Use 'auto' for dashboard grid layouts.",
   card_padding: "Inner padding, e.g. 16px or 12px 20px.",
@@ -158,6 +161,7 @@ const KEY_ORDER = Object.freeze([
   "name",
   "entity",
   "weather_entity",
+  "precipitation_entity",
   "sun_entity",
   "moon_phase_entity",
   "color_mode",
@@ -5058,6 +5062,10 @@ class AtmosphericWeatherCardEditor extends LitElement {
     const c = this._formData;
     return html`${this._renderForm([
         { name: "weather_entity", selector: { entity: { domain: "weather" } } },
+        {
+          name: "precipitation_entity",
+          selector: { entity: { domain: "sensor" } },
+        },
       ])}
       <ha-expansion-panel
         outlined

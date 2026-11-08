@@ -4,7 +4,7 @@
 import {
   advanceWindAndPulse,
   CloudShapeGenerator,
-  drawAurora,
+  cometColors,
   drawBirds,
   drawCelestialClouds,
   drawComets,
@@ -26,6 +26,11 @@ import {
   fillCircle,
   hslToRgb,
 } from "./atmo-weather-animations.js";
+import {
+  adjustParams,
+  computeAtmosphere,
+  readWeatherData,
+} from "./atmo-weather-atmosphere.js";
 import { CONFIG_DEFAULTS, migrateConfig } from "./atmo-weather-config.js";
 import {
   ACTIVE_STATES,
@@ -97,6 +102,9 @@ try {
     initialValue: "0%",
   });
 } catch (_) {}
+// Weather attributes behind the measured effects, see atmo-weather-atmosphere.js.
+const atmoSignature = (a) =>
+  [a.cloud_coverage, a.visibility, a.humidity, a.dew_point].join("|");
 // Blur radius in atlas pixels used while baking clouds, see _cloudBakeFilter.
 const CLOUD_BAKE_SMOOTH = 1.35;
 // Breathing moves each puff by up to this share of its radius.
@@ -115,7 +123,6 @@ class AtmosphericWeatherCard extends HTMLElement {
     this._frameScale = 1;
     this._boundAnimate = this._animate.bind(this);
     for (const key of PARTICLE_ARRAYS) this[key] = [];
-    this._aurora = null;
     this._params = WEATHER_MAP["default"];
     this._flashOpacity = 0;
     this._flashHold = 0;
@@ -588,6 +595,9 @@ class AtmosphericWeatherCard extends HTMLElement {
       : null;
     const themeObj = cfg.theme_entity ? hass.states[cfg.theme_entity] : null;
     const statusObj = cfg.status_entity ? hass.states[cfg.status_entity] : null;
+    const precipObj = cfg.precipitation_entity
+      ? hass.states[cfg.precipitation_entity]
+      : null;
     if (this._lastSnapshot) {
       let changed =
         wObj !== this._refW ||
@@ -595,6 +605,7 @@ class AtmosphericWeatherCard extends HTMLElement {
         moonObj !== this._refMoon ||
         themeObj !== this._refTheme ||
         statusObj !== this._refStatus ||
+        precipObj !== this._refPrecip ||
         (hass.themes && hass.themes.darkMode) !== this._refSysDark;
       if (!changed) {
         for (const s of this._chips) {
@@ -635,6 +646,7 @@ class AtmosphericWeatherCard extends HTMLElement {
     this._refMoon = moonObj;
     this._refTheme = themeObj;
     this._refStatus = statusObj;
+    this._refPrecip = precipObj;
     this._refSysDark = hass.themes && hass.themes.darkMode;
     const refs = new Map();
     for (const s of this._chips) {
@@ -662,6 +674,9 @@ class AtmosphericWeatherCard extends HTMLElement {
       : null;
     const statusEntity = this._config.status_entity
       ? hass.states[this._config.status_entity]
+      : null;
+    const precipEntity = this._config.precipitation_entity
+      ? hass.states[this._config.precipitation_entity]
       : null;
     const botSig = this._chips
       .map((s) => {
@@ -705,6 +720,10 @@ class AtmosphericWeatherCard extends HTMLElement {
       windUnit:
         (wEntity && wEntity.attributes && wEntity.attributes.wind_speed_unit) ||
         "",
+      windBearing:
+        wEntity && wEntity.attributes && wEntity.attributes.wind_bearing != null
+          ? wEntity.attributes.wind_bearing
+          : "",
       sun: (sunEntity && sunEntity.state) || "",
       sunElev:
         sunEntity &&
@@ -718,6 +737,12 @@ class AtmosphericWeatherCard extends HTMLElement {
       botSig,
       sysDark: !!sysDark,
       lang,
+      atmo:
+        (wEntity && wEntity.attributes
+          ? atmoSignature(wEntity.attributes)
+          : "") +
+        "|" +
+        (precipEntity ? precipEntity.state : ""),
     };
     if (
       this._lastSnapshot &&
@@ -756,6 +781,18 @@ class AtmosphericWeatherCard extends HTMLElement {
       newParams.type = "stars";
       newParams.count = 280;
     }
+    // Measured weather data refines the scene and drives the sky light.
+    const weatherData = readWeatherData(wEntity.attributes, precipEntity);
+    newParams = adjustParams(newParams, weatherData);
+    const sunElev =
+      sunEntity && sunEntity.attributes
+        ? parseFloat(sunEntity.attributes.elevation)
+        : NaN;
+    this._atmo = computeAtmosphere(weatherData, {
+      state: weatherState,
+      isTimeNight,
+      sunElev: Number.isFinite(sunElev) ? sunElev : null,
+    });
     this._updateStandaloneStyles(isTimeNight, newParams);
     this._updateTextElements(hass, wEntity, lang, weatherState);
     const windSpeedRaw = this._getEntityAttribute(wEntity, "wind_speed", 0);
@@ -1219,6 +1256,7 @@ class AtmosphericWeatherCard extends HTMLElement {
       prev.temp !== next.temp ||
       prev.windSpeed !== next.windSpeed ||
       prev.windUnit !== next.windUnit ||
+      prev.windBearing !== next.windBearing ||
       prev.sun !== next.sun ||
       prev.sunElev !== next.sunElev ||
       prev.moon !== next.moon ||
@@ -1226,7 +1264,8 @@ class AtmosphericWeatherCard extends HTMLElement {
       prev.status !== next.status ||
       prev.botSig !== next.botSig ||
       prev.sysDark !== next.sysDark ||
-      prev.lang !== next.lang
+      prev.lang !== next.lang ||
+      prev.atmo !== next.atmo
     );
   }
   _calculateStatusImage(hass, isNight) {
@@ -1462,9 +1501,15 @@ class AtmosphericWeatherCard extends HTMLElement {
   _handleWeatherChange(weatherState, newParams, hasNightChanged) {
     const oldParams = this._params,
       typeChanged = !oldParams || oldParams.type !== newParams.type,
-      stateChanged = this._lastState !== weatherState;
+      stateChanged = this._lastState !== weatherState,
+      // New measured cloud cover or precipitation needs a new scene.
+      amountChanged =
+        !!oldParams &&
+        (oldParams.cloud !== newParams.cloud ||
+          oldParams.count !== newParams.count ||
+          oldParams.overcast !== newParams.overcast);
     this._lastState = weatherState;
-    if (typeChanged || stateChanged || hasNightChanged) {
+    if (typeChanged || stateChanged || hasNightChanged || amountChanged) {
       this._params = newParams;
       this._buildRenderState();
       if (this.isConnected) {
@@ -1681,9 +1726,10 @@ class AtmosphericWeatherCard extends HTMLElement {
       this._cloudAtlases = null;
     }
     this._cloudScratch = null;
+    this._atmoCache = null;
+    this._mistBanks = null;
     for (const key of PARTICLE_ARRAYS) this[key] = [];
     this._flashHold = 0;
-    this._aurora = null;
     if (this._milkyWay) {
       this._milkyWay.width = 0;
       this._milkyWay = null;
@@ -2948,7 +2994,7 @@ class AtmosphericWeatherCard extends HTMLElement {
     const widthChanged = this._cachedDimensions.width !== scaledWidth,
       dprChanged = this._cachedDimensions.dpr !== dpr;
     const heightDiff = Math.abs(this._cachedDimensions.height - scaledHeight);
-    if (!widthChanged && !dprChanged && heightDiff < 150 * dpr) return false;
+    if (!widthChanged && !dprChanged && heightDiff === 0) return false;
     this._cachedDimensions = { width: scaledWidth, height: scaledHeight, dpr };
     for (const k of ["bg", "mid", "fg"]) {
       const canvas = this._elements[k],
@@ -2980,7 +3026,9 @@ class AtmosphericWeatherCard extends HTMLElement {
       this._renderGate.hasValidDimensions = true;
       this._checkRenderGate();
     }
-    return true;
+    // The canvases always follow the card; the scene is only rebuilt for a
+    // real size change, not when a chip row wraps.
+    return widthChanged || dprChanged || heightDiff >= 60 * dpr;
   }
   _scheduleParticleReinit() {
     this._pendingResize = true;
@@ -2991,7 +3039,11 @@ class AtmosphericWeatherCard extends HTMLElement {
         const currentCSSWidth =
           this._cachedDimensions.width / this._cachedDimensions.dpr;
         const diff = Math.abs(currentCSSWidth - this._lastInitWidth);
-        if (diff < 100) {
+        const heightDiff = Math.abs(
+          this._cachedDimensions.height / this._cachedDimensions.dpr -
+            (this._lastInitHeight || 0),
+        );
+        if (diff < 100 && heightDiff < 60) {
           this._pendingResize = false;
           return;
         }
@@ -3188,23 +3240,15 @@ class AtmosphericWeatherCard extends HTMLElement {
     }
     const p = this._params;
     if (w === 0 || h === 0 || !p) return;
+    this._lastInitHeight = h;
     this._clearAllParticles();
     const fx = this._perfEffects,
       isUltra = fx >= 2;
     if (
       fx >= 1 &&
-      this._isThemeDark &&
-      this._isTimeNight &&
-      (p.type === "stars" || p.type === "cloud") &&
-      (p.cloud || 0) <= 5 &&
-      Math.random() < 0.04
-    )
-      this._initAurora(w, h);
-    if (
-      fx >= 1 &&
       this._isNight &&
       p.type === "stars" &&
-      Math.random() < (isUltra ? 0.002 : 0.0011)
+      Math.random() < (isUltra ? 0.0028 : 0.00154)
     )
       this._comets.push(this._createComet(w, h));
     if (this._perfFauna >= 2 && Math.random() < 0.25)
@@ -3251,27 +3295,6 @@ class AtmosphericWeatherCard extends HTMLElement {
       this._initWindVapor(w, h, p.vapor || 24, p.vaporScale || 1.0, vaporFlat);
     this._bakeAllClouds();
   }
-  _initAurora(w, h) {
-    const _auroraColors = [
-      "rgba(80, 255, 160, 0.22)",
-      "rgba(100, 200, 255, 0.22)",
-      "rgba(180, 100, 255, 0.18)",
-      "rgba(255, 120, 200, 0.15)",
-    ];
-    this._aurora = {
-      phase: 0,
-      waves: Array(6)
-        .fill()
-        .map((_, i) => ({
-          y: h * 0.12 + i * 10,
-          speed: 0.006 + Math.random() * 0.012,
-          amplitude: 6 + Math.random() * 8,
-          wavelength: 0.01 + Math.random() * 0.008,
-          color: _auroraColors[Math.floor(Math.random() * 4)],
-          offset: Math.random() * TWO_PI,
-        })),
-    };
-  }
   _createComet(w, h) {
     return {
       x: w * 0.15,
@@ -3284,6 +3307,8 @@ class AtmosphericWeatherCard extends HTMLElement {
       tailHead: 0,
       tailLen: 0,
       size: 3 + Math.random() * 2,
+      // Without colors the comet glow fails and stops every frame.
+      ...cometColors(this),
     };
   }
   _createPlane(w, h) {
@@ -3455,7 +3480,8 @@ class AtmosphericWeatherCard extends HTMLElement {
         y: overcast
           ? h * (0.02 + Math.random() * heightLimit * 0.35)
           : h * (0.08 + Math.random() * (heightLimit * 0.6 - 0.08)),
-        scale: (0.55 + Math.random() * 0.4) * configScale * (overcast ? 2.0 : 1.6),
+        scale:
+          (0.55 + Math.random() * 0.4) * configScale * (overcast ? 2.0 : 1.6),
         speed: 0.002 + Math.random() * 0.002,
         puffs: CloudShapeGenerator.generateWispyPuffs(seed, baseUnit, pq),
         cloudType: "stratus",
@@ -5249,9 +5275,6 @@ class AtmosphericWeatherCard extends HTMLElement {
   }
   _drawLightning(ctx, w, h) {
     drawLightning(this, ctx, w, h);
-  }
-  _drawAurora(ctx, w) {
-    drawAurora(this, ctx, w);
   }
   _drawFog(ctx, w) {
     drawFog(this, ctx, w);

@@ -210,3 +210,16 @@ test("the wind display style can be picked in the editor", async () => {
   // The default is not saved.
   assert.ok(!("wind_style" in emitted.at(-1)));
 });
+
+test("the precipitation sensor can be picked under the weather entity", async () => {
+  const { editor } = await mountEditor({ weather_entity: "weather.home" });
+  const form = [...editor.shadowRoot.querySelectorAll("ha-form")].find((f) =>
+    (f.schema || []).some((field) => field.name === "precipitation_entity"),
+  );
+
+  assert.ok(form, "field rendered");
+  const field = form.schema.find((x) => x.name === "precipitation_entity");
+  assert.deepEqual(field.selector, { entity: { domain: "sensor" } });
+  assert.equal(form.schema[0].name, "weather_entity");
+  assert.equal(form.computeLabel(field), "Precipitation Sensor");
+});

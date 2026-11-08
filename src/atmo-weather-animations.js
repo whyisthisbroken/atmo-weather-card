@@ -1,3 +1,9 @@
+import {
+  drawHaze,
+  drawMist,
+  drawSunRays,
+  drawTwilight,
+} from "./atmo-weather-atmosphere.js";
 export const TWO_PI = Math.PI * 2;
 
 export { drawBirds, drawPlanes } from "./atmo-weather-fauna.js";
@@ -709,47 +715,6 @@ export function drawWindVapor(card, ctx, w, h, effectiveWind) {
   ctx.globalCompositeOperation = "source-over";
 }
 
-export function drawAurora(card, ctx, w) {
-  if (!card._aurora) return;
-  const fadeOpacity = card._layerFadeProgress.effects;
-  card._aurora.phase += 0.006 * card._animationSpeed * (card._frameScale || 1);
-  ctx.save();
-  ctx.globalCompositeOperation = card._isThemeDark ? "lighter" : "source-over";
-  ctx.globalAlpha = fadeOpacity;
-  const waves = card._aurora.waves;
-  const waveLen = waves.length;
-  for (let wi = 0; wi < waveLen; wi++) {
-    const wave = waves[wi];
-    if (!wave._g) {
-      const g = ctx.createLinearGradient(0, wave.y - 20, 0, wave.y + 50);
-      g.addColorStop(0, "rgba(0, 0, 0, 0)");
-      g.addColorStop(0.3, wave.color);
-      g.addColorStop(0.6, wave.color.replace(/[\d.]+\)$/, "0.1)"));
-      g.addColorStop(1, "rgba(0, 0, 0, 0)");
-      wave._g = g;
-    }
-    ctx.fillStyle = wave._g;
-    ctx.beginPath();
-    for (let x = 0; x <= w; x += 6) {
-      const y =
-        wave.y +
-        Math.sin(
-          x * wave.wavelength +
-            card._aurora.phase * wave.speed * 100 +
-            wave.offset,
-        ) *
-          wave.amplitude;
-      if (x === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-    ctx.lineTo(w, wave.y + 60);
-    ctx.lineTo(0, wave.y + 60);
-    ctx.closePath();
-    ctx.fill();
-  }
-  ctx.restore();
-}
-
 // A veil over the whole card that thickens towards the ground, with soft
 // drifting banks on top. Each bank is the full radial gradient stretched to the
 // bank shape, so it fades to zero at every edge. Low mode keeps only the veil.
@@ -979,17 +944,33 @@ function windSetup(card) {
 
 // Draws a stored polyline from index `from` to `to` in bands that grow from a
 // thin faint tail to the full-width head.
+// Point at a fractional index, so line ends glide instead of jumping a point.
+function lerpPoint(pts, f, out) {
+  const i = Math.floor(f),
+    t = f - i,
+    j = (i + 1) * 2 < pts.length ? i + 1 : i;
+  out[0] = pts[i * 2] + (pts[j * 2] - pts[i * 2]) * t;
+  out[1] = pts[i * 2 + 1] + (pts[j * 2 + 1] - pts[i * 2 + 1]) * t;
+  return out;
+}
+const lerpA = [0, 0],
+  lerpB = [0, 0];
+
 function strokeTapered(ctx, pts, from, to, alpha, width, bands) {
   for (let band = 0; band < bands; band++) {
-    const a = from + Math.floor(((to - from) * band) / bands);
-    const b = from + Math.floor(((to - from) * (band + 1)) / bands);
+    const a = from + ((to - from) * band) / bands;
+    const b = from + ((to - from) * (band + 1)) / bands;
     if (b <= a) continue;
     const k = (band + 1) / bands;
     ctx.globalAlpha = alpha * (0.2 + 0.8 * k);
     ctx.lineWidth = width * (0.4 + 0.6 * k);
     ctx.beginPath();
-    ctx.moveTo(pts[a * 2], pts[a * 2 + 1]);
-    for (let j = a + 1; j <= b; j++) ctx.lineTo(pts[j * 2], pts[j * 2 + 1]);
+    lerpPoint(pts, a, lerpA);
+    ctx.moveTo(lerpA[0], lerpA[1]);
+    for (let j = Math.floor(a) + 1; j < b; j++)
+      ctx.lineTo(pts[j * 2], pts[j * 2 + 1]);
+    lerpPoint(pts, b, lerpB);
+    ctx.lineTo(lerpB[0], lerpB[1]);
     ctx.stroke();
   }
 }
@@ -1070,9 +1051,9 @@ export function drawWindLines(card, ctx, w, h) {
       buildWindLine(line, w, h, s.angle);
       continue;
     }
-    const from = Math.floor(line.tail);
-    const to = Math.floor(line.head);
-    if (to - from < 2) continue;
+    const from = line.tail;
+    const to = line.head;
+    if (to - from < 0.5) continue;
     // Fade in while the line grows, fade out while it shrinks.
     const alpha = alphaBase * Math.min(1, (line.head - line.tail) / (span * 0.6));
     strokeTapered(ctx, line.pts, from, to, alpha, line.width, 6);
@@ -1186,8 +1167,8 @@ export function renderAnimationFrame(
 
   if (card._cloudSunAngleLighting) card._trackCloudSunAngle(w, h);
 
+  drawTwilight(card, bg, w, h);
   if (rs.glow && rs.glow.drawPhase === "bg") card._drawCelestialGlow(bg, w, h);
-  if (fx >= 1) card._drawAurora(mid, w);
   card._drawStars(bg, w, h, dpr);
   card._drawMoon(bg, w, h);
   if (
@@ -1207,6 +1188,7 @@ export function renderAnimationFrame(
     card._drawCelestialClouds(mid, w, h, effectiveWind);
   if (fx >= 1 && card._windVapor.length > 0)
     drawWindVapor(card, mid, w, h, effectiveWind);
+  if (fx >= 1) drawHaze(card, mid, w, h);
   if (card._fogBanks.length > 0) card._drawFog(mid, w);
   if (card._params && card._params.overcast) drawCloudDeck(card, mid, w, h);
   drawClouds(card, mid, card._clouds, w, h, effectiveWind);
@@ -1225,11 +1207,13 @@ export function renderAnimationFrame(
   }
   if (glowActive && glowActive.drawPhase === "mid-post")
     card._drawCelestialGlow(mid, w, h);
+  if (fx >= 1) drawSunRays(card, mid, w, h);
   const birdsAtNightEnabled = card._faunaBirdsAtNight !== false;
   const canDrawBirds = fauna >= 1 && (!card._isNight || birdsAtNightEnabled);
   if (canDrawBirds) card._drawBirds(mid, w, h);
   else if (card._isNight && card._birds.length > 0) card._birds.length = 0;
   drawClouds(card, mid, card._fgClouds, w, h, effectiveWind);
+  if (fx >= 1) drawMist(card, mid, w, h);
   if (fauna >= 2) card._drawPlanes(mid, w, h);
 
   card._drawLightning(fg, w, h);
@@ -1273,7 +1257,10 @@ export function drawCelestialClouds(card, ctx, w, h, effectiveWind) {
 }
 
 export function drawStars(card, ctx, w, h, dpr) {
-  const starFade = card._layerFadeProgress.stars;
+  // Twilight lets the stars come out one by one.
+  const starFade =
+    card._layerFadeProgress.stars *
+    (card._atmo ? card._atmo.starVisibility : 1);
   const starMode = card._renderState.starMode;
   if (starFade <= 0.01 || starMode === "hidden") return;
   const len = card._stars.length;
@@ -1391,9 +1378,10 @@ export function drawShootingStars(
   const frameScale = card._frameScale || 1;
   if (
     !badWeather &&
-    Math.random() < 0.002145 * frameScale &&
+    (card._forceShootingStar || Math.random() < 0.003003 * frameScale) &&
     card._shootingStars.length < limits.MAX_SHOOTING_STARS
   ) {
+    card._forceShootingStar = false;
     let spawnX;
     if (Math.random() < 0.7) spawnX = Math.random() * (w * 0.6);
     else spawnX = w * 0.6 + Math.random() * (w * 0.4);
@@ -1486,6 +1474,34 @@ export function drawShootingStars(
   ctx.globalAlpha = 1;
 }
 
+// Head, glow and tail colors of a new comet; ink tones on light themes.
+export function cometColors(card) {
+  if (!card._isThemeDark)
+    return {
+      _coreRgb: "50,60,75",
+      _glowRgb: "70,85,105",
+      _tailRgb: "rgb(65,80,100)",
+    };
+  const roll = Math.random();
+  if (roll < 0.5)
+    return {
+      _coreRgb: "220,240,255",
+      _glowRgb: "100,200,255",
+      _tailRgb: "rgb(160,210,255)",
+    };
+  if (roll < 0.78)
+    return {
+      _coreRgb: "200,255,220",
+      _glowRgb: "120,220,160",
+      _tailRgb: "rgb(150,230,180)",
+    };
+  return {
+    _coreRgb: "255,240,200",
+    _glowRgb: "230,190,100",
+    _tailRgb: "rgb(240,210,150)",
+  };
+}
+
 export function drawComets(card, ctx, w, h, trailCapComet) {
   const badWeather = card._renderState.isBadWeatherForComets;
   const dpr = card._cachedDimensions.dpr;
@@ -1494,31 +1510,13 @@ export function drawComets(card, ctx, w, h, trailCapComet) {
     card._isNight &&
     !badWeather &&
     card._comets.length === 0 &&
-    Math.random() < (card._perfEffects >= 2 ? 0.0005 : 0.0002728) * frameScale
+    (card._forceComet ||
+      Math.random() < (card._perfEffects >= 2 ? 0.0007 : 0.000382) * frameScale)
   ) {
+    card._forceComet = false;
     const startX = Math.random() < 0.5 ? -60 : w + 60;
     const dir = startX < 0 ? 1 : -1;
     const speed = 2.2 + Math.random() * 1.3;
-    const isInk = !card._isThemeDark;
-    const colorRoll = Math.random();
-    let coreRgb, glowRgb, tailRgb;
-    if (isInk) {
-      coreRgb = "50,60,75";
-      glowRgb = "70,85,105";
-      tailRgb = "rgb(65,80,100)";
-    } else if (colorRoll < 0.5) {
-      coreRgb = "220,240,255";
-      glowRgb = "100,200,255";
-      tailRgb = "rgb(160,210,255)";
-    } else if (colorRoll < 0.78) {
-      coreRgb = "200,255,220";
-      glowRgb = "120,220,160";
-      tailRgb = "rgb(150,230,180)";
-    } else {
-      coreRgb = "255,240,200";
-      glowRgb = "230,190,100";
-      tailRgb = "rgb(240,210,150)";
-    }
     card._comets.push({
       x: startX,
       y: Math.random() * (h * 0.4),
@@ -1526,9 +1524,7 @@ export function drawComets(card, ctx, w, h, trailCapComet) {
       vy: speed * 0.15,
       size: 1.5 + Math.random(),
       life: 1.2,
-      _coreRgb: coreRgb,
-      _glowRgb: glowRgb,
-      _tailRgb: tailRgb,
+      ...cometColors(card),
       tailBuf: new Float32Array(trailPoints(card, trailCapComet) * 2),
       tailHead: 0,
       tailLen: 0,

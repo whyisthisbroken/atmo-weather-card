@@ -2,6 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  cometColors,
+  drawComets,
   drawBirds,
   drawPlanes,
   drawClouds,
@@ -538,4 +540,63 @@ test("a wind line ends by shrinking from its tail, not by stopping", () => {
   assert.ok(shrinking > 3, String(shrinking));
   // Thin strokes.
   assert.ok(card._windLines.every((l) => l.width <= 1.2));
+});
+
+test("wind line ends glide between the points instead of jumping", () => {
+  const card = windCard({ _animationSpeed: 0 });
+  drawWindLines(card, createContext(), 400, 200);
+  const [line, ...rest] = card._windLines;
+  for (const other of rest) other.delay = 1;
+  line.delay = 0;
+  line.tail = 10.25;
+  line.head = 30.5;
+  const moves = [];
+  const ctx = { ...createContext(), moveTo: (x, y) => moves.push([x, y]) };
+
+  drawWindLines(card, ctx, 400, 200);
+
+  const at = (i) => [line.pts[i * 2], line.pts[i * 2 + 1]];
+  const [x0, y0] = at(10);
+  const [x1, y1] = at(11);
+  // The tail sits a quarter of the way to the next point, not on point 10.
+  assert.ok(Math.abs(moves[0][0] - (x0 + (x1 - x0) * 0.25)) < 1e-4);
+  assert.ok(Math.abs(moves[0][1] - (y0 + (y1 - y0) * 0.25)) < 1e-4);
+});
+
+test("the demo can spawn a shooting star or a comet on demand", () => {
+  const card = baseCard();
+  card._layerFadeProgress.stars = 1;
+  card._renderState = { isBadWeatherForComets: false };
+  card._shootingStars = [];
+  card._comets = [];
+  card._isNight = true;
+  card._isThemeDark = true;
+  card._perfEffects = 1;
+  const ctx = createContext();
+  const originalRandom = Math.random;
+  // A roll that never spawns on its own.
+  Math.random = () => 0.999;
+  try {
+    drawShootingStars(card, ctx, 100, 100, { MAX_SHOOTING_STARS: 2 }, 12);
+    drawComets(card, ctx, 100, 100, 12);
+    assert.equal(card._shootingStars.length + card._comets.length, 0);
+    card._forceShootingStar = true;
+    card._forceComet = true;
+    drawShootingStars(card, ctx, 100, 100, { MAX_SHOOTING_STARS: 2 }, 12);
+    drawComets(card, ctx, 100, 100, 12);
+  } finally {
+    Math.random = originalRandom;
+  }
+  assert.equal(card._shootingStars.length, 1);
+  assert.equal(card._comets.length, 1);
+  assert.equal(card._forceShootingStar, false);
+  assert.equal(card._forceComet, false);
+});
+
+test("comets get colors for dark themes and ink tones for light ones", () => {
+  const dark = cometColors({ _isThemeDark: true });
+  const light = cometColors({ _isThemeDark: false });
+  for (const c of [dark, light]) assert.match(c._coreRgb, /^[0-9]+,[0-9]+,[0-9]+$/);
+  assert.equal(light._coreRgb, "50,60,75");
+  assert.notEqual(dark._coreRgb, light._coreRgb);
 });

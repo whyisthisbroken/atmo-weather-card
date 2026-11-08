@@ -1,0 +1,300 @@
+// Real weather data and sky light: reads the optional attributes of the
+// weather entity and turns them into cloud amount, precipitation density,
+// haze, ground mist, twilight and sun rays. Every attribute is
+// optional; without it the card looks as before.
+
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const num = (v) => {
+  const n = typeof v === "number" ? v : parseFloat(v);
+  return Number.isFinite(n) ? n : null;
+};
+
+// Normalizes the attributes the effects use: km, mm/h and degrees Celsius.
+// The rain amount only comes from the optional precipitation sensor.
+export function readWeatherData(attrs, precipEntity) {
+  const a = attrs || {};
+  let visibility = num(a.visibility);
+  const visUnit = String(a.visibility_unit || "km").toLowerCase();
+  if (visibility != null && visUnit.startsWith("mi")) visibility *= 1.609;
+  else if (visibility != null && visUnit === "m") visibility /= 1000;
+  let precipitation = precipEntity ? num(precipEntity.state) : null;
+  const precUnit = String(
+    (precipEntity &&
+      precipEntity.attributes &&
+      precipEntity.attributes.unit_of_measurement) ||
+      "mm/h",
+  ).toLowerCase();
+  if (precipitation != null && precUnit.startsWith("in")) precipitation *= 25.4;
+  let temperature = num(a.temperature),
+    dewPoint = num(a.dew_point);
+  if (String(a.temperature_unit || "").includes("F")) {
+    if (temperature != null) temperature = ((temperature - 32) * 5) / 9;
+    if (dewPoint != null) dewPoint = ((dewPoint - 32) * 5) / 9;
+  }
+  return {
+    coverage: num(a.cloud_coverage),
+    precipitation,
+    visibility,
+    humidity: num(a.humidity),
+    temperature,
+    dewPoint,
+  };
+}
+
+// Cloud amount and precipitation density from the measured values. Values are
+// rounded into steps, so small sensor changes don't rebuild the scene.
+export function adjustParams(params, data) {
+  const p = { ...params };
+  if (data.coverage != null && p.type !== "fog") {
+    const cov = clamp(data.coverage, 0, 100);
+    const clouds = Math.round((cov * 0.45) / 3) * 3;
+    if (params.overcast) {
+      // Rain needs clouds: keep at least 60 % of the usual amount.
+      p.cloud = Math.round(
+        clamp(clouds, params.cloud * 0.6, params.cloud * 1.1),
+      );
+      p.overcast = cov >= 70;
+    } else p.cloud = clouds;
+  }
+  if (data.precipitation != null) {
+    const mm = Math.max(0, data.precipitation);
+    if (p.type === "rain")
+      p.count = Math.round(clamp(40 + 30 * mm, 40, 280) / 10) * 10;
+    else if (p.type === "snow")
+      p.count = Math.round(clamp(20 + 20 * mm, 20, 150) / 10) * 10;
+  }
+  return p;
+}
+
+// Strength (0..1) of every sky light effect for the current conditions.
+export function computeAtmosphere(data, { state, isTimeNight, sunElev }) {
+  const out = {
+    haze: 0,
+    mist: 0,
+    twilight: 0,
+    starVisibility: 1,
+    rays: 0,
+    sunElev,
+  };
+  const elev = sunElev;
+  const foggy = state === "fog";
+  if (!foggy) {
+    const visTerm =
+      data.visibility == null ? 0 : clamp((20 - data.visibility) / 18, 0, 1);
+    const humTerm =
+      data.humidity == null ? 0 : clamp((data.humidity - 80) / 20, 0, 1) * 0.5;
+    out.haze = Math.max(visTerm, humTerm);
+    // Mist forms when the air cools to its dew point: at night and in the
+    // morning, not in heavy rain.
+    if (
+      data.temperature != null &&
+      data.dewPoint != null &&
+      (elev == null || elev < 12) &&
+      state !== "pouring"
+    ) {
+      const spread = data.temperature - data.dewPoint;
+      out.mist = clamp((2.5 - spread) / 2.5, 0, 1);
+    }
+  }
+  if (elev != null && isTimeNight) {
+    // Civil twilight: the sky stays blue until the sun is 6 degrees down,
+    // and the stars come out one by one until about 8 degrees.
+    out.twilight = clamp(1 + elev / 6, 0, 1);
+    out.starVisibility = clamp(-elev / 8, 0.15, 1);
+  }
+  if (!isTimeNight && (elev == null || elev > 0)) {
+    const base = state === "partlycloudy" ? 1 : state === "cloudy" ? 0.6 : 0;
+    const closed = data.coverage != null && data.coverage >= 95;
+    if (base > 0 && !closed)
+      out.rays = base * (elev == null || elev < 35 ? 1 : 0.6);
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------- drawing
+
+function cacheCanvas(card, key, w, h, build) {
+  const store = card._atmoCache || (card._atmoCache = new Map());
+  const hit = store.get(key);
+  if (hit && hit.k === build.k) return hit.canvas;
+  const dpr = card._cachedDimensions.dpr || 1;
+  const pw = Math.max(1, Math.ceil(w * dpr)),
+    ph = Math.max(1, Math.ceil(h * dpr));
+  let canvas = hit && hit.canvas;
+  if (!canvas || canvas.width !== pw || canvas.height !== ph) {
+    try {
+      canvas = new OffscreenCanvas(pw, ph);
+    } catch (e) {
+      canvas = document.createElement("canvas");
+      canvas.width = pw;
+      canvas.height = ph;
+    }
+  }
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, pw, ph);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  build.draw(ctx);
+  store.set(key, { k: build.k, canvas });
+  return canvas;
+}
+
+// Deep blue sky with a soft warm band near the horizon, behind the stars.
+export function drawTwilight(card, ctx, w, h) {
+  const a = card._atmo;
+  if (!a || a.twilight <= 0.01 || card._isImmersive) return;
+  const t = a.twilight;
+  const key = `${Math.round(w)}|${Math.round(h)}`;
+  if (!card._twilightGrad || card._twilightGradKey !== key) {
+    const g = ctx.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, "rgba(28, 52, 104, 1)");
+    g.addColorStop(0.55, "rgba(58, 88, 150, 1)");
+    g.addColorStop(0.85, "rgba(120, 118, 168, 1)");
+    g.addColorStop(1, "rgba(214, 140, 128, 1)");
+    card._twilightGrad = g;
+    card._twilightGradKey = key;
+  }
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, 0.85 * Math.pow(t, 1.4));
+  ctx.fillStyle = card._twilightGrad;
+  ctx.fillRect(0, 0, w, h);
+  ctx.restore();
+}
+
+// A thin veil that thickens towards the ground: low visibility or humid air.
+export function drawHaze(card, ctx, w, h) {
+  const a = card._atmo;
+  if (!a || a.haze <= 0.01) return;
+  const color = card._isTimeNight
+    ? "62,70,88"
+    : card._isLightBackground
+      ? "214,220,228"
+      : "150,160,176";
+  const key = `${color}|${Math.round(h)}`;
+  if (card._hazeKey !== key) {
+    const g = ctx.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, `rgba(${color},0.25)`);
+    g.addColorStop(0.6, `rgba(${color},0.6)`);
+    g.addColorStop(1, `rgba(${color},1)`);
+    card._hazeGrad = g;
+    card._hazeKey = key;
+  }
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, 0.5 * a.haze * card._layerFadeProgress.effects);
+  ctx.fillStyle = card._hazeGrad;
+  ctx.fillRect(0, 0, w, h);
+  ctx.restore();
+}
+
+// Ground mist: a low band with a few soft banks drifting slowly.
+export function drawMist(card, ctx, w, h) {
+  const a = card._atmo;
+  if (!a || a.mist <= 0.01) return;
+  const color = card._isTimeNight
+    ? "92,100,118"
+    : card._isLightBackground
+      ? "232,236,242"
+      : "176,186,200";
+  if (!card._mistBanks || card._mistBanks.w !== w || card._mistBanks.h !== h) {
+    card._mistBanks = Array.from({ length: 5 }, (_, i) => ({
+      x: (w * (i + Math.random() * 0.6)) / 4,
+      rx: w * (0.25 + Math.random() * 0.2),
+      ry: h * (0.08 + Math.random() * 0.06),
+      y: h * (0.86 + Math.random() * 0.1),
+      speed: 0.04 + Math.random() * 0.06,
+    }));
+    card._mistBanks.w = w;
+    card._mistBanks.h = h;
+  }
+  const s = Math.min(1, a.mist * card._layerFadeProgress.effects);
+  const animSpeed = card._animationSpeed * (card._frameScale || 1);
+  const key = `${color}|${Math.round(h)}`;
+  if (card._mistKey !== key) {
+    const band = ctx.createLinearGradient(0, h * 0.6, 0, h);
+    band.addColorStop(0, `rgba(${color},0)`);
+    band.addColorStop(1, `rgba(${color},0.55)`);
+    const blob = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+    blob.addColorStop(0, `rgba(${color},0.5)`);
+    blob.addColorStop(0.6, `rgba(${color},0.18)`);
+    blob.addColorStop(1, `rgba(${color},0)`);
+    card._mistBand = band;
+    card._mistBlob = blob;
+    card._mistKey = key;
+  }
+  ctx.save();
+  ctx.globalAlpha = s;
+  ctx.fillStyle = card._mistBand;
+  ctx.fillRect(0, h * 0.6, w, h * 0.4);
+  ctx.fillStyle = card._mistBlob;
+  for (const b of card._mistBanks) {
+    b.x += b.speed * animSpeed;
+    if (b.x - b.rx > w) b.x = -b.rx;
+    ctx.save();
+    ctx.translate(b.x, b.y);
+    ctx.scale(b.rx, b.ry);
+    ctx.beginPath();
+    ctx.arc(0, 0, 1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+// Soft beams fanning out from the sun, baked once with a blur and only
+// breathing slowly while drawn.
+export function drawSunRays(card, ctx, w, h) {
+  const a = card._atmo;
+  if (!a || a.rays <= 0.01) return;
+  const sun = card._getCelestialPosition(w, h);
+  const sx = Math.round(sun.x),
+    sy = Math.round(sun.y);
+  const dpr = card._cachedDimensions.dpr || 1;
+  const light = card._isLightBackground;
+  const sprite = cacheCanvas(card, "rays", w, h, {
+    k: `${Math.round(w)}|${Math.round(h)}|${sx}|${sy}|${dpr}|${light}`,
+    draw: (c) => {
+      const len = Math.hypot(w, h) * 1.1;
+      const toCenter = Math.atan2(h * 0.9 - sy, w / 2 - sx);
+      const color = light ? "255,248,225" : "255,240,205";
+      c.filter = `blur(${Math.max(4, h * 0.03) * dpr}px)`;
+      const beams = [-0.62, -0.38, -0.2, -0.04, 0.12, 0.3, 0.5, 0.7];
+      beams.forEach((off, i) => {
+        const ang = toCenter + off;
+        const spread = 0.05 + ((i * 37) % 5) * 0.015;
+        const g = c.createRadialGradient(sx, sy, 0, sx, sy, len);
+        g.addColorStop(0, `rgba(${color},0.75)`);
+        g.addColorStop(0.3, `rgba(${color},0.42)`);
+        g.addColorStop(0.7, `rgba(${color},0.12)`);
+        g.addColorStop(1, `rgba(${color},0)`);
+        c.fillStyle = g;
+        c.globalAlpha = 0.55 + ((i * 53) % 7) / 14;
+        c.beginPath();
+        c.moveTo(sx, sy);
+        c.lineTo(
+          sx + Math.cos(ang - spread) * len,
+          sy + Math.sin(ang - spread) * len,
+        );
+        c.lineTo(
+          sx + Math.cos(ang + spread) * len,
+          sy + Math.sin(ang + spread) * len,
+        );
+        c.closePath();
+        c.fill();
+      });
+      c.filter = "none";
+      c.globalAlpha = 1;
+    },
+  });
+  card._raysPhase =
+    (card._raysPhase || 0) +
+    0.004 * card._animationSpeed * (card._frameScale || 1);
+  const breath = 0.7 + 0.3 * Math.sin(card._raysPhase);
+  ctx.save();
+  ctx.globalCompositeOperation = "screen";
+  ctx.globalAlpha = Math.min(
+    1,
+    (light ? 0.9 : 1) * a.rays * breath * card._layerFadeProgress.effects,
+  );
+  ctx.drawImage(sprite, 0, 0, w, h);
+  ctx.restore();
+}

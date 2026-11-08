@@ -1,0 +1,114 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+
+import {
+  adjustParams,
+  computeAtmosphere,
+  readWeatherData,
+} from "../src/atmo-weather-atmosphere.js";
+
+const near = (actual, expected) =>
+  assert.ok(Math.abs(actual - expected) < 1e-6, `${actual} != ${expected}`);
+
+test("weather data is read in km, mm/h and degrees Celsius", () => {
+  const data = readWeatherData({
+    cloud_coverage: 40,
+    visibility: 5,
+    visibility_unit: "mi",
+    humidity: "88",
+    temperature: 50,
+    dew_point: 41,
+    temperature_unit: "°F",
+  });
+  assert.equal(data.coverage, 40);
+  near(data.visibility, 8.045);
+  assert.equal(data.humidity, 88);
+  near(data.temperature, 10);
+  near(data.dewPoint, 5);
+  assert.equal(readWeatherData({ visibility: 800, visibility_unit: "m" }).visibility, 0.8);
+  assert.equal(readWeatherData({ visibility: "unknown" }).visibility, null);
+});
+
+test("the rain amount only comes from the precipitation sensor", () => {
+  // An attribute on the weather entity is ignored.
+  assert.equal(readWeatherData({ precipitation: 5 }).precipitation, null);
+  assert.equal(readWeatherData({}, { state: "2.5", attributes: { unit_of_measurement: "mm/h" } }).precipitation, 2.5);
+  assert.equal(readWeatherData({}, { state: "0.1", attributes: { unit_of_measurement: "in/h" } }).precipitation, 2.54);
+  assert.equal(readWeatherData({}, { state: "unavailable", attributes: {} }).precipitation, null);
+});
+
+test("cloud cover sets the number of clouds in steps", () => {
+  const sunny = { type: "sun", cloud: 0 };
+  assert.equal(adjustParams(sunny, { coverage: 0 }).cloud, 0);
+  assert.equal(adjustParams(sunny, { coverage: 40 }).cloud, 18);
+  assert.equal(adjustParams(sunny, { coverage: 41 }).cloud, 18);
+  assert.equal(adjustParams(sunny, { coverage: 100 }).cloud, 45);
+  // Without a value nothing changes.
+  assert.deepEqual(adjustParams(sunny, {}), sunny);
+  // Fog keeps its own look.
+  assert.equal(adjustParams({ type: "fog", cloud: 0 }, { coverage: 80 }).cloud, 0);
+});
+
+test("rain keeps most of its clouds and opens the deck below 70 % cover", () => {
+  const rainy = { type: "rain", cloud: 40, overcast: true, count: 120 };
+  const broken = adjustParams(rainy, { coverage: 50 });
+  assert.equal(broken.cloud, 24);
+  assert.equal(broken.overcast, false);
+  const closed = adjustParams(rainy, { coverage: 100 });
+  assert.equal(closed.cloud, 44);
+  assert.equal(closed.overcast, true);
+  assert.equal(rainy.cloud, 40, "the input stays untouched");
+});
+
+test("the measured amount sets the rain and snow density", () => {
+  const rain = { type: "rain", count: 120 };
+  assert.equal(adjustParams(rain, { precipitation: 0 }).count, 40);
+  assert.equal(adjustParams(rain, { precipitation: 2 }).count, 100);
+  assert.equal(adjustParams(rain, { precipitation: 20 }).count, 280);
+  assert.equal(adjustParams({ type: "snow", count: 60 }, { precipitation: 3 }).count, 80);
+  // Hail keeps its count.
+  assert.equal(adjustParams({ type: "hail", count: 150 }, { precipitation: 5 }).count, 150);
+});
+
+const sky = (data, opts) =>
+  computeAtmosphere(data, { state: "sunny", isTimeNight: false, sunElev: 30, ...opts });
+
+test("low visibility and humid air make haze, but not in fog", () => {
+  assert.equal(sky({}).haze, 0);
+  assert.equal(sky({ visibility: 20 }).haze, 0);
+  assert.equal(sky({ visibility: 2 }).haze, 1);
+  assert.equal(sky({ humidity: 100 }).haze, 0.5);
+  assert.equal(sky({ visibility: 2 }, { state: "fog" }).haze, 0);
+});
+
+test("ground mist forms near the dew point at night and in the morning", () => {
+  const damp = { temperature: 6, dewPoint: 5.5 };
+  near(sky(damp, { sunElev: 5 }).mist, 0.8);
+  assert.equal(sky(damp, { sunElev: 30 }).mist, 0, "not with the sun high up");
+  assert.equal(sky(damp, { sunElev: 5, state: "pouring" }).mist, 0);
+  assert.equal(sky({ temperature: 12, dewPoint: 4 }, { sunElev: 5 }).mist, 0);
+  assert.equal(sky({ temperature: 6 }, { sunElev: 5 }).mist, 0);
+});
+
+test("twilight is blue right after sunset and the stars come out slowly", () => {
+  const dusk = sky({}, { isTimeNight: true, sunElev: -1.5 });
+  near(dusk.twilight, 0.75);
+  assert.equal(dusk.starVisibility, 0.1875);
+  const night = sky({}, { isTimeNight: true, sunElev: -12 });
+  assert.equal(night.twilight, 0);
+  assert.equal(night.starVisibility, 1);
+  // Without a sun elevation the night looks as before.
+  const unknown = sky({}, { isTimeNight: true, sunElev: null });
+  assert.equal(unknown.twilight, 0);
+  assert.equal(unknown.starVisibility, 1);
+});
+
+test("sun rays shine through broken clouds, strongest with a low sun", () => {
+  assert.equal(sky({}, { state: "partlycloudy", sunElev: 15 }).rays, 1);
+  assert.equal(sky({}, { state: "partlycloudy", sunElev: 50 }).rays, 0.6);
+  assert.equal(sky({}, { state: "cloudy", sunElev: 15 }).rays, 0.6);
+  assert.equal(sky({}, { state: "partlycloudy", sunElev: null }).rays, 1);
+  assert.equal(sky({ coverage: 98 }, { state: "cloudy", sunElev: 15 }).rays, 0);
+  assert.equal(sky({}, { state: "sunny", sunElev: 15 }).rays, 0);
+  assert.equal(sky({}, { state: "partlycloudy", isTimeNight: true, sunElev: -3 }).rays, 0);
+});

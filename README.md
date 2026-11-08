@@ -22,7 +22,9 @@ Click any weather condition or Day/Night to switch instantly and see every effec
 - **Live weather scenes** for every Home Assistant condition, by day and by night — layered clouds, rain, hail, snow, fog, thunderstorms with lightning, and overcast skies
 - **Wind you can see** — direction and strength from your weather entity, drawn as wind lines or a flow field
 - **Sun and moon** that follow the real sun position, with sunrise and sunset colors, live moon phases and a moon tilted for your latitude
-- **Night sky** with stars, shooting stars, comets and aurora; birds and planes by day
+- **Night sky** with stars, shooting stars and comets; birds and planes by day
+- **Real weather data** shapes the sky: the measured cloud cover sets the clouds, low visibility or humid air adds haze, ground mist forms near the dew point, and an optional precipitation sensor sets how hard it rains
+- **Sky light** with a blue hour after sunset and before sunrise, stars that come out one by one, and soft sun rays through broken clouds
 - **Chips** for any entity or attribute, weather forecasts, ring and bar gauges, free positioning and many styles
 - **Visual editor** for everything, plus full YAML control
 - **Performance presets** from Low (older tablets) to Ultra (smooth 60 fps, sharp on large wall displays)
@@ -50,7 +52,7 @@ Click any weather condition or Day/Night to switch instantly and see every effec
 
 **Guides** · [Chips](#chips) · [Layout & Layering](#layout-layering) · [Icons](#weather-icons)
 
-**Reference** · [Color Mode](#color-mode) · [Performance](#performance)
+**Reference** · [Weather Data & Sky Light](#weather-data) · [Color Mode](#color-mode) · [Performance](#performance)
 
 **Help** · [Troubleshooting](#troubleshooting)
 
@@ -127,6 +129,7 @@ For manual installation without the Marketplace. [Download the latest files from
 | **`weather_entity`** | `string` | —       | **Required.** Your weather integration entity (e.g., `weather.your_weather_entity`). See [Troubleshooting: Weather entity is unavailable or values look wrong](#weather-entity-is-unavailable-or-values-look-wrong).                    |
 | **`sun_entity`**     | `string` | —       | **Required.** Tracks the sun to auto-switch between day and night. Without this, the card will default to permanent day. See [Troubleshooting: No night effects (stars/comets) are visible](#no-night-effects-starscomets-are-visible). |
 | `moon_phase_entity`  | `string` | —       | _Recommended._ Displays the correct moon phase (e.g., `sensor.moon_phase`).                                                                                                                                                             |
+| `precipitation_entity` | `string` | —     | _Optional._ A sensor with the current rain intensity in mm/h (or in/h). Rain and snow then follow the measured amount, from drizzle to downpour. Without it the density depends on the weather state as before. See [Weather Data & Sky Light](#weather-data). |
 
 > [!NOTE]
 > The `sun_entity` controls the timing of the sun and moon. Without it, the card defaults to permanent day. Additionally, card colors change based on your [configuration](#color-mode).
@@ -1236,6 +1239,24 @@ This explains how to create an image for your own home and use it in the card.
 
 </details>
 
+<a name="weather-data"></a>
+
+## Weather Data & Sky Light
+
+The card reads optional attributes of your weather entity and uses them to make each scene match the real sky. Every attribute is optional: if your weather integration does not provide one, the card looks exactly as it does without it. Nothing needs to be configured.
+
+| Source                                         | Effect                                                                                                                                                                                                 |
+| :--------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cloud_coverage` (weather attribute, %)        | Sets the number of clouds, so 30 % cloud cover looks different from 70 %. In rain, snow and storms a cover below 70 % opens the cloud deck and leaves gaps, while at least 60 % of the usual clouds stay. |
+| `visibility` (weather attribute, km or mi)     | Below 20 km a thin haze appears that gets denser towards the ground; at 2 km it is at full strength.                                                                                                     |
+| `humidity` (weather attribute, %)              | Above 80 % humidity the air gets slightly hazy as well.                                                                                                                                                |
+| `dew_point` + `temperature` (weather attributes) | When the temperature is within 2.5 °C of the dew point, ground mist drifts along the bottom of the card at night and in the morning (sun below 12°), not during downpours.                            |
+| `precipitation_entity` (sensor, mm/h or in/h)  | Sets the rain and snow density: drizzle at 0 mm/h, a downpour from about 8 mm/h. The weather entity has no standard attribute for this, so the value comes from a sensor you choose in the editor.       |
+| Sun elevation (`sun_entity`)                   | **Blue hour:** from sunset until the sun is 6° below the horizon (and before sunrise) the sky stays deep blue with a warm glow at the horizon, and the stars come out one by one until about 8°.        |
+| Weather state + sun elevation                  | **Sun rays:** soft beams fan out from the sun in `partlycloudy` and `cloudy` weather, strongest with a low sun (below 35°) and not under a closed cloud cover (95 % or more).                         |
+
+Cloud cover and precipitation are rounded into steps, so small sensor changes do not rebuild the scene every few minutes. Haze, ground mist and sun rays need `perf_effects` 1 or higher. The blue hour works in every mode, but it tints the sky only in the `standalone` card style, because the `immersive` style has no sky of its own.
+
 ## Color Mode
 
 The card's appearance depends on your **`sun_entity`** (sun or moon) and your **`card_color_mode`** (light or dark).
@@ -1288,7 +1309,7 @@ The card has three performance presets (`low`, `default`, and `ultra`) which cov
 | `perf_mode`             | `string`  | `default` | Performance preset. `low` disables effects and lowers resolution for weak devices. `default` is balanced. `ultra` raises the frame rate and cloud detail to maximum, and keeps large cards (for example on wall tablets) at full sharpness.                                                                                                                                                                                                                                                                                                                                                                   |
 | `perf_fps`              | `number`  | `30`      | Animation frame rate. `30` saves battery, `60` is smoother. See [Troubleshooting: Editor preview stutters or FPS looks wrong after install/update](#editor-preview-stutters-or-fps-looks-wrong-after-installupdate) and [Performance is weak on older devices](#performance-is-weak-on-older-devices).                                                                                                                                                                                                                                 |
 | `perf_cloud_quality`    | `number`  | `1.5`     | Cloud detail level. Controls how many puffs each cloud shape gets. `0.5` = low, `1` = medium, `1.5` = high, `2` = ultra.                                                                                                                                                                                                                                                                                                                                                                                                               |
-| `perf_effects`          | `number`  | `1`       | Weather effects intensity. `0` disables visual effects like shooting stars, comets, aurora, fog banks, and similar atmospheric extras. The fog haze and the wind display stay visible, with fewer wind lines. `1` enables default spawn rates. `2` increases effect intensity and spawn rates (comets appear 1.8x more often). Spawn rates also scale with `perf_fps` and overall system performance. See [Troubleshooting: No night effects (stars/comets) are visible](#no-night-effects-starscomets-are-visible) and [Performance is weak on older devices](#performance-is-weak-on-older-devices). |
+| `perf_effects`          | `number`  | `1`       | Weather effects intensity. `0` disables visual effects like shooting stars, comets, fog banks, and similar atmospheric extras. The fog haze and the wind display stay visible, with fewer wind lines. `1` enables default spawn rates. `2` increases effect intensity and spawn rates (comets appear 1.8x more often). Spawn rates also scale with `perf_fps` and overall system performance. See [Troubleshooting: No night effects (stars/comets) are visible](#no-night-effects-starscomets-are-visible) and [Performance is weak on older devices](#performance-is-weak-on-older-devices). |
 | `cloud_sun_angle_lighting` | `boolean` | _auto_ | YAML only. Lights clouds from the current sun angle. On by default when `perf_effects` is `2`. |
 | `cloud_breathing_shapes`   | `boolean` | _auto_ | YAML only. Slowly reshapes clouds over time. On by default when `perf_effects` is `2`. |
 | `perf_fauna`            | `number`  | `2`       | Birds and planes spawn rate. `0` = no fauna, `1` = birds only, `2` = birds and planes. Separate control from weather effects. See [Troubleshooting: No birds or planes are visible](#no-birds-or-planes-are-visible).                                                                                                                                                                                                                                                                                                                  |

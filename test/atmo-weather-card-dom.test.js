@@ -483,6 +483,119 @@ test("low mode draws the sun without a corona", () => {
   assert.equal(card._coronaSprites, undefined);
 });
 
+const weatherWith = (weather, attributes, extra = {}) => {
+  const hass = makeHass({ weather, ...extra });
+  Object.assign(hass.states["weather.home"].attributes, attributes);
+  return hass;
+};
+const nextTask = () => new Promise((resolve) => setTimeout(resolve, 0));
+// happy-dom has no layout, so a rebuild is counted rather than run.
+const countRebuilds = (card) => {
+  const calls = { n: 0 };
+  card._initParticles = () => calls.n++;
+  return calls;
+};
+
+test("measured cloud cover sets the clouds and rebuilds the scene when it changes", async () => {
+  const card = mountCard({ perf_mode: "ultra" }, weatherWith("sunny", { cloud_coverage: 60 }));
+  runFrames(3);
+  assert.equal(card._params.cloud, 27);
+  assert.ok(card._clouds.length > 0);
+
+  const rebuilds = countRebuilds(card);
+  card.hass = weatherWith("sunny", { cloud_coverage: 0 });
+  await nextTask();
+  assert.equal(card._params.cloud, 0);
+  assert.equal(rebuilds.n, 1);
+  // The same cover again changes nothing.
+  card.hass = weatherWith("sunny", { cloud_coverage: 0 });
+  await nextTask();
+  assert.equal(rebuilds.n, 1);
+});
+
+test("rain follows the precipitation sensor and ignores the attribute", () => {
+  const rain = (config, attrs) => {
+    const hass = weatherWith("rainy", attrs, {
+      states: { "sensor.rain_rate": { entity_id: "sensor.rain_rate", state: "8", attributes: { unit_of_measurement: "mm/h" } } },
+    });
+    return mountCard({ perf_mode: "ultra", ...config }, hass)._params.count;
+  };
+  assert.equal(rain({}, { precipitation: 8 }), 120);
+  assert.equal(rain({ precipitation_entity: "sensor.rain_rate" }, {}), 280);
+});
+
+test("a new reading of the precipitation sensor reaches the card", async () => {
+  const sensor = (state) => ({ "sensor.rain_rate": { entity_id: "sensor.rain_rate", state, attributes: { unit_of_measurement: "mm/h" } } });
+  const card = mountCard(
+    { perf_mode: "ultra", precipitation_entity: "sensor.rain_rate" },
+    makeHass({ weather: "rainy", states: sensor("1") }),
+  );
+  assert.equal(card._params.count, 70);
+  assert.equal(card._rain.length, 70);
+  const rebuilds = countRebuilds(card);
+  card.hass = makeHass({ weather: "rainy", states: sensor("4") });
+  await nextTask();
+  assert.equal(card._params.count, 160);
+  assert.equal(rebuilds.n, 1);
+});
+
+test("the sky light effects draw for twilight, haze, mist and sun rays", () => {
+  const dusk = makeHass({ weather: "clear-night", sun: "below_horizon", dark: true });
+  dusk.states["sun.sun"].attributes.elevation = -2;
+  Object.assign(dusk.states["weather.home"].attributes, { visibility: 3, temperature: 6, dew_point: 5.8 });
+  const night = mountCard({ perf_mode: "ultra" }, dusk);
+  runFrames(3);
+  assert.ok(night._atmo.twilight > 0.5);
+  assert.ok(night._atmo.starVisibility < 0.5);
+  assert.ok(night._twilightGrad, "twilight drawn");
+  assert.ok(night._hazeGrad, "haze drawn");
+  assert.equal(night._mistBanks.length, 5, "mist drawn");
+
+  const day = makeHass({ weather: "partlycloudy" });
+  day.states["sun.sun"].attributes.elevation = 15;
+  const sunny = mountCard({ perf_mode: "ultra" }, day);
+  runFrames(3);
+  assert.equal(sunny._atmo.rays, 1);
+  assert.ok(sunny._atmoCache.has("rays"), "sun rays drawn");
+  // Low mode leaves the extra light out.
+  const low = mountCard({ perf_mode: "low" }, day);
+  runFrames(3);
+  assert.ok(!low._atmoCache);
+});
+
+test("a comet made while building the night sky has colors and draws", () => {
+  const card = mountCard({ perf_mode: "ultra" }, makeHass({ weather: "clear-night", sun: "below_horizon", dark: true }));
+  const comet = card._createComet(400, 200);
+  assert.ok(comet._coreRgb && comet._glowRgb && comet._tailRgb);
+  card._comets.push(comet);
+  runFrames(5);
+  assert.ok(!errors.some((e) => e.includes("render frame failed")));
+});
+
+test("the canvases follow every height change, the scene only bigger ones", () => {
+  const card = mountCard({ perf_mode: "ultra" });
+  const dpr = card._cachedDimensions.dpr;
+  assert.equal(card._elements.bg.height, Math.floor(200 * dpr));
+
+  // 120 px more used to be ignored, leaving the bottom of the card empty.
+  assert.equal(card._updateCanvasDimensions(400, 320), true);
+  assert.equal(card._elements.bg.height, Math.floor(320 * dpr));
+  // A small change resizes the canvases without rebuilding the scene.
+  assert.equal(card._updateCanvasDimensions(400, 340), false);
+  assert.equal(card._elements.bg.height, Math.floor(340 * dpr));
+  assert.equal(card._updateCanvasDimensions(400, 340), false);
+});
+
+test("a change of the wind direction alone reaches the card", () => {
+  const hass = makeHass({ weather: "windy" });
+  const card = mountCard({}, hass);
+  assert.equal(card._windBearing, 90);
+  const turned = makeHass({ weather: "windy" });
+  turned.states["weather.home"].attributes.wind_bearing = 270;
+  card.hass = turned;
+  assert.equal(card._windBearing, 270);
+});
+
 test("ultra keeps large cards sharp, other modes cap the pixels", () => {
   const ratio = window.devicePixelRatio;
   window.devicePixelRatio = 2;
