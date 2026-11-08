@@ -26,6 +26,13 @@ test("the documentation page is built from docs-src", async () => {
   assert.ok(page.includes("./atmo-weather-card.js"));
 });
 
+test("the live card of the documentation starts sunny without measured cloud cover", () => {
+  // A fixed cloud_coverage in the demo data put clouds into every sunny sky.
+  const script = page.slice(page.indexOf("function buildHass()"));
+  assert.ok(!/cloud_coverage/.test(script.slice(0, script.indexOf("return {"))));
+  assert.match(page, /const state = \{ condition: "sunny", night: false \};/);
+});
+
 test("the editor help links point at sections of the documentation", () => {
   const editor = read("src/atmo-weather-card-editor.js").replace(/\r\n/g, "\n");
   assert.ok(editor.includes(`const DOCS_URL = "${DOCS}";`));

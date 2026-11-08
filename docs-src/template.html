@@ -192,7 +192,7 @@
   });
   await import("./atmo-weather-card.js");
 
-  const state = { condition: "partlycloudy", night: false };
+  const state = { condition: "sunny", night: false };
   const CONDS = [["sunny", "Sunny"], ["partlycloudy", "Partly cloudy"], ["cloudy", "Cloudy"], ["rainy", "Rain"], ["lightning-rainy", "Storm"], ["snowy", "Snow"], ["fog", "Fog"], ["windy", "Windy"]];
   const sensorFor = (id) => {
     const m = (re) => re.test(id);
@@ -214,7 +214,7 @@
   function buildHass() {
     const states = {
       "weather.demo": { entity_id: "weather.demo", state: state.night && state.condition === "sunny" ? "clear-night" : state.condition,
-        attributes: { temperature: 14, humidity: 64, uv_index: 3, precipitation_probability: 20, wind_speed: state.condition === "windy" ? 45 : 12, wind_bearing: 250, wind_speed_unit: "km/h", temperature_unit: "°C", cloud_coverage: 45, friendly_name: "Home" } },
+        attributes: { temperature: 14, humidity: 64, uv_index: 3, precipitation_probability: 20, wind_speed: state.condition === "windy" ? 45 : 12, wind_bearing: 250, wind_speed_unit: "km/h", temperature_unit: "°C", friendly_name: "Home" } },
       "sun.sun": { entity_id: "sun.sun", state: state.night ? "below_horizon" : "above_horizon", attributes: { elevation: state.night ? -12 : 32, azimuth: 200 } },
       "sensor.moon_phase": { entity_id: "sensor.moon_phase", state: "waxing_gibbous", attributes: {} },
       "sensor.time": { entity_id: "sensor.time", state: new Date().toISOString(), attributes: {} },
@@ -277,7 +277,7 @@
       navigator.clipboard?.writeText(c.closest(".code").querySelector("code").textContent).then(() => { c.textContent = "Copied"; setTimeout(() => (c.textContent = "Copy"), 1200); }, () => {});
     }
   });
-  document.getElementById("reset").onclick = () => { state.condition = "partlycloudy"; state.night = false; title.textContent = "Default card"; document.querySelectorAll(".code.showing").forEach((c) => c.classList.remove("showing")); mount(DEFAULT); syncButtons(); };
+  document.getElementById("reset").onclick = () => { state.condition = "sunny"; state.night = false; title.textContent = "Default card"; document.querySelectorAll(".code.showing").forEach((c) => c.classList.remove("showing")); mount(DEFAULT); syncButtons(); };
   mount(DEFAULT); syncButtons();
   setInterval(() => card && (card.hass = buildHass()), 1000);
 
