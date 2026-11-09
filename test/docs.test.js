@@ -84,9 +84,11 @@ test("tables and the demo stay readable on phones", () => {
   const cells = [...page.matchAll(/<td(?=[\s>])[^>]*>/g)].map((m) => m[0]);
   assert.ok(cells.length > 100);
   for (const cell of cells) assert.match(cell, /data-label="[^"]+"/);
-  // The phone rule must come after the sticky rule, or the card covers the controls.
-  const demo = read("docs/demo.html");
+  // Phones: only the card stays on top, above the controls. The phone rule must come after the
+  // sticky .stage rule, or the whole stage sticks and the controls paint over the card.
+  const demo = read("docs/demo.html").replace(/\r\n/g, "\n");
   const sticky = demo.indexOf(".stage { position: sticky");
-  const phone = demo.search(/@media \(max-width: 900px\) \{[^\n]*\.stage \{ position: static; \}/);
+  const phone = demo.search(/@media \(max-width: 900px\) \{[^}]*\}\s*\.stage \{ position: static; display: contents; \}/);
   assert.ok(sticky > 0 && phone > sticky);
+  assert.match(demo.slice(phone), /#card-slot \{ position: sticky; top: 0; z-index: \d+;[^}]*background:/);
 });

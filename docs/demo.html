@@ -17,8 +17,15 @@
   header a { color: var(--link); text-decoration: none; }
   .layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 24px; align-items: start; }
   .stage { position: sticky; top: 16px; }
-  /* Must come after the .stage rule above, or the card stays sticky on phones and covers the controls. */
-  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } .stage { position: static; } }
+  /* Must come after the .stage rule above. On phones only the card itself stays on top (status and note scroll away),
+     so the sky stays in view while moving the controls. display: contents makes the card a child of the tall grid. */
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; gap: 12px; }
+    .stage { position: static; display: contents; }
+    #card-slot { position: sticky; top: 0; z-index: 10; padding: 8px 0; margin: -8px 0; background: var(--bg);
+      box-shadow: 0 10px 12px -10px rgba(0, 0, 0, 0.8); }
+    .status, .note { margin: 0; }
+  }
   atmo-weather-card { display: block; width: 100%; }
   .status { margin-top: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--muted); font-size: 12.5px; }
   .status b { color: var(--text); font-weight: 600; }
