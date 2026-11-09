@@ -114,7 +114,19 @@
     .side { position: static; max-height: none; }
     .side .nav-group { display: none; }
     .live, main { grid-column: 1; }
-    .top nav { margin-left: 0; }
+    .top { position: static; }
+    .top nav { margin-left: 0; gap: 6px 16px; }
+  }
+  /* Narrow screens: every table row becomes a small block, the column title sits in front of each value (data-label). */
+  @media (max-width: 900px) {
+    table, tbody, tr, td { display: block; }
+    table { overflow: visible; }
+    thead { display: none; }
+    tr { border-bottom: 1px solid var(--line); padding: 10px 0; }
+    td { border: 0; padding: 2px 0; }
+    td:first-child { white-space: normal; overflow-wrap: anywhere; font-weight: 600; }
+    td[data-label]:not(:first-child)::before { content: attr(data-label); display: inline-block; min-width: 6.5em; margin-right: 8px;
+      font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
   }
   @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 </style>
@@ -159,28 +171,28 @@
 </tr>
 </thead>
 <tbody><tr>
-<td style="text-align:left"><strong><code>weather_entity</code></strong></td>
-<td id="opt-string" style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left"><strong>Required.</strong> Your weather integration entity (e.g., <code>weather.your_weather_entity</code>). See <a href="#weather-entity-is-unavailable-or-values-look-wrong">Troubleshooting: Weather entity is unavailable or values look wrong</a>.</td>
+<td data-label="Option" style="text-align:left"><strong><code>weather_entity</code></strong></td>
+<td data-label="Type" id="opt-string" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left"><strong>Required.</strong> Your weather integration entity (e.g., <code>weather.your_weather_entity</code>). See <a href="#weather-entity-is-unavailable-or-values-look-wrong">Troubleshooting: Weather entity is unavailable or values look wrong</a>.</td>
 </tr>
 <tr>
-<td id="opt-sun_entity" style="text-align:left"><code>sun_entity</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left"><em>Recommended.</em> Usually <code>sun.sun</code>. Switches between day and night and drives sunrise and sunset colors, the blue hour, sun rays and the moving sun. Without it the card always shows day. How it also sets the card colors is explained in <a href="#color-mode">Color Mode</a>.</td>
+<td data-label="Option" id="opt-sun_entity" style="text-align:left"><code>sun_entity</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left"><em>Recommended.</em> Usually <code>sun.sun</code>. Switches between day and night and drives sunrise and sunset colors, the blue hour, sun rays and the moving sun. Without it the card always shows day. How it also sets the card colors is explained in <a href="#color-mode">Color Mode</a>.</td>
 </tr>
 <tr>
-<td id="opt-moon_phase_entity" style="text-align:left"><code>moon_phase_entity</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left"><em>Recommended.</em> Displays the correct moon phase (e.g., <code>sensor.moon_phase</code>).</td>
+<td data-label="Option" id="opt-moon_phase_entity" style="text-align:left"><code>moon_phase_entity</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left"><em>Recommended.</em> Displays the correct moon phase (e.g., <code>sensor.moon_phase</code>).</td>
 </tr>
 <tr>
-<td id="opt-precipitation_entity" style="text-align:left"><code>precipitation_entity</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left"><em>Optional.</em> A sensor with the current rain intensity in mm/h (or in/h). The editor lists only sensors with one of these units. Rain and snow then follow the measured amount, from drizzle to downpour. Without it the density follows the weather state. See <a href="#weather-data">Weather Data &amp; Sky Light</a>.</td>
+<td data-label="Option" id="opt-precipitation_entity" style="text-align:left"><code>precipitation_entity</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left"><em>Optional.</em> A sensor with the current rain intensity in mm/h (or in/h). The editor lists only sensors with one of these units. Rain and snow then follow the measured amount, from drizzle to downpour. Without it the density follows the weather state. See <a href="#weather-data">Weather Data &amp; Sky Light</a>.</td>
 </tr>
 </tbody></table>
 </section>
@@ -646,58 +658,58 @@ grid_options:
 </tr>
 </thead>
 <tbody><tr>
-<td id="opt-card_style" style="text-align:left"><code>card_style</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td id="opt-standalone" style="text-align:left"><code>standalone</code></td>
-<td style="text-align:left">Set to <code>standalone</code> for a solid background with dynamic weather visuals, or <code>immersive</code> for a transparent background.</td>
+<td data-label="Option" id="opt-card_style" style="text-align:left"><code>card_style</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" id="opt-standalone" style="text-align:left"><code>standalone</code></td>
+<td data-label="Description" style="text-align:left">Set to <code>standalone</code> for a solid background with dynamic weather visuals, or <code>immersive</code> for a transparent background.</td>
 </tr>
 <tr>
-<td id="opt-card_height" style="text-align:left"><code>card_height</code></td>
-<td id="opt-number" style="text-align:left"><code>number</code> · <code>string</code></td>
-<td style="text-align:left"><code>200</code></td>
-<td style="text-align:left">Height in pixels. Numbers are automatically treated as px (e.g., <code>110</code> becomes <code>110px</code>). <strong>Set to <code>auto</code></strong> to dynamically fill the available height (for grid layouts).</td>
+<td data-label="Option" id="opt-card_height" style="text-align:left"><code>card_height</code></td>
+<td data-label="Type" id="opt-number" style="text-align:left"><code>number</code> · <code>string</code></td>
+<td data-label="Default" style="text-align:left"><code>200</code></td>
+<td data-label="Description" style="text-align:left">Height in pixels. Numbers are automatically treated as px (e.g., <code>110</code> becomes <code>110px</code>). <strong>Set to <code>auto</code></strong> to dynamically fill the available height (for grid layouts).</td>
 </tr>
 <tr>
-<td id="opt-card_padding" style="text-align:left"><code>card_padding</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left"><code>16px</code></td>
-<td style="text-align:left">Inner padding around the text. Accepts any CSS padding value (e.g., <code>8px</code>, <code>12px 20px</code>).</td>
+<td data-label="Option" id="opt-card_padding" style="text-align:left"><code>card_padding</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left"><code>16px</code></td>
+<td data-label="Description" style="text-align:left">Inner padding around the text. Accepts any CSS padding value (e.g., <code>8px</code>, <code>12px 20px</code>).</td>
 </tr>
 <tr>
-<td id="opt-card_hide_text" style="text-align:left"><code>card_hide_text</code></td>
-<td id="opt-boolean" style="text-align:left"><code>boolean</code></td>
-<td id="opt-false" style="text-align:left"><code>false</code></td>
-<td style="text-align:left">Hides all text overlays, including chips. The card&#39;s weather animations and configured chip settings remain available if you enable it again.</td>
+<td data-label="Option" id="opt-card_hide_text" style="text-align:left"><code>card_hide_text</code></td>
+<td data-label="Type" id="opt-boolean" style="text-align:left"><code>boolean</code></td>
+<td data-label="Default" id="opt-false" style="text-align:left"><code>false</code></td>
+<td data-label="Description" style="text-align:left">Hides all text overlays, including chips. The card&#39;s weather animations and configured chip settings remain available if you enable it again.</td>
 </tr>
 <tr>
-<td id="opt-card_square" style="text-align:left"><code>card_square</code></td>
-<td style="text-align:left"><code>boolean</code></td>
-<td style="text-align:left"><code>false</code></td>
-<td style="text-align:left">Forces the card into a perfect square. Highly useful for grid layouts.</td>
+<td data-label="Option" id="opt-card_square" style="text-align:left"><code>card_square</code></td>
+<td data-label="Type" style="text-align:left"><code>boolean</code></td>
+<td data-label="Default" style="text-align:left"><code>false</code></td>
+<td data-label="Description" style="text-align:left">Forces the card into a perfect square. Highly useful for grid layouts.</td>
 </tr>
 <tr>
-<td id="opt-card_full_width" style="text-align:left"><code>card_full_width</code></td>
-<td style="text-align:left"><code>boolean</code></td>
-<td style="text-align:left"><code>false</code></td>
-<td style="text-align:left">Stretches the card edge-to-edge by removing side margins.</td>
+<td data-label="Option" id="opt-card_full_width" style="text-align:left"><code>card_full_width</code></td>
+<td data-label="Type" style="text-align:left"><code>boolean</code></td>
+<td data-label="Default" style="text-align:left"><code>false</code></td>
+<td data-label="Description" style="text-align:left">Stretches the card edge-to-edge by removing side margins.</td>
 </tr>
 <tr>
-<td id="opt-card_offset" style="text-align:left"><code>card_offset</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left"><code>0px</code></td>
-<td style="text-align:left">Shifts the card using CSS margin (e.g., <code>&quot;-50px 0px 0px 0px&quot;</code>). Useful when layering cards.</td>
+<td data-label="Option" id="opt-card_offset" style="text-align:left"><code>card_offset</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left"><code>0px</code></td>
+<td data-label="Description" style="text-align:left">Shifts the card using CSS margin (e.g., <code>&quot;-50px 0px 0px 0px&quot;</code>). Useful when layering cards.</td>
 </tr>
 <tr>
-<td id="opt-card_stack_order" style="text-align:left"><code>card_stack_order</code></td>
-<td style="text-align:left"><code>number</code></td>
-<td style="text-align:left"><em>auto</em></td>
-<td style="text-align:left">Manually sets the z-index (e.g., <code>1</code>, <code>0</code>, <code>-1</code>). Useful for forcing an immersive card to display in front of cards with solid backgrounds. See <a href="#card-always-stays-in-front-of-other-cards">Troubleshooting: Card always stays in front of other cards</a> and <a href="#card-appears-behind-other-cards-or-becomes-hard-to-see">Card appears behind other cards or becomes hard to see</a>.</td>
+<td data-label="Option" id="opt-card_stack_order" style="text-align:left"><code>card_stack_order</code></td>
+<td data-label="Type" style="text-align:left"><code>number</code></td>
+<td data-label="Default" style="text-align:left"><em>auto</em></td>
+<td data-label="Description" style="text-align:left">Manually sets the z-index (e.g., <code>1</code>, <code>0</code>, <code>-1</code>). Useful for forcing an immersive card to display in front of cards with solid backgrounds. See <a href="#card-always-stays-in-front-of-other-cards">Troubleshooting: Card always stays in front of other cards</a> and <a href="#card-appears-behind-other-cards-or-becomes-hard-to-see">Card appears behind other cards or becomes hard to see</a>.</td>
 </tr>
 <tr>
-<td id="opt-card_tap_action" style="text-align:left"><code>card_tap_action</code></td>
-<td id="opt-object" style="text-align:left"><code>object</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">A standard Home Assistant <a href="https://www.home-assistant.io/dashboards/actions/">tap action</a>.</td>
+<td data-label="Option" id="opt-card_tap_action" style="text-align:left"><code>card_tap_action</code></td>
+<td data-label="Type" id="opt-object" style="text-align:left"><code>object</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">A standard Home Assistant <a href="https://www.home-assistant.io/dashboards/actions/">tap action</a>.</td>
 </tr>
 </tbody></table>
 <h3 id="theme--filters"><a class="anchor" href="#theme--filters" aria-hidden="true">#</a>Theme &amp; Filters</h3>
@@ -715,40 +727,40 @@ grid_options:
 </tr>
 </thead>
 <tbody><tr>
-<td id="opt-card_color_mode" style="text-align:left"><code>card_color_mode</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td id="opt-auto" style="text-align:left"><code>auto</code></td>
-<td style="text-align:left">Controls the card&#39;s color scheme. By default, it follows your Home Assistant theme, or <code>theme_entity</code> if you set one. Use <code>dark</code> or <code>light</code> to lock the look. <code>night</code> and <code>day</code> override the sky content. The older <code>force_dark</code> and <code>force_light</code> still work. See <a href="#color-mode">Colors</a>.</td>
+<td data-label="Option" id="opt-card_color_mode" style="text-align:left"><code>card_color_mode</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" id="opt-auto" style="text-align:left"><code>auto</code></td>
+<td data-label="Description" style="text-align:left">Controls the card&#39;s color scheme. By default, it follows your Home Assistant theme, or <code>theme_entity</code> if you set one. Use <code>dark</code> or <code>light</code> to lock the look. <code>night</code> and <code>day</code> override the sky content. The older <code>force_dark</code> and <code>force_light</code> still work. See <a href="#color-mode">Colors</a>.</td>
 </tr>
 <tr>
-<td id="opt-card_filter_clouds" style="text-align:left"><code>card_filter_clouds</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td id="opt-none" style="text-align:left"><code>none</code></td>
-<td style="text-align:left">Applies a visual filter preset to the clouds. Options: <code>none</code>, <code>darken</code>, <code>vivid</code>, <code>muted</code>, <code>warm</code>.</td>
+<td data-label="Option" id="opt-card_filter_clouds" style="text-align:left"><code>card_filter_clouds</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" id="opt-none" style="text-align:left"><code>none</code></td>
+<td data-label="Description" style="text-align:left">Applies a visual filter preset to the clouds. Options: <code>none</code>, <code>darken</code>, <code>vivid</code>, <code>muted</code>, <code>warm</code>.</td>
 </tr>
 <tr>
-<td id="opt-card_filter_sun" style="text-align:left"><code>card_filter_sun</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left"><code>none</code></td>
-<td style="text-align:left">Applies a visual filter preset to the sun glow. Same options as <code>card_filter_clouds</code>. An older <code>card_filter</code> value is applied to both automatically.</td>
+<td data-label="Option" id="opt-card_filter_sun" style="text-align:left"><code>card_filter_sun</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left"><code>none</code></td>
+<td data-label="Description" style="text-align:left">Applies a visual filter preset to the sun glow. Same options as <code>card_filter_clouds</code>. An older <code>card_filter</code> value is applied to both automatically.</td>
 </tr>
 <tr>
-<td id="opt-card_mask_vertical" style="text-align:left"><code>card_mask_vertical</code></td>
-<td style="text-align:left"><code>boolean</code></td>
-<td id="opt-true" style="text-align:left"><code>true</code></td>
-<td style="text-align:left"><em>(Immersive only)</em> Fades the top and bottom edges. Set to <code>false</code> to disable.</td>
+<td data-label="Option" id="opt-card_mask_vertical" style="text-align:left"><code>card_mask_vertical</code></td>
+<td data-label="Type" style="text-align:left"><code>boolean</code></td>
+<td data-label="Default" id="opt-true" style="text-align:left"><code>true</code></td>
+<td data-label="Description" style="text-align:left"><em>(Immersive only)</em> Fades the top and bottom edges. Set to <code>false</code> to disable.</td>
 </tr>
 <tr>
-<td id="opt-card_mask_horizontal" style="text-align:left"><code>card_mask_horizontal</code></td>
-<td style="text-align:left"><code>boolean</code></td>
-<td style="text-align:left"><code>true</code></td>
-<td style="text-align:left"><em>(Immersive only)</em> Fades the left and right edges. Set to <code>false</code> to disable.</td>
+<td data-label="Option" id="opt-card_mask_horizontal" style="text-align:left"><code>card_mask_horizontal</code></td>
+<td data-label="Type" style="text-align:left"><code>boolean</code></td>
+<td data-label="Default" style="text-align:left"><code>true</code></td>
+<td data-label="Description" style="text-align:left"><em>(Immersive only)</em> Fades the left and right edges. Set to <code>false</code> to disable.</td>
 </tr>
 <tr>
-<td id="opt-theme_entity" style="text-align:left"><code>theme_entity</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Drives the card&#39;s color scheme from any entity&#39;s state instead of your HA theme. Commonly set to <code>sun.sun</code> to sync the card with sunrise/sunset. See <a href="#color-mode">Colors</a>.</td>
+<td data-label="Option" id="opt-theme_entity" style="text-align:left"><code>theme_entity</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Drives the card&#39;s color scheme from any entity&#39;s state instead of your HA theme. Commonly set to <code>sun.sun</code> to sync the card with sunrise/sunset. See <a href="#color-mode">Colors</a>.</td>
 </tr>
 </tbody></table>
 <h3 id="sun--moon"><a class="anchor" href="#sun--moon" aria-hidden="true">#</a>Sun &amp; Moon</h3>
@@ -763,34 +775,34 @@ grid_options:
 </tr>
 </thead>
 <tbody><tr>
-<td id="opt-celestial_size" style="text-align:left"><code>celestial_size</code></td>
-<td style="text-align:left"><code>number</code></td>
-<td style="text-align:left"><code>62</code></td>
-<td style="text-align:left">Overrides the sun/moon diameter in pixels.</td>
+<td data-label="Option" id="opt-celestial_size" style="text-align:left"><code>celestial_size</code></td>
+<td data-label="Type" style="text-align:left"><code>number</code></td>
+<td data-label="Default" style="text-align:left"><code>62</code></td>
+<td data-label="Description" style="text-align:left">Overrides the sun/moon diameter in pixels.</td>
 </tr>
 <tr>
-<td id="opt-celestial_position" style="text-align:left"><code>celestial_position</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td id="opt-fixed" style="text-align:left"><code>fixed</code></td>
-<td style="text-align:left">How the sun and moon are positioned. <code>fixed</code> uses the <code>celestial_alignment</code>, <code>celestial_x</code>, and <code>celestial_y</code> values. <code>dynamic_sun</code> animates the sun across the sky following the real solar arc (moon stays fixed). <code>dynamic_both</code> animates both the sun and the moon.</td>
+<td data-label="Option" id="opt-celestial_position" style="text-align:left"><code>celestial_position</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" id="opt-fixed" style="text-align:left"><code>fixed</code></td>
+<td data-label="Description" style="text-align:left">How the sun and moon are positioned. <code>fixed</code> uses the <code>celestial_alignment</code>, <code>celestial_x</code>, and <code>celestial_y</code> values. <code>dynamic_sun</code> animates the sun across the sky following the real solar arc (moon stays fixed). <code>dynamic_both</code> animates both the sun and the moon.</td>
 </tr>
 <tr>
-<td id="opt-celestial_alignment" style="text-align:left"><code>celestial_alignment</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left"><code>top-left</code></td>
-<td style="text-align:left">Where the sun and moon anchor inside the card. Uses a 9-cell grid (e.g., <code>top-left</code>, <code>center</code>, <code>bottom-right</code>). Also accepts <code>left</code>, <code>right</code> as shorthand.</td>
+<td data-label="Option" id="opt-celestial_alignment" style="text-align:left"><code>celestial_alignment</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left"><code>top-left</code></td>
+<td data-label="Description" style="text-align:left">Where the sun and moon anchor inside the card. Uses a 9-cell grid (e.g., <code>top-left</code>, <code>center</code>, <code>bottom-right</code>). Also accepts <code>left</code>, <code>right</code> as shorthand.</td>
 </tr>
 <tr>
-<td id="opt-celestial_x" style="text-align:left"><code>celestial_x</code></td>
-<td style="text-align:left"><code>number</code></td>
-<td style="text-align:left"><code>0</code></td>
-<td style="text-align:left">Horizontal offset in pixels from the anchored position.</td>
+<td data-label="Option" id="opt-celestial_x" style="text-align:left"><code>celestial_x</code></td>
+<td data-label="Type" style="text-align:left"><code>number</code></td>
+<td data-label="Default" style="text-align:left"><code>0</code></td>
+<td data-label="Description" style="text-align:left">Horizontal offset in pixels from the anchored position.</td>
 </tr>
 <tr>
-<td id="opt-celestial_y" style="text-align:left"><code>celestial_y</code></td>
-<td style="text-align:left"><code>number</code></td>
-<td style="text-align:left"><code>0</code></td>
-<td style="text-align:left">Vertical offset in pixels from the anchored position.</td>
+<td data-label="Option" id="opt-celestial_y" style="text-align:left"><code>celestial_y</code></td>
+<td data-label="Type" style="text-align:left"><code>number</code></td>
+<td data-label="Default" style="text-align:left"><code>0</code></td>
+<td data-label="Description" style="text-align:left">Vertical offset in pixels from the anchored position.</td>
 </tr>
 </tbody></table>
 <p><span id="chip-editor-structure"></span></p>
@@ -838,172 +850,172 @@ grid_options:
 </tr>
 </thead>
 <tbody><tr>
-<td id="opt-chips" style="text-align:left"><code>chips</code></td>
-<td id="opt-list" style="text-align:left"><code>list</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">The list of chips to display. Each entry is an object with its own settings (see below).</td>
+<td data-label="Option" id="opt-chips" style="text-align:left"><code>chips</code></td>
+<td data-label="Type" id="opt-list" style="text-align:left"><code>list</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">The list of chips to display. Each entry is an object with its own settings (see below).</td>
 </tr>
 <tr>
-<td id="opt-chip_area_position" style="text-align:left"><code>chip_area_position</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left"><code>bottom-left</code></td>
-<td style="text-align:left">Where the chips row is positioned.</td>
+<td data-label="Option" id="opt-chip_area_position" style="text-align:left"><code>chip_area_position</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left"><code>bottom-left</code></td>
+<td data-label="Description" style="text-align:left">Where the chips row is positioned.</td>
 </tr>
 <tr>
-<td id="opt-chip_area_layout" style="text-align:left"><code>chip_area_layout</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td id="opt-wrap" style="text-align:left"><code>wrap</code></td>
-<td style="text-align:left">Row behavior. <code>wrap</code> moves overflowing chips to a new line, <code>horizontal-scroll</code> keeps them on one line with a hidden scrollbar and edge fades, <code>vertical-scroll</code> stacks them in a scrollable column, <code>grid</code> arranges them in equal columns. <code>scroll</code> is accepted as an alias for <code>horizontal-scroll</code>.</td>
+<td data-label="Option" id="opt-chip_area_layout" style="text-align:left"><code>chip_area_layout</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" id="opt-wrap" style="text-align:left"><code>wrap</code></td>
+<td data-label="Description" style="text-align:left">Row behavior. <code>wrap</code> moves overflowing chips to a new line, <code>horizontal-scroll</code> keeps them on one line with a hidden scrollbar and edge fades, <code>vertical-scroll</code> stacks them in a scrollable column, <code>grid</code> arranges them in equal columns. <code>scroll</code> is accepted as an alias for <code>horizontal-scroll</code>.</td>
 </tr>
 <tr>
-<td id="opt-chip_area_columns" style="text-align:left"><code>chip_area_columns</code></td>
-<td style="text-align:left"><code>number</code></td>
-<td style="text-align:left"><code>3</code></td>
-<td style="text-align:left">Number of equal-width columns when <code>chip_area_layout: grid</code> is active.</td>
+<td data-label="Option" id="opt-chip_area_columns" style="text-align:left"><code>chip_area_columns</code></td>
+<td data-label="Type" style="text-align:left"><code>number</code></td>
+<td data-label="Default" style="text-align:left"><code>3</code></td>
+<td data-label="Description" style="text-align:left">Number of equal-width columns when <code>chip_area_layout: grid</code> is active.</td>
 </tr>
 <tr>
-<td id="opt-chip_area_align" style="text-align:left"><code>chip_area_align</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td id="opt-start" style="text-align:left"><code>start</code></td>
-<td style="text-align:left">How chips align inside the chip area. Options: <code>start</code>, <code>center</code>, <code>end</code>, <code>spread</code>.</td>
+<td data-label="Option" id="opt-chip_area_align" style="text-align:left"><code>chip_area_align</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" id="opt-start" style="text-align:left"><code>start</code></td>
+<td data-label="Description" style="text-align:left">How chips align inside the chip area. Options: <code>start</code>, <code>center</code>, <code>end</code>, <code>spread</code>.</td>
 </tr>
 <tr>
-<td id="opt-chip_area_width" style="text-align:left"><code>chip_area_width</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Limits the full row width (e.g., <code>60%</code> or <code>200px</code>). Useful to place the chips row next to the top text instead of spanning the card.</td>
+<td data-label="Option" id="opt-chip_area_width" style="text-align:left"><code>chip_area_width</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Limits the full row width (e.g., <code>60%</code> or <code>200px</code>). Useful to place the chips row next to the top text instead of spanning the card.</td>
 </tr>
 <tr>
-<td id="opt-chip_area_height" style="text-align:left"><code>chip_area_height</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Sets the height of the chips row (e.g., <code>120px</code>).</td>
+<td data-label="Option" id="opt-chip_area_height" style="text-align:left"><code>chip_area_height</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Sets the height of the chips row (e.g., <code>120px</code>).</td>
 </tr>
 <tr>
-<td id="opt-chip_padding" style="text-align:left"><code>chip_padding</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left"><code>5px 10px</code></td>
-<td style="text-align:left">Inner padding of each chip (e.g., <code>5px 10px</code>).</td>
+<td data-label="Option" id="opt-chip_padding" style="text-align:left"><code>chip_padding</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left"><code>5px 10px</code></td>
+<td data-label="Description" style="text-align:left">Inner padding of each chip (e.g., <code>5px 10px</code>).</td>
 </tr>
 <tr>
-<td id="opt-chip_area_padding" style="text-align:left"><code>chip_area_padding</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Padding of the outer chips container (the wrapper around all chips).</td>
+<td data-label="Option" id="opt-chip_area_padding" style="text-align:left"><code>chip_area_padding</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Padding of the outer chips container (the wrapper around all chips).</td>
 </tr>
 <tr>
-<td id="opt-chip_area_gap" style="text-align:left"><code>chip_area_gap</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left"><code>8px</code></td>
-<td style="text-align:left">Space between chips.</td>
+<td data-label="Option" id="opt-chip_area_gap" style="text-align:left"><code>chip_area_gap</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left"><code>8px</code></td>
+<td data-label="Description" style="text-align:left">Space between chips.</td>
 </tr>
 <tr>
-<td id="opt-chip_gap" style="text-align:left"><code>chip_gap</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left"><code>6px</code></td>
-<td style="text-align:left">Space between the icon and text inside each chip.</td>
+<td data-label="Option" id="opt-chip_gap" style="text-align:left"><code>chip_gap</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left"><code>6px</code></td>
+<td data-label="Description" style="text-align:left">Space between the icon and text inside each chip.</td>
 </tr>
 <tr>
-<td id="opt-chip_style" style="text-align:left"><code>chip_style</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td id="opt-inline" style="text-align:left"><code>inline</code></td>
-<td style="text-align:left">Controls the chip layout style. <code>inline</code> is the default horizontal layout with icon and text side by side. <code>stacked</code> arranges the icon, name, and value in a compact two-column grid. <code>vertical</code> stacks icon, name, and value in a centered column.</td>
+<td data-label="Option" id="opt-chip_style" style="text-align:left"><code>chip_style</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" id="opt-inline" style="text-align:left"><code>inline</code></td>
+<td data-label="Description" style="text-align:left">Controls the chip layout style. <code>inline</code> is the default horizontal layout with icon and text side by side. <code>stacked</code> arranges the icon, name, and value in a compact two-column grid. <code>vertical</code> stacks icon, name, and value in a centered column.</td>
 </tr>
 <tr>
-<td id="opt-chip_area_scroll_count" style="text-align:left"><code>chip_area_scroll_count</code></td>
-<td style="text-align:left"><code>number</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Number of chips visible at once when using a scroll layout. Enables snap-scrolling through pages of chips.</td>
+<td data-label="Option" id="opt-chip_area_scroll_count" style="text-align:left"><code>chip_area_scroll_count</code></td>
+<td data-label="Type" style="text-align:left"><code>number</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Number of chips visible at once when using a scroll layout. Enables snap-scrolling through pages of chips.</td>
 </tr>
 <tr>
-<td id="opt-chip_area_grouped" style="text-align:left"><code>chip_area_grouped</code></td>
-<td style="text-align:left"><code>boolean</code></td>
-<td style="text-align:left"><code>false</code></td>
-<td style="text-align:left">Wraps all chips into a single shared background container instead of styling each chip individually. Requires <code>chip_area_background: true</code>.</td>
+<td data-label="Option" id="opt-chip_area_grouped" style="text-align:left"><code>chip_area_grouped</code></td>
+<td data-label="Type" style="text-align:left"><code>boolean</code></td>
+<td data-label="Default" style="text-align:left"><code>false</code></td>
+<td data-label="Description" style="text-align:left">Wraps all chips into a single shared background container instead of styling each chip individually. Requires <code>chip_area_background: true</code>.</td>
 </tr>
 <tr>
-<td id="opt-chip_area_full_width" style="text-align:left"><code>chip_area_full_width</code></td>
-<td style="text-align:left"><code>boolean</code></td>
-<td style="text-align:left"><code>false</code></td>
-<td style="text-align:left">Stretches each chip to fill the available row width. Useful in combination with <code>chip_area_scroll_count</code> or grid layouts.</td>
+<td data-label="Option" id="opt-chip_area_full_width" style="text-align:left"><code>chip_area_full_width</code></td>
+<td data-label="Type" style="text-align:left"><code>boolean</code></td>
+<td data-label="Default" style="text-align:left"><code>false</code></td>
+<td data-label="Description" style="text-align:left">Stretches each chip to fill the available row width. Useful in combination with <code>chip_area_scroll_count</code> or grid layouts.</td>
 </tr>
 <tr>
-<td id="opt-chip_text_size" style="text-align:left"><code>chip_text_size</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Font size of the chip value text. Accepts any CSS size value (e.g., <code>16px</code>, <code>1.2em</code>).</td>
+<td data-label="Option" id="opt-chip_text_size" style="text-align:left"><code>chip_text_size</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Font size of the chip value text. Accepts any CSS size value (e.g., <code>16px</code>, <code>1.2em</code>).</td>
 </tr>
 <tr>
-<td id="opt-chip_label_size" style="text-align:left"><code>chip_label_size</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Font size of the chip name label.</td>
+<td data-label="Option" id="opt-chip_label_size" style="text-align:left"><code>chip_label_size</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Font size of the chip name label.</td>
 </tr>
 <tr>
-<td id="opt-chip_icon_size" style="text-align:left"><code>chip_icon_size</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Global icon size for all chips.</td>
+<td data-label="Option" id="opt-chip_icon_size" style="text-align:left"><code>chip_icon_size</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Global icon size for all chips.</td>
 </tr>
 <tr>
-<td id="opt-chip_icon_padding" style="text-align:left"><code>chip_icon_padding</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Global padding around the icon for all chips.</td>
+<td data-label="Option" id="opt-chip_icon_padding" style="text-align:left"><code>chip_icon_padding</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Global padding around the icon for all chips.</td>
 </tr>
 <tr>
-<td id="opt-chip_icon_background" style="text-align:left"><code>chip_icon_background</code></td>
-<td style="text-align:left"><code>boolean</code></td>
-<td style="text-align:left"><code>false</code></td>
-<td style="text-align:left">Adds a background behind the icon area of each chip.</td>
+<td data-label="Option" id="opt-chip_icon_background" style="text-align:left"><code>chip_icon_background</code></td>
+<td data-label="Type" style="text-align:left"><code>boolean</code></td>
+<td data-label="Default" style="text-align:left"><code>false</code></td>
+<td data-label="Description" style="text-align:left">Adds a background behind the icon area of each chip.</td>
 </tr>
 <tr>
-<td id="opt-chip_area_background" style="text-align:left"><code>chip_area_background</code></td>
-<td style="text-align:left"><code>boolean</code></td>
-<td style="text-align:left"><code>false</code></td>
-<td style="text-align:left">Adds a styled background behind each chip (the style is controlled by <code>card_background_style</code>).</td>
+<td data-label="Option" id="opt-chip_area_background" style="text-align:left"><code>chip_area_background</code></td>
+<td data-label="Type" style="text-align:left"><code>boolean</code></td>
+<td data-label="Default" style="text-align:left"><code>false</code></td>
+<td data-label="Description" style="text-align:left">Adds a styled background behind each chip (the style is controlled by <code>card_background_style</code>).</td>
 </tr>
 <tr>
-<td id="opt-card_background_style" style="text-align:left"><code>card_background_style</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td id="opt-frosted" style="text-align:left"><code>frosted</code></td>
-<td style="text-align:left">Visual treatment used when chip backgrounds are enabled. Options: <code>frosted</code> (translucent glass), <code>contrast</code> (solid and readable), <code>theme</code> (uses Home Assistant theme colors).</td>
+<td data-label="Option" id="opt-card_background_style" style="text-align:left"><code>card_background_style</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" id="opt-frosted" style="text-align:left"><code>frosted</code></td>
+<td data-label="Description" style="text-align:left">Visual treatment used when chip backgrounds are enabled. Options: <code>frosted</code> (translucent glass), <code>contrast</code> (solid and readable), <code>theme</code> (uses Home Assistant theme colors).</td>
 </tr>
 <tr>
-<td id="opt-chip_area_separator" style="text-align:left"><code>chip_area_separator</code></td>
-<td style="text-align:left"><code>boolean</code></td>
-<td style="text-align:left"><code>false</code></td>
-<td style="text-align:left">Adds a thin divider line between chips. Only visible when <code>chip_area_grouped</code> is enabled.</td>
+<td data-label="Option" id="opt-chip_area_separator" style="text-align:left"><code>chip_area_separator</code></td>
+<td data-label="Type" style="text-align:left"><code>boolean</code></td>
+<td data-label="Default" style="text-align:left"><code>false</code></td>
+<td data-label="Description" style="text-align:left">Adds a thin divider line between chips. Only visible when <code>chip_area_grouped</code> is enabled.</td>
 </tr>
 <tr>
-<td id="opt-chip_background_color" style="text-align:left"><code>chip_background_color</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Custom background color applied to all chips. Accepts any CSS color value, including <code>rgba()</code>.</td>
+<td data-label="Option" id="opt-chip_background_color" style="text-align:left"><code>chip_background_color</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Custom background color applied to all chips. Accepts any CSS color value, including <code>rgba()</code>.</td>
 </tr>
 <tr>
-<td id="opt-chip_icon_background_color" style="text-align:left"><code>chip_icon_background_color</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Custom background color for the icon area of all chips.</td>
+<td data-label="Option" id="opt-chip_icon_background_color" style="text-align:left"><code>chip_icon_background_color</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Custom background color for the icon area of all chips.</td>
 </tr>
 <tr>
-<td id="opt-chip_area_background_color" style="text-align:left"><code>chip_area_background_color</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Custom background color for the grouped container when <code>chip_area_grouped</code> is enabled.</td>
+<td data-label="Option" id="opt-chip_area_background_color" style="text-align:left"><code>chip_area_background_color</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Custom background color for the grouped container when <code>chip_area_grouped</code> is enabled.</td>
 </tr>
 <tr>
-<td id="opt-chip_text_gap" style="text-align:left"><code>chip_text_gap</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left"><code>0.35em</code></td>
-<td style="text-align:left">Gap between the name label and the value text inside each chip.</td>
+<td data-label="Option" id="opt-chip_text_gap" style="text-align:left"><code>chip_text_gap</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left"><code>0.35em</code></td>
+<td data-label="Description" style="text-align:left">Gap between the name label and the value text inside each chip.</td>
 </tr>
 <tr>
-<td id="opt-chip_area_hide" style="text-align:left"><code>chip_area_hide</code></td>
-<td style="text-align:left"><code>boolean</code></td>
-<td style="text-align:left"><code>false</code></td>
-<td style="text-align:left">Hides the chips row entirely.</td>
+<td data-label="Option" id="opt-chip_area_hide" style="text-align:left"><code>chip_area_hide</code></td>
+<td data-label="Type" style="text-align:left"><code>boolean</code></td>
+<td data-label="Default" style="text-align:left"><code>false</code></td>
+<td data-label="Description" style="text-align:left">Hides the chips row entirely.</td>
 </tr>
 </tbody></table>
 <h3 id="per-chip-options"><a class="anchor" href="#per-chip-options" aria-hidden="true">#</a>Per-chip options</h3>
@@ -1018,208 +1030,208 @@ grid_options:
 </tr>
 </thead>
 <tbody><tr>
-<td id="opt-entity" style="text-align:left"><code>entity</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left"><strong>Required.</strong> Any sensor, binary_sensor, or weather entity. Pointing it at the weather entity shows the current state (e.g., <code>Sunny</code>).</td>
+<td data-label="Option" id="opt-entity" style="text-align:left"><code>entity</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left"><strong>Required.</strong> Any sensor, binary_sensor, or weather entity. Pointing it at the weather entity shows the current state (e.g., <code>Sunny</code>).</td>
 </tr>
 <tr>
-<td id="opt-attribute" style="text-align:left"><code>attribute</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Read a specific attribute of the entity instead of its state (e.g., <code>humidity</code> on a weather entity).</td>
+<td data-label="Option" id="opt-attribute" style="text-align:left"><code>attribute</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Read a specific attribute of the entity instead of its state (e.g., <code>humidity</code> on a weather entity).</td>
 </tr>
 <tr>
-<td id="opt-forecast" style="text-align:left"><code>forecast</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Set to <code>daily</code> or <code>hourly</code> to show forecast data instead of live entity data. The chip&#39;s name is generated automatically (day names for daily, time for hourly). Requires the entity to be a weather entity.</td>
+<td data-label="Option" id="opt-forecast" style="text-align:left"><code>forecast</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Set to <code>daily</code> or <code>hourly</code> to show forecast data instead of live entity data. The chip&#39;s name is generated automatically (day names for daily, time for hourly). Requires the entity to be a weather entity.</td>
 </tr>
 <tr>
-<td id="opt-forecast_offset" style="text-align:left"><code>forecast_offset</code></td>
-<td style="text-align:left"><code>number</code></td>
-<td style="text-align:left"><code>0</code></td>
-<td style="text-align:left">Which forecast entry to display. <code>0</code> = today/now, <code>1</code> = tomorrow/next hour, and so on. Daily goes up to 6, hourly up to 23.</td>
+<td data-label="Option" id="opt-forecast_offset" style="text-align:left"><code>forecast_offset</code></td>
+<td data-label="Type" style="text-align:left"><code>number</code></td>
+<td data-label="Default" style="text-align:left"><code>0</code></td>
+<td data-label="Description" style="text-align:left">Which forecast entry to display. <code>0</code> = today/now, <code>1</code> = tomorrow/next hour, and so on. Daily goes up to 6, hourly up to 23.</td>
 </tr>
 <tr>
-<td id="opt-forecast_precision" style="text-align:left"><code>forecast_precision</code></td>
-<td style="text-align:left"><code>number</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Maximum number of decimal places for forecast values (0–2). Only limits the number shown; trailing zero decimals are trimmed (e.g. a whole number stays without a decimal point even at precision <code>1</code> or <code>2</code>).</td>
+<td data-label="Option" id="opt-forecast_precision" style="text-align:left"><code>forecast_precision</code></td>
+<td data-label="Type" style="text-align:left"><code>number</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Maximum number of decimal places for forecast values (0–2). Only limits the number shown; trailing zero decimals are trimmed (e.g. a whole number stays without a decimal point even at precision <code>1</code> or <code>2</code>).</td>
 </tr>
 <tr>
-<td id="opt-value_precision" style="text-align:left"><code>value_precision</code></td>
-<td style="text-align:left"><code>number</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Forces the chip&#39;s main value to always show exactly this many decimal places (0–2), padding with zeros if needed (e.g. <code>22</code> becomes <code>22.0</code> at precision <code>1</code>). Leave unset to use Home Assistant&#39;s own display precision for the entity/attribute (&quot;Auto&quot;). Does not apply to forecast chips — use <code>forecast_precision</code> for those.</td>
+<td data-label="Option" id="opt-value_precision" style="text-align:left"><code>value_precision</code></td>
+<td data-label="Type" style="text-align:left"><code>number</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Forces the chip&#39;s main value to always show exactly this many decimal places (0–2), padding with zeros if needed (e.g. <code>22</code> becomes <code>22.0</code> at precision <code>1</code>). Leave unset to use Home Assistant&#39;s own display precision for the entity/attribute (&quot;Auto&quot;). Does not apply to forecast chips — use <code>forecast_precision</code> for those.</td>
 </tr>
 <tr>
-<td id="opt-unit_format" style="text-align:left"><code>unit_format</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Replaces the unit shown after the value. Placed directly after the value with no space, e.g. <code>°</code> turns <code>12 °C</code> into <code>12°</code>.</td>
+<td data-label="Option" id="opt-unit_format" style="text-align:left"><code>unit_format</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Replaces the unit shown after the value. Placed directly after the value with no space, e.g. <code>°</code> turns <code>12 °C</code> into <code>12°</code>.</td>
 </tr>
 <tr>
-<td id="opt-name" style="text-align:left"><code>name</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Optional label shown before the value (e.g., <code>Wind</code>). For forecast chips, this overrides the auto-generated day/time name.</td>
+<td data-label="Option" id="opt-name" style="text-align:left"><code>name</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Optional label shown before the value (e.g., <code>Wind</code>). For forecast chips, this overrides the auto-generated day/time name.</td>
 </tr>
 <tr>
-<td id="opt-icon" style="text-align:left"><code>icon</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left"><em>auto</em></td>
-<td style="text-align:left">An <code>mdi:</code> icon (e.g., <code>mdi:water-percent</code>), the keyword <code>weather</code> to automatically show the icon matching the current weather state (or the forecasted condition when using <code>forecast</code>), or empty to inherit the sensor&#39;s own icon.</td>
+<td data-label="Option" id="opt-icon" style="text-align:left"><code>icon</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left"><em>auto</em></td>
+<td data-label="Description" style="text-align:left">An <code>mdi:</code> icon (e.g., <code>mdi:water-percent</code>), the keyword <code>weather</code> to automatically show the icon matching the current weather state (or the forecasted condition when using <code>forecast</code>), or empty to inherit the sensor&#39;s own icon.</td>
 </tr>
 <tr>
-<td id="opt-icon_path" style="text-align:left"><code>icon_path</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Folder for custom SVG icons (e.g., <code>/local/weather-icons/</code>). When set, the value of <code>icon</code> resolves to an image file instead of an MDI icon. For example, <code>icon: weather</code> combined with <code>icon_path: /local/weather-icons/</code> loads <code>/local/weather-icons/rainy.svg</code> for rainy weather. You can find the animated SVG icons from the examples <a href="https://github.com/basmilius/weather-icons">here</a>.</td>
+<td data-label="Option" id="opt-icon_path" style="text-align:left"><code>icon_path</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Folder for custom SVG icons (e.g., <code>/local/weather-icons/</code>). When set, the value of <code>icon</code> resolves to an image file instead of an MDI icon. For example, <code>icon: weather</code> combined with <code>icon_path: /local/weather-icons/</code> loads <code>/local/weather-icons/rainy.svg</code> for rainy weather. You can find the animated SVG icons from the examples <a href="https://github.com/basmilius/weather-icons">here</a>.</td>
 </tr>
 <tr>
-<td id="opt-hide_icon" style="text-align:left"><code>hide_icon</code></td>
-<td style="text-align:left"><code>boolean</code></td>
-<td style="text-align:left"><code>false</code></td>
-<td style="text-align:left">Hides the icon for this chip.</td>
+<td data-label="Option" id="opt-hide_icon" style="text-align:left"><code>hide_icon</code></td>
+<td data-label="Type" style="text-align:left"><code>boolean</code></td>
+<td data-label="Default" style="text-align:left"><code>false</code></td>
+<td data-label="Description" style="text-align:left">Hides the icon for this chip.</td>
 </tr>
 <tr>
-<td id="opt-hide_label" style="text-align:left"><code>hide_label</code></td>
-<td style="text-align:left"><code>boolean</code></td>
-<td style="text-align:left"><code>false</code></td>
-<td style="text-align:left">Hides the name label for this chip.</td>
+<td data-label="Option" id="opt-hide_label" style="text-align:left"><code>hide_label</code></td>
+<td data-label="Type" style="text-align:left"><code>boolean</code></td>
+<td data-label="Default" style="text-align:left"><code>false</code></td>
+<td data-label="Description" style="text-align:left">Hides the name label for this chip.</td>
 </tr>
 <tr>
-<td id="opt-hide_value" style="text-align:left"><code>hide_value</code></td>
-<td style="text-align:left"><code>boolean</code></td>
-<td style="text-align:left"><code>false</code></td>
-<td style="text-align:left">Hides the value text for this chip.</td>
+<td data-label="Option" id="opt-hide_value" style="text-align:left"><code>hide_value</code></td>
+<td data-label="Type" style="text-align:left"><code>boolean</code></td>
+<td data-label="Default" style="text-align:left"><code>false</code></td>
+<td data-label="Description" style="text-align:left">Hides the value text for this chip.</td>
 </tr>
 <tr>
-<td id="opt-fancy_unit" style="text-align:left"><code>fancy_unit</code></td>
-<td style="text-align:left"><code>boolean</code></td>
-<td style="text-align:left"><code>false</code></td>
-<td style="text-align:left">Renders the temperature unit as a small superscript next to the value. Only works when reading a <code>temperature</code> attribute from a weather entity.</td>
+<td data-label="Option" id="opt-fancy_unit" style="text-align:left"><code>fancy_unit</code></td>
+<td data-label="Type" style="text-align:left"><code>boolean</code></td>
+<td data-label="Default" style="text-align:left"><code>false</code></td>
+<td data-label="Description" style="text-align:left">Renders the temperature unit as a small superscript next to the value. Only works when reading a <code>temperature</code> attribute from a weather entity.</td>
 </tr>
 <tr>
-<td id="opt-width" style="text-align:left"><code>width</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Limits the chip&#39;s width in pixels. Use <code>200px</code> (or <code>200</code>, which is normalized to <code>200px</code>). Required for marquee overflow.</td>
+<td data-label="Option" id="opt-width" style="text-align:left"><code>width</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Limits the chip&#39;s width in pixels. Use <code>200px</code> (or <code>200</code>, which is normalized to <code>200px</code>). Required for marquee overflow.</td>
 </tr>
 <tr>
-<td id="opt-height" style="text-align:left"><code>height</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Sets the chip height in pixels. Use <code>40px</code> (or <code>40</code>, which is normalized to <code>40px</code>).</td>
+<td data-label="Option" id="opt-height" style="text-align:left"><code>height</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Sets the chip height in pixels. Use <code>40px</code> (or <code>40</code>, which is normalized to <code>40px</code>).</td>
 </tr>
 <tr>
-<td id="opt-overflow" style="text-align:left"><code>overflow</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td id="opt-ellipsis" style="text-align:left"><code>ellipsis</code></td>
-<td style="text-align:left">How text exceeding <code>width</code> is handled. Options: <code>ellipsis</code> (cuts off with <code>…</code>), <code>clip</code> (cuts off without indicator), <code>wrap</code> (breaks onto a second line), <code>marquee</code> (scrolls horizontally).</td>
+<td data-label="Option" id="opt-overflow" style="text-align:left"><code>overflow</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" id="opt-ellipsis" style="text-align:left"><code>ellipsis</code></td>
+<td data-label="Description" style="text-align:left">How text exceeding <code>width</code> is handled. Options: <code>ellipsis</code> (cuts off with <code>…</code>), <code>clip</code> (cuts off without indicator), <code>wrap</code> (breaks onto a second line), <code>marquee</code> (scrolls horizontally).</td>
 </tr>
 <tr>
-<td id="opt-label_overflow" style="text-align:left"><code>label_overflow</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left"><code>ellipsis</code></td>
-<td style="text-align:left">How the name label handles overflow. Same options as <code>overflow</code>.</td>
+<td data-label="Option" id="opt-label_overflow" style="text-align:left"><code>label_overflow</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left"><code>ellipsis</code></td>
+<td data-label="Description" style="text-align:left">How the name label handles overflow. Same options as <code>overflow</code>.</td>
 </tr>
 <tr>
-<td id="opt-marquee_speed" style="text-align:left"><code>marquee_speed</code></td>
-<td style="text-align:left"><code>number</code></td>
-<td style="text-align:left"><code>30</code></td>
-<td style="text-align:left">Scroll speed in pixels per second when any overflow mode is <code>marquee</code> (<code>overflow</code>, <code>label_overflow</code>, or <code>sub_value_overflow</code>). Minimum <code>5</code>.</td>
+<td data-label="Option" id="opt-marquee_speed" style="text-align:left"><code>marquee_speed</code></td>
+<td data-label="Type" style="text-align:left"><code>number</code></td>
+<td data-label="Default" style="text-align:left"><code>30</code></td>
+<td data-label="Description" style="text-align:left">Scroll speed in pixels per second when any overflow mode is <code>marquee</code> (<code>overflow</code>, <code>label_overflow</code>, or <code>sub_value_overflow</code>). Minimum <code>5</code>.</td>
 </tr>
 <tr>
-<td id="opt-marquee_rtl" style="text-align:left"><code>marquee_rtl</code></td>
-<td style="text-align:left"><code>boolean</code></td>
-<td style="text-align:left"><code>false</code></td>
-<td style="text-align:left">Reverses marquee direction (scrolls right-to-left) for all marquee-based text overflows.</td>
+<td data-label="Option" id="opt-marquee_rtl" style="text-align:left"><code>marquee_rtl</code></td>
+<td data-label="Type" style="text-align:left"><code>boolean</code></td>
+<td data-label="Default" style="text-align:left"><code>false</code></td>
+<td data-label="Description" style="text-align:left">Reverses marquee direction (scrolls right-to-left) for all marquee-based text overflows.</td>
 </tr>
 <tr>
-<td id="opt-tap_action" style="text-align:left"><code>tap_action</code></td>
-<td style="text-align:left"><code>object</code></td>
-<td style="text-align:left"><code>more-info</code></td>
-<td style="text-align:left">A standard Home Assistant <a href="https://www.home-assistant.io/dashboards/actions/">tap action</a> scoped to this chip.</td>
+<td data-label="Option" id="opt-tap_action" style="text-align:left"><code>tap_action</code></td>
+<td data-label="Type" style="text-align:left"><code>object</code></td>
+<td data-label="Default" style="text-align:left"><code>more-info</code></td>
+<td data-label="Description" style="text-align:left">A standard Home Assistant <a href="https://www.home-assistant.io/dashboards/actions/">tap action</a> scoped to this chip.</td>
 </tr>
 <tr>
-<td id="opt-name_sensor" style="text-align:left"><code>name_sensor</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">An entity whose state (or attribute) is used as the chip&#39;s dynamic name label. Updates in real time.</td>
+<td data-label="Option" id="opt-name_sensor" style="text-align:left"><code>name_sensor</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">An entity whose state (or attribute) is used as the chip&#39;s dynamic name label. Updates in real time.</td>
 </tr>
 <tr>
-<td id="opt-name_attribute" style="text-align:left"><code>name_attribute</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Reads a specific attribute from the <code>name_sensor</code> entity instead of its state.</td>
+<td data-label="Option" id="opt-name_attribute" style="text-align:left"><code>name_attribute</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Reads a specific attribute from the <code>name_sensor</code> entity instead of its state.</td>
 </tr>
 <tr>
-<td id="opt-hide_sub_value" style="text-align:left"><code>hide_sub_value</code></td>
-<td style="text-align:left"><code>boolean</code></td>
-<td style="text-align:left"><code>false</code></td>
-<td style="text-align:left">Hides the optional secondary value.</td>
+<td data-label="Option" id="opt-hide_sub_value" style="text-align:left"><code>hide_sub_value</code></td>
+<td data-label="Type" style="text-align:left"><code>boolean</code></td>
+<td data-label="Default" style="text-align:left"><code>false</code></td>
+<td data-label="Description" style="text-align:left">Hides the optional secondary value.</td>
 </tr>
 <tr>
-<td id="opt-sub_value_entity" style="text-align:left"><code>sub_value_entity</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Entity used for the secondary value.</td>
+<td data-label="Option" id="opt-sub_value_entity" style="text-align:left"><code>sub_value_entity</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Entity used for the secondary value.</td>
 </tr>
 <tr>
-<td id="opt-sub_value_attribute" style="text-align:left"><code>sub_value_attribute</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Attribute read from <code>sub_value_entity</code> instead of its state. On a forecast chip, <code>templow</code> shows the daily low next to the high.</td>
+<td data-label="Option" id="opt-sub_value_attribute" style="text-align:left"><code>sub_value_attribute</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Attribute read from <code>sub_value_entity</code> instead of its state. On a forecast chip, <code>templow</code> shows the daily low next to the high.</td>
 </tr>
 <tr>
-<td id="opt-sub_value_format" style="text-align:left"><code>sub_value_format</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Optional text format for the secondary value.</td>
+<td data-label="Option" id="opt-sub_value_format" style="text-align:left"><code>sub_value_format</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Optional text format for the secondary value.</td>
 </tr>
 <tr>
-<td id="opt-sub_value_position" style="text-align:left"><code>sub_value_position</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td id="opt-below" style="text-align:left"><code>below</code></td>
-<td style="text-align:left">Where to display the secondary value. Use <code>beside</code> for an inline range such as <code>8 – 18</code>, or leave it unset to show it below the main value.</td>
+<td data-label="Option" id="opt-sub_value_position" style="text-align:left"><code>sub_value_position</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" id="opt-below" style="text-align:left"><code>below</code></td>
+<td data-label="Description" style="text-align:left">Where to display the secondary value. Use <code>beside</code> for an inline range such as <code>8 – 18</code>, or leave it unset to show it below the main value.</td>
 </tr>
 <tr>
-<td id="opt-sub_value_overflow" style="text-align:left"><code>sub_value_overflow</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left"><code>ellipsis</code></td>
-<td style="text-align:left">How the secondary value handles overflow. Uses the same options as <code>overflow</code>.</td>
+<td data-label="Option" id="opt-sub_value_overflow" style="text-align:left"><code>sub_value_overflow</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left"><code>ellipsis</code></td>
+<td data-label="Description" style="text-align:left">How the secondary value handles overflow. Uses the same options as <code>overflow</code>.</td>
 </tr>
 <tr>
-<td id="opt-position" style="text-align:left"><code>position</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Set to <code>custom</code> to detach this chip from the row and place it freely on the card using <code>position_anchor</code>, <code>position_x</code>, and <code>position_y</code>.</td>
+<td data-label="Option" id="opt-position" style="text-align:left"><code>position</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Set to <code>custom</code> to detach this chip from the row and place it freely on the card using <code>position_anchor</code>, <code>position_x</code>, and <code>position_y</code>.</td>
 </tr>
 <tr>
-<td id="opt-position_anchor" style="text-align:left"><code>position_anchor</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left"><code>top-left</code></td>
-<td style="text-align:left">Anchor point for a free-positioned chip. Uses a 9-cell grid (e.g., <code>top-left</code>, <code>center</code>, <code>bottom-right</code>).</td>
+<td data-label="Option" id="opt-position_anchor" style="text-align:left"><code>position_anchor</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left"><code>top-left</code></td>
+<td data-label="Description" style="text-align:left">Anchor point for a free-positioned chip. Uses a 9-cell grid (e.g., <code>top-left</code>, <code>center</code>, <code>bottom-right</code>).</td>
 </tr>
 <tr>
-<td id="opt-position_x" style="text-align:left"><code>position_x</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left"><code>0</code></td>
-<td style="text-align:left">Horizontal offset for a free-positioned chip (e.g., <code>20px</code>, <code>10%</code>).</td>
+<td data-label="Option" id="opt-position_x" style="text-align:left"><code>position_x</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left"><code>0</code></td>
+<td data-label="Description" style="text-align:left">Horizontal offset for a free-positioned chip (e.g., <code>20px</code>, <code>10%</code>).</td>
 </tr>
 <tr>
-<td id="opt-position_y" style="text-align:left"><code>position_y</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left"><code>0</code></td>
-<td style="text-align:left">Vertical offset for a free-positioned chip (e.g., <code>20px</code>, <code>10%</code>).</td>
+<td data-label="Option" id="opt-position_y" style="text-align:left"><code>position_y</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left"><code>0</code></td>
+<td data-label="Description" style="text-align:left">Vertical offset for a free-positioned chip (e.g., <code>20px</code>, <code>10%</code>).</td>
 </tr>
 <tr>
-<td id="opt-behind_effects" style="text-align:left"><code>behind_effects</code></td>
-<td style="text-align:left"><code>boolean</code></td>
-<td style="text-align:left"><code>false</code></td>
-<td style="text-align:left">Places the chip behind the weather animations. Only works on free-positioned chips.</td>
+<td data-label="Option" id="opt-behind_effects" style="text-align:left"><code>behind_effects</code></td>
+<td data-label="Type" style="text-align:left"><code>boolean</code></td>
+<td data-label="Default" style="text-align:left"><code>false</code></td>
+<td data-label="Description" style="text-align:left">Places the chip behind the weather animations. Only works on free-positioned chips.</td>
 </tr>
 </tbody></table>
 <h3 id="per-chip-style-overrides"><a class="anchor" href="#per-chip-style-overrides" aria-hidden="true">#</a>Per-chip style overrides</h3>
@@ -1234,112 +1246,112 @@ grid_options:
 </tr>
 </thead>
 <tbody><tr>
-<td id="opt-style" style="text-align:left"><code>style</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Overrides the global <code>chip_style</code> for this chip. Accepts <code>inline</code>, <code>stacked</code>, or <code>vertical</code>.</td>
+<td data-label="Option" id="opt-style" style="text-align:left"><code>style</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Overrides the global <code>chip_style</code> for this chip. Accepts <code>inline</code>, <code>stacked</code>, or <code>vertical</code>.</td>
 </tr>
 <tr>
-<td id="opt-background" style="text-align:left"><code>background</code></td>
-<td style="text-align:left"><code>boolean</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Overrides the global <code>chip_area_background</code> for this chip. Set to <code>false</code> to hide the background on a specific chip even when backgrounds are globally enabled (or the other way around).</td>
+<td data-label="Option" id="opt-background" style="text-align:left"><code>background</code></td>
+<td data-label="Type" style="text-align:left"><code>boolean</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Overrides the global <code>chip_area_background</code> for this chip. Set to <code>false</code> to hide the background on a specific chip even when backgrounds are globally enabled (or the other way around).</td>
 </tr>
 <tr>
-<td id="opt-background_color" style="text-align:left"><code>background_color</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Custom background color for this chip. Accepts any CSS color value, including <code>rgba()</code> for transparency.</td>
+<td data-label="Option" id="opt-background_color" style="text-align:left"><code>background_color</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Custom background color for this chip. Accepts any CSS color value, including <code>rgba()</code> for transparency.</td>
 </tr>
 <tr>
-<td id="opt-padding" style="text-align:left"><code>padding</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Overrides the chip padding for this chip only.</td>
+<td data-label="Option" id="opt-padding" style="text-align:left"><code>padding</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Overrides the chip padding for this chip only.</td>
 </tr>
 <tr>
-<td id="opt-text_size" style="text-align:left"><code>text_size</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Overrides the value text size for this chip.</td>
+<td data-label="Option" id="opt-text_size" style="text-align:left"><code>text_size</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Overrides the value text size for this chip.</td>
 </tr>
 <tr>
-<td id="opt-label_size" style="text-align:left"><code>label_size</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Overrides the name label text size for this chip.</td>
+<td data-label="Option" id="opt-label_size" style="text-align:left"><code>label_size</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Overrides the name label text size for this chip.</td>
 </tr>
 <tr>
-<td id="opt-label_weight" style="text-align:left"><code>label_weight</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Font weight of the name label (e.g., <code>500</code>, <code>600</code>, <code>700</code>).</td>
+<td data-label="Option" id="opt-label_weight" style="text-align:left"><code>label_weight</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Font weight of the name label (e.g., <code>500</code>, <code>600</code>, <code>700</code>).</td>
 </tr>
 <tr>
-<td id="opt-inner_gap" style="text-align:left"><code>inner_gap</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Overrides the icon/text gap for this chip.</td>
+<td data-label="Option" id="opt-inner_gap" style="text-align:left"><code>inner_gap</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Overrides the icon/text gap for this chip.</td>
 </tr>
 <tr>
-<td id="opt-icon_size" style="text-align:left"><code>icon_size</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Overrides the icon size for this chip.</td>
+<td data-label="Option" id="opt-icon_size" style="text-align:left"><code>icon_size</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Overrides the icon size for this chip.</td>
 </tr>
 <tr>
-<td id="opt-icon_padding" style="text-align:left"><code>icon_padding</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Overrides the icon padding for this chip.</td>
+<td data-label="Option" id="opt-icon_padding" style="text-align:left"><code>icon_padding</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Overrides the icon padding for this chip.</td>
 </tr>
 <tr>
-<td id="opt-icon_background" style="text-align:left"><code>icon_background</code></td>
-<td style="text-align:left"><code>boolean</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Overrides the global <code>chip_icon_background</code> for this chip.</td>
+<td data-label="Option" id="opt-icon_background" style="text-align:left"><code>icon_background</code></td>
+<td data-label="Type" style="text-align:left"><code>boolean</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Overrides the global <code>chip_icon_background</code> for this chip.</td>
 </tr>
 <tr>
-<td id="opt-icon_background_color" style="text-align:left"><code>icon_background_color</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Custom background color for the icon area. Accepts any CSS color value, including <code>rgba()</code>.</td>
+<td data-label="Option" id="opt-icon_background_color" style="text-align:left"><code>icon_background_color</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Custom background color for the icon area. Accepts any CSS color value, including <code>rgba()</code>.</td>
 </tr>
 <tr>
-<td id="opt-align" style="text-align:left"><code>align</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Content alignment within this chip. Options: <code>start</code>, <code>center</code>, <code>end</code>.</td>
+<td data-label="Option" id="opt-align" style="text-align:left"><code>align</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Content alignment within this chip. Options: <code>start</code>, <code>center</code>, <code>end</code>.</td>
 </tr>
 <tr>
-<td id="opt-value_weight" style="text-align:left"><code>value_weight</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Font weight of the value text (e.g., <code>500</code>, <code>600</code>, <code>700</code>).</td>
+<td data-label="Option" id="opt-value_weight" style="text-align:left"><code>value_weight</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Font weight of the value text (e.g., <code>500</code>, <code>600</code>, <code>700</code>).</td>
 </tr>
 <tr>
-<td id="opt-sub_value_size" style="text-align:left"><code>sub_value_size</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Overrides the secondary value text size for this chip.</td>
+<td data-label="Option" id="opt-sub_value_size" style="text-align:left"><code>sub_value_size</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Overrides the secondary value text size for this chip.</td>
 </tr>
 <tr>
-<td id="opt-sub_value_weight" style="text-align:left"><code>sub_value_weight</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Font weight of the secondary value (e.g., <code>500</code>, <code>600</code>, <code>700</code>).</td>
+<td data-label="Option" id="opt-sub_value_weight" style="text-align:left"><code>sub_value_weight</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Font weight of the secondary value (e.g., <code>500</code>, <code>600</code>, <code>700</code>).</td>
 </tr>
 <tr>
-<td id="opt-text_gap" style="text-align:left"><code>text_gap</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Overrides the gap between the name label and value for this chip.</td>
+<td data-label="Option" id="opt-text_gap" style="text-align:left"><code>text_gap</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Overrides the gap between the name label and value for this chip.</td>
 </tr>
 <tr>
-<td id="opt-chip_round" style="text-align:left"><code>chip_round</code></td>
-<td style="text-align:left"><code>boolean</code></td>
-<td style="text-align:left"><code>false</code></td>
-<td style="text-align:left">Forces a fully rounded (pill) shape on this chip.</td>
+<td data-label="Option" id="opt-chip_round" style="text-align:left"><code>chip_round</code></td>
+<td data-label="Type" style="text-align:left"><code>boolean</code></td>
+<td data-label="Default" style="text-align:left"><code>false</code></td>
+<td data-label="Description" style="text-align:left">Forces a fully rounded (pill) shape on this chip.</td>
 </tr>
 </tbody></table>
 <h3 id="ring--bar-gauge-options"><a class="anchor" href="#ring--bar-gauge-options" aria-hidden="true">#</a>Ring &amp; Bar gauge options</h3>
@@ -1354,64 +1366,64 @@ grid_options:
 </tr>
 </thead>
 <tbody><tr>
-<td id="opt-type" style="text-align:left"><code>type</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Set to <code>ring</code> or <code>bar</code> to enable the gauge.</td>
+<td data-label="Option" id="opt-type" style="text-align:left"><code>type</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Set to <code>ring</code> or <code>bar</code> to enable the gauge.</td>
 </tr>
 <tr>
-<td id="opt-ring_min" style="text-align:left"><code>ring_min</code> / <code>bar_min</code></td>
-<td style="text-align:left"><code>number</code></td>
-<td style="text-align:left"><code>0</code></td>
-<td style="text-align:left">Minimum value for the gauge range.</td>
+<td data-label="Option" id="opt-ring_min" style="text-align:left"><code>ring_min</code> / <code>bar_min</code></td>
+<td data-label="Type" style="text-align:left"><code>number</code></td>
+<td data-label="Default" style="text-align:left"><code>0</code></td>
+<td data-label="Description" style="text-align:left">Minimum value for the gauge range.</td>
 </tr>
 <tr>
-<td id="opt-ring_max" style="text-align:left"><code>ring_max</code> / <code>bar_max</code></td>
-<td style="text-align:left"><code>number</code></td>
-<td style="text-align:left"><code>100</code></td>
-<td style="text-align:left">Maximum value for the gauge range.</td>
+<td data-label="Option" id="opt-ring_max" style="text-align:left"><code>ring_max</code> / <code>bar_max</code></td>
+<td data-label="Type" style="text-align:left"><code>number</code></td>
+<td data-label="Default" style="text-align:left"><code>100</code></td>
+<td data-label="Description" style="text-align:left">Maximum value for the gauge range.</td>
 </tr>
 <tr>
-<td id="opt-ring_width" style="text-align:left"><code>ring_width</code> / <code>bar_height</code></td>
-<td style="text-align:left"><code>number</code></td>
-<td style="text-align:left"><code>4</code></td>
-<td style="text-align:left">Thickness of the ring stroke, or height of the bar, in pixels.</td>
+<td data-label="Option" id="opt-ring_width" style="text-align:left"><code>ring_width</code> / <code>bar_height</code></td>
+<td data-label="Type" style="text-align:left"><code>number</code></td>
+<td data-label="Default" style="text-align:left"><code>4</code></td>
+<td data-label="Description" style="text-align:left">Thickness of the ring stroke, or height of the bar, in pixels.</td>
 </tr>
 <tr>
-<td id="opt-ring_gap" style="text-align:left"><code>ring_gap</code> / <code>bar_gap</code></td>
-<td style="text-align:left"><code>number</code></td>
-<td style="text-align:left"><code>3</code></td>
-<td style="text-align:left">Gap between the gauge and the chip content in pixels.</td>
+<td data-label="Option" id="opt-ring_gap" style="text-align:left"><code>ring_gap</code> / <code>bar_gap</code></td>
+<td data-label="Type" style="text-align:left"><code>number</code></td>
+<td data-label="Default" style="text-align:left"><code>3</code></td>
+<td data-label="Description" style="text-align:left">Gap between the gauge and the chip content in pixels.</td>
 </tr>
 <tr>
-<td id="opt-ring_color" style="text-align:left"><code>ring_color</code> / <code>bar_color</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left"><em>theme primary</em></td>
-<td style="text-align:left">Color of the filled portion. Accepts any CSS color.</td>
+<td data-label="Option" id="opt-ring_color" style="text-align:left"><code>ring_color</code> / <code>bar_color</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left"><em>theme primary</em></td>
+<td data-label="Description" style="text-align:left">Color of the filled portion. Accepts any CSS color.</td>
 </tr>
 <tr>
-<td id="opt-ring_threshold_mode" style="text-align:left"><code>ring_threshold_mode</code> / <code>bar_threshold_mode</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">How thresholds are applied. <code>solid</code> fills the whole gauge with the matched color. <code>segments</code> draws each range as a separate arc/segment. <code>gradient</code> blends between colors.</td>
+<td data-label="Option" id="opt-ring_threshold_mode" style="text-align:left"><code>ring_threshold_mode</code> / <code>bar_threshold_mode</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">How thresholds are applied. <code>solid</code> fills the whole gauge with the matched color. <code>segments</code> draws each range as a separate arc/segment. <code>gradient</code> blends between colors.</td>
 </tr>
 <tr>
-<td id="opt-ring_thresholds" style="text-align:left"><code>ring_thresholds</code> / <code>bar_thresholds</code></td>
-<td style="text-align:left"><code>list</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">A list of <code>{ value, color }</code> entries. The gauge changes color once the value passes a threshold.</td>
+<td data-label="Option" id="opt-ring_thresholds" style="text-align:left"><code>ring_thresholds</code> / <code>bar_thresholds</code></td>
+<td data-label="Type" style="text-align:left"><code>list</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">A list of <code>{ value, color }</code> entries. The gauge changes color once the value passes a threshold.</td>
 </tr>
 <tr>
-<td id="opt-gauge_entity" style="text-align:left"><code>gauge_entity</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Optional secondary entity that drives the gauge fill, independent of the chip&#39;s main <code>entity</code>/<code>attribute</code>.</td>
+<td data-label="Option" id="opt-gauge_entity" style="text-align:left"><code>gauge_entity</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Optional secondary entity that drives the gauge fill, independent of the chip&#39;s main <code>entity</code>/<code>attribute</code>.</td>
 </tr>
 <tr>
-<td id="opt-gauge_attribute" style="text-align:left"><code>gauge_attribute</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Reads a specific attribute from <code>gauge_entity</code> instead of its state.</td>
+<td data-label="Option" id="opt-gauge_attribute" style="text-align:left"><code>gauge_attribute</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Reads a specific attribute from <code>gauge_entity</code> instead of its state.</td>
 </tr>
 </tbody></table>
 <h3 id="custom-images"><a class="anchor" href="#custom-images" aria-hidden="true">#</a>Custom Images</h3>
@@ -1426,58 +1438,58 @@ grid_options:
 </tr>
 </thead>
 <tbody><tr>
-<td id="opt-image_day" style="text-align:left"><code>image_day</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">File path for the daytime image (e.g., <code>/local/house-day.png</code>).</td>
+<td data-label="Option" id="opt-image_day" style="text-align:left"><code>image_day</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">File path for the daytime image (e.g., <code>/local/house-day.png</code>).</td>
 </tr>
 <tr>
-<td id="opt-image_night" style="text-align:left"><code>image_night</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">File path for the nighttime image. Falls back to the day image if left empty.</td>
+<td data-label="Option" id="opt-image_night" style="text-align:left"><code>image_night</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">File path for the nighttime image. Falls back to the day image if left empty.</td>
 </tr>
 <tr>
-<td id="opt-image_scale" style="text-align:left"><code>image_scale</code></td>
-<td style="text-align:left"><code>number</code></td>
-<td style="text-align:left"><code>100</code></td>
-<td style="text-align:left">Image size as a percentage of the total card height.</td>
+<td data-label="Option" id="opt-image_scale" style="text-align:left"><code>image_scale</code></td>
+<td data-label="Type" style="text-align:left"><code>number</code></td>
+<td data-label="Default" style="text-align:left"><code>100</code></td>
+<td data-label="Description" style="text-align:left">Image size as a percentage of the total card height.</td>
 </tr>
 <tr>
-<td id="opt-image_alignment" style="text-align:left"><code>image_alignment</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left"><code>top-right</code></td>
-<td style="text-align:left">Image placement. Options: <code>top-left</code>, <code>top-center</code>, <code>top-right</code>, <code>center-left</code>, <code>center</code>, <code>center-right</code>, <code>bottom-left</code>, <code>bottom-center</code>, <code>bottom-right</code>.</td>
+<td data-label="Option" id="opt-image_alignment" style="text-align:left"><code>image_alignment</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left"><code>top-right</code></td>
+<td data-label="Description" style="text-align:left">Image placement. Options: <code>top-left</code>, <code>top-center</code>, <code>top-right</code>, <code>center-left</code>, <code>center</code>, <code>center-right</code>, <code>bottom-left</code>, <code>bottom-center</code>, <code>bottom-right</code>.</td>
 </tr>
 <tr>
-<td id="opt-image_x" style="text-align:left"><code>image_x</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left"><code>0</code></td>
-<td style="text-align:left">Horizontal offset from the selected image alignment. Accepts pixels or CSS values such as <code>-20</code> or <code>10%</code>.</td>
+<td data-label="Option" id="opt-image_x" style="text-align:left"><code>image_x</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left"><code>0</code></td>
+<td data-label="Description" style="text-align:left">Horizontal offset from the selected image alignment. Accepts pixels or CSS values such as <code>-20</code> or <code>10%</code>.</td>
 </tr>
 <tr>
-<td id="opt-image_y" style="text-align:left"><code>image_y</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left"><code>0</code></td>
-<td style="text-align:left">Vertical offset from the selected image alignment. Accepts pixels or CSS values such as <code>10</code> or <code>-5%</code>.</td>
+<td data-label="Option" id="opt-image_y" style="text-align:left"><code>image_y</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left"><code>0</code></td>
+<td data-label="Description" style="text-align:left">Vertical offset from the selected image alignment. Accepts pixels or CSS values such as <code>10</code> or <code>-5%</code>.</td>
 </tr>
 <tr>
-<td id="opt-status_entity" style="text-align:left"><code>status_entity</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Entity to monitor for a status-specific image (for example a door sensor).</td>
+<td data-label="Option" id="opt-status_entity" style="text-align:left"><code>status_entity</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Entity to monitor for a status-specific image (for example a door sensor).</td>
 </tr>
 <tr>
-<td id="opt-status_day" style="text-align:left"><code>status_day</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Day image to show while <code>status_entity</code> is active, open, or home.</td>
+<td data-label="Option" id="opt-status_day" style="text-align:left"><code>status_day</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Day image to show while <code>status_entity</code> is active, open, or home.</td>
 </tr>
 <tr>
-<td id="opt-status_night" style="text-align:left"><code>status_night</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Night image to show while <code>status_entity</code> is active, open, or home.</td>
+<td data-label="Option" id="opt-status_night" style="text-align:left"><code>status_night</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Night image to show while <code>status_entity</code> is active, open, or home.</td>
 </tr>
 </tbody></table>
 <h3 id="embedded-cards"><a class="anchor" href="#embedded-cards" aria-hidden="true">#</a>Embedded Cards</h3>
@@ -1492,34 +1504,34 @@ grid_options:
 </tr>
 </thead>
 <tbody><tr>
-<td id="opt-custom_cards" style="text-align:left"><code>custom_cards</code></td>
-<td style="text-align:left"><code>list</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">A list of cards to display. You can use standard Home Assistant cards or custom ones.</td>
+<td data-label="Option" id="opt-custom_cards" style="text-align:left"><code>custom_cards</code></td>
+<td data-label="Type" style="text-align:left"><code>list</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">A list of cards to display. You can use standard Home Assistant cards or custom ones.</td>
 </tr>
 <tr>
-<td id="opt-custom_cards_position" style="text-align:left"><code>custom_cards_position</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left"><em>auto</em></td>
-<td style="text-align:left">Where the embedded cards sit: <code>top</code>, <code>center</code> or <code>bottom</code>, each optionally with <code>-left</code>, <code>-center</code> or <code>-right</code> (for example <code>bottom-right</code>). Without it the cards sit at the bottom, on the side opposite the chips.</td>
+<td data-label="Option" id="opt-custom_cards_position" style="text-align:left"><code>custom_cards_position</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left"><em>auto</em></td>
+<td data-label="Description" style="text-align:left">Where the embedded cards sit: <code>top</code>, <code>center</code> or <code>bottom</code>, each optionally with <code>-left</code>, <code>-center</code> or <code>-right</code> (for example <code>bottom-right</code>). Without it the cards sit at the bottom, on the side opposite the chips.</td>
 </tr>
 <tr>
-<td id="opt-custom_cards_css_class" style="text-align:left"><code>custom_cards_css_class</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left">Assigns a custom CSS class to the container, making it easy to style with <code>card_mod</code>.</td>
+<td data-label="Option" id="opt-custom_cards_css_class" style="text-align:left"><code>custom_cards_css_class</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Assigns a custom CSS class to the container, making it easy to style with <code>card_mod</code>.</td>
 </tr>
 <tr>
-<td id="opt-custom_width" style="text-align:left"><code>custom_width</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left"><em>Used directly on the nested cards.</em> Forces a specific width for an individual card (e.g., <code>100%</code>, <code>50px</code>).</td>
+<td data-label="Option" id="opt-custom_width" style="text-align:left"><code>custom_width</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left"><em>Used directly on the nested cards.</em> Forces a specific width for an individual card (e.g., <code>100%</code>, <code>50px</code>).</td>
 </tr>
 <tr>
-<td id="opt-custom_height" style="text-align:left"><code>custom_height</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left">—</td>
-<td style="text-align:left"><em>Used directly on the nested cards.</em> Forces a specific height for an individual card (e.g., <code>150px</code>).</td>
+<td data-label="Option" id="opt-custom_height" style="text-align:left"><code>custom_height</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left"><em>Used directly on the nested cards.</em> Forces a specific height for an individual card (e.g., <code>150px</code>).</td>
 </tr>
 </tbody></table>
 <p><strong>Basic Example:</strong></p>
@@ -1542,44 +1554,44 @@ custom_cards:
 </tr>
 </thead>
 <tbody><tr>
-<td style="text-align:left"><code>--awc-card-border-radius</code></td>
-<td style="text-align:left"><code>12px</code></td>
-<td style="text-align:left">Adjusts the corner radius.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-card-border-radius</code></td>
+<td data-label="Default" style="text-align:left"><code>12px</code></td>
+<td data-label="Description" style="text-align:left">Adjusts the corner radius.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-card-border-width</code></td>
-<td style="text-align:left"><em>HA theme</em></td>
-<td style="text-align:left">Overrides the card&#39;s border width. Inherits from the Home Assistant theme by default.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-card-border-width</code></td>
+<td data-label="Default" style="text-align:left"><em>HA theme</em></td>
+<td data-label="Description" style="text-align:left">Overrides the card&#39;s border width. Inherits from the Home Assistant theme by default.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-card-padding</code></td>
-<td style="text-align:left"><code>16px</code></td>
-<td style="text-align:left">Padding space around the text.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-card-padding</code></td>
+<td data-label="Default" style="text-align:left"><code>16px</code></td>
+<td data-label="Description" style="text-align:left">Padding space around the text.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-stack-order</code></td>
-<td style="text-align:left"><code>-1</code> / <code>1</code></td>
-<td style="text-align:left">Controls the stacking order (z-index) of the card. Defaults to <code>-1</code> for immersive and <code>1</code> for standalone.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-stack-order</code></td>
+<td data-label="Default" style="text-align:left"><code>-1</code> / <code>1</code></td>
+<td data-label="Description" style="text-align:left">Controls the stacking order (z-index) of the card. Defaults to <code>-1</code> for immersive and <code>1</code> for standalone.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-custom-cards-direction</code></td>
-<td id="opt-row" style="text-align:left"><code>row</code></td>
-<td style="text-align:left">Flex direction of the custom cards container.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-custom-cards-direction</code></td>
+<td data-label="Default" id="opt-row" style="text-align:left"><code>row</code></td>
+<td data-label="Description" style="text-align:left">Flex direction of the custom cards container.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-custom-cards-gap</code></td>
-<td style="text-align:left"><code>8px</code></td>
-<td style="text-align:left">Gap between items in the custom cards container.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-custom-cards-gap</code></td>
+<td data-label="Default" style="text-align:left"><code>8px</code></td>
+<td data-label="Description" style="text-align:left">Gap between items in the custom cards container.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-custom-cards-justify</code></td>
-<td style="text-align:left"><code>flex-start</code></td>
-<td style="text-align:left">Horizontal justification of the custom cards container.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-custom-cards-justify</code></td>
+<td data-label="Default" style="text-align:left"><code>flex-start</code></td>
+<td data-label="Description" style="text-align:left">Horizontal justification of the custom cards container.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-custom-cards-align</code></td>
-<td style="text-align:left"><code>flex-start</code></td>
-<td style="text-align:left">Vertical alignment of the custom cards container.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-custom-cards-align</code></td>
+<td data-label="Default" style="text-align:left"><code>flex-start</code></td>
+<td data-label="Description" style="text-align:left">Vertical alignment of the custom cards container.</td>
 </tr>
 </tbody></table>
 <h4 id="text-variables"><a class="anchor" href="#text-variables" aria-hidden="true">#</a>Text variables</h4>
@@ -1592,164 +1604,164 @@ custom_cards:
 </tr>
 </thead>
 <tbody><tr>
-<td style="text-align:left"><code>--awc-text-day</code></td>
-<td style="text-align:left"><code>#2c2c2e</code></td>
-<td style="text-align:left">Text color during the daytime.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-text-day</code></td>
+<td data-label="Default" style="text-align:left"><code>#2c2c2e</code></td>
+<td data-label="Description" style="text-align:left">Text color during the daytime.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-text-night</code></td>
-<td style="text-align:left"><code>#FFFFFF</code></td>
-<td style="text-align:left">Text color during the nighttime.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-text-night</code></td>
+<td data-label="Default" style="text-align:left"><code>#FFFFFF</code></td>
+<td data-label="Description" style="text-align:left">Text color during the nighttime.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-text-color</code></td>
-<td style="text-align:left"><em>auto</em></td>
-<td style="text-align:left">Resolved text color for the current scheme. Overrides both day and night colors at once.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-text-color</code></td>
+<td data-label="Default" style="text-align:left"><em>auto</em></td>
+<td data-label="Description" style="text-align:left">Resolved text color for the current scheme. Overrides both day and night colors at once.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-text-shadow-day</code></td>
-<td style="text-align:left"><em>soft white glow</em></td>
-<td style="text-align:left">Text shadow effect for daytime.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-text-shadow-day</code></td>
+<td data-label="Default" style="text-align:left"><em>soft white glow</em></td>
+<td data-label="Description" style="text-align:left">Text shadow effect for daytime.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-text-shadow-night</code></td>
-<td style="text-align:left"><em>soft dark glow</em></td>
-<td style="text-align:left">Text shadow effect for nighttime.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-text-shadow-night</code></td>
+<td data-label="Default" style="text-align:left"><em>soft dark glow</em></td>
+<td data-label="Description" style="text-align:left">Text shadow effect for nighttime.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-text-shadow-active</code></td>
-<td style="text-align:left"><em>auto</em></td>
-<td style="text-align:left">Resolved text shadow for the current scheme. Overrides both day and night shadows at once.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-text-shadow-active</code></td>
+<td data-label="Default" style="text-align:left"><em>auto</em></td>
+<td data-label="Description" style="text-align:left">Resolved text shadow for the current scheme. Overrides both day and night shadows at once.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-chip-text-shadow</code></td>
-<td style="text-align:left"><code>0 1px 2px rgba(0,0,0,0.35)</code></td>
-<td style="text-align:left">Text shadow applied to the chip name label.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-chip-text-shadow</code></td>
+<td data-label="Default" style="text-align:left"><code>0 1px 2px rgba(0,0,0,0.35)</code></td>
+<td data-label="Description" style="text-align:left">Text shadow applied to the chip name label.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-bottom-font-size</code></td>
-<td style="text-align:left"><code>clamp(15px, 5cqmin, 26px)</code></td>
-<td style="text-align:left">Chip text size (dynamically responsive).</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-bottom-font-size</code></td>
+<td data-label="Default" style="text-align:left"><code>clamp(15px, 5cqmin, 26px)</code></td>
+<td data-label="Description" style="text-align:left">Chip text size (dynamically responsive).</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-bottom-font-weight</code></td>
-<td style="text-align:left"><code>500</code></td>
-<td style="text-align:left">Chip text weight.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-bottom-font-weight</code></td>
+<td data-label="Default" style="text-align:left"><code>500</code></td>
+<td data-label="Description" style="text-align:left">Chip text weight.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-bottom-gap</code></td>
-<td style="text-align:left"><code>8px</code></td>
-<td style="text-align:left">Gap between chips in the row.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-bottom-gap</code></td>
+<td data-label="Default" style="text-align:left"><code>8px</code></td>
+<td data-label="Description" style="text-align:left">Gap between chips in the row.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-bottom-opacity</code></td>
-<td style="text-align:left"><code>0.7</code></td>
-<td style="text-align:left">Opacity of chips without a background.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-bottom-opacity</code></td>
+<td data-label="Default" style="text-align:left"><code>0.7</code></td>
+<td data-label="Description" style="text-align:left">Opacity of chips without a background.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-chip-name-weight</code></td>
-<td style="text-align:left"><code>700</code></td>
-<td style="text-align:left">Font weight of the chip name label.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-chip-name-weight</code></td>
+<td data-label="Default" style="text-align:left"><code>700</code></td>
+<td data-label="Description" style="text-align:left">Font weight of the chip name label.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-chip-name-opacity</code></td>
-<td style="text-align:left"><code>0.7</code></td>
-<td style="text-align:left">Opacity of the chip name label.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-chip-name-opacity</code></td>
+<td data-label="Default" style="text-align:left"><code>0.7</code></td>
+<td data-label="Description" style="text-align:left">Opacity of the chip name label.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-chip-name-color</code></td>
-<td id="opt-inherit" style="text-align:left"><code>inherit</code></td>
-<td style="text-align:left">Color of the chip name label.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-chip-name-color</code></td>
+<td data-label="Default" id="opt-inherit" style="text-align:left"><code>inherit</code></td>
+<td data-label="Description" style="text-align:left">Color of the chip name label.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-chip-gap</code></td>
-<td style="text-align:left"><code>6px</code></td>
-<td style="text-align:left">Gap between the icon and text inside each chip.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-chip-gap</code></td>
+<td data-label="Default" style="text-align:left"><code>6px</code></td>
+<td data-label="Description" style="text-align:left">Gap between the icon and text inside each chip.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-chips-padding</code></td>
-<td style="text-align:left"><code>0</code> (<code>5px 10px</code> with background)</td>
-<td style="text-align:left">Inner padding of each chip.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-chips-padding</code></td>
+<td data-label="Default" style="text-align:left"><code>0</code> (<code>5px 10px</code> with background)</td>
+<td data-label="Description" style="text-align:left">Inner padding of each chip.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-row-width</code></td>
-<td style="text-align:left"><code>calc(100% - padding)</code></td>
-<td style="text-align:left">Width of the chips row. Overrides the <code>chip_area_width</code> option.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-row-width</code></td>
+<td data-label="Default" style="text-align:left"><code>calc(100% - padding)</code></td>
+<td data-label="Description" style="text-align:left">Width of the chips row. Overrides the <code>chip_area_width</code> option.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-row-height</code></td>
-<td style="text-align:left"><code>auto</code></td>
-<td style="text-align:left">Height of the chips row. Overrides the <code>chip_area_height</code> option.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-row-height</code></td>
+<td data-label="Default" style="text-align:left"><code>auto</code></td>
+<td data-label="Description" style="text-align:left">Height of the chips row. Overrides the <code>chip_area_height</code> option.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-row-columns</code></td>
-<td style="text-align:left"><code>3</code></td>
-<td style="text-align:left">Number of columns when <code>chip_area_layout: grid</code> is active.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-row-columns</code></td>
+<td data-label="Default" style="text-align:left"><code>3</code></td>
+<td data-label="Description" style="text-align:left">Number of columns when <code>chip_area_layout: grid</code> is active.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-row-fade-l</code></td>
-<td style="text-align:left"><em>auto</em></td>
-<td style="text-align:left">Left edge fade width for the scrolling chip row.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-row-fade-l</code></td>
+<td data-label="Default" style="text-align:left"><em>auto</em></td>
+<td data-label="Description" style="text-align:left">Left edge fade width for the scrolling chip row.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-row-fade-r</code></td>
-<td style="text-align:left"><em>auto</em></td>
-<td style="text-align:left">Right edge fade width for the scrolling chip row.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-row-fade-r</code></td>
+<td data-label="Default" style="text-align:left"><em>auto</em></td>
+<td data-label="Description" style="text-align:left">Right edge fade width for the scrolling chip row.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-bottom-bg-color</code></td>
-<td style="text-align:left"><em>auto</em></td>
-<td style="text-align:left">Background color when <code>chip_area_background</code> is enabled. Defaults to the active background style.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-bottom-bg-color</code></td>
+<td data-label="Default" style="text-align:left"><em>auto</em></td>
+<td data-label="Description" style="text-align:left">Background color when <code>chip_area_background</code> is enabled. Defaults to the active background style.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-bottom-bg-radius</code></td>
-<td style="text-align:left"><em>card radius</em></td>
-<td style="text-align:left">Border radius for the chip background.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-bottom-bg-radius</code></td>
+<td data-label="Default" style="text-align:left"><em>card radius</em></td>
+<td data-label="Description" style="text-align:left">Border radius for the chip background.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-bottom-bg-filter</code></td>
-<td style="text-align:left"><code>blur(10px)</code></td>
-<td style="text-align:left">Backdrop filter for the chip background (only used by the <code>frosted</code> style).</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-bottom-bg-filter</code></td>
+<td data-label="Default" style="text-align:left"><code>blur(10px)</code></td>
+<td data-label="Description" style="text-align:left">Backdrop filter for the chip background (only used by the <code>frosted</code> style).</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-bg-shadow</code></td>
-<td style="text-align:left"><em>auto</em></td>
-<td style="text-align:left">Overrides the shadow used by <code>frosted</code> and <code>contrast</code> chip backgrounds.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-bg-shadow</code></td>
+<td data-label="Default" style="text-align:left"><em>auto</em></td>
+<td data-label="Description" style="text-align:left">Overrides the shadow used by <code>frosted</code> and <code>contrast</code> chip backgrounds.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-bg-border</code></td>
-<td style="text-align:left"><code>1px solid …</code></td>
-<td style="text-align:left">Overrides the border used by the <code>frosted</code> background style.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-bg-border</code></td>
+<td data-label="Default" style="text-align:left"><code>1px solid …</code></td>
+<td data-label="Description" style="text-align:left">Overrides the border used by the <code>frosted</code> background style.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-icon-size</code></td>
-<td style="text-align:left"><code>1.1em</code></td>
-<td style="text-align:left">Size of the chip icon.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-icon-size</code></td>
+<td data-label="Default" style="text-align:left"><code>1.1em</code></td>
+<td data-label="Description" style="text-align:left">Size of the chip icon.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-icon-drop-shadow</code></td>
-<td style="text-align:left"><code>drop-shadow(0px 3px 6px rgba(0,0,0,0.3))</code></td>
-<td style="text-align:left">Drop shadow filter applied to custom image icons set via <code>icon_path</code>.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-icon-drop-shadow</code></td>
+<td data-label="Default" style="text-align:left"><code>drop-shadow(0px 3px 6px rgba(0,0,0,0.3))</code></td>
+<td data-label="Description" style="text-align:left">Drop shadow filter applied to custom image icons set via <code>icon_path</code>.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-marquee-duration</code></td>
-<td style="text-align:left"><code>20s</code></td>
-<td style="text-align:left">Animation duration for the marquee overflow mode. Longer = slower.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-marquee-duration</code></td>
+<td data-label="Default" style="text-align:left"><code>20s</code></td>
+<td data-label="Description" style="text-align:left">Animation duration for the marquee overflow mode. Longer = slower.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-marquee-fade</code></td>
-<td style="text-align:left"><code>12px</code></td>
-<td style="text-align:left">Edge fade width on either side of a marquee chip.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-marquee-fade</code></td>
+<td data-label="Default" style="text-align:left"><code>12px</code></td>
+<td data-label="Description" style="text-align:left">Edge fade width on either side of a marquee chip.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-marquee-separator</code></td>
-<td style="text-align:left"><code>&quot;•&quot;</code></td>
-<td style="text-align:left">Character inserted between marquee repetitions.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-marquee-separator</code></td>
+<td data-label="Default" style="text-align:left"><code>&quot;•&quot;</code></td>
+<td data-label="Description" style="text-align:left">Character inserted between marquee repetitions.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-marquee-sep-gap</code></td>
-<td style="text-align:left"><code>0.4em</code></td>
-<td style="text-align:left">Padding around the marquee separator character.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-marquee-sep-gap</code></td>
+<td data-label="Default" style="text-align:left"><code>0.4em</code></td>
+<td data-label="Description" style="text-align:left">Padding around the marquee separator character.</td>
 </tr>
 </tbody></table>
 <h4 id="stacked-and-vertical-chip-variables"><a class="anchor" href="#stacked-and-vertical-chip-variables" aria-hidden="true">#</a>Stacked and vertical chip variables</h4>
@@ -1763,64 +1775,64 @@ custom_cards:
 </tr>
 </thead>
 <tbody><tr>
-<td style="text-align:left"><code>--awc-stacked-icon-bg</code></td>
-<td style="text-align:left"><em>auto</em></td>
-<td style="text-align:left">Background color of the icon area in stacked/vertical chips.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-stacked-icon-bg</code></td>
+<td data-label="Default" style="text-align:left"><em>auto</em></td>
+<td data-label="Description" style="text-align:left">Background color of the icon area in stacked/vertical chips.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-stacked-icon-radius</code></td>
-<td style="text-align:left"><em>auto</em></td>
-<td style="text-align:left">Border radius of the icon area.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-stacked-icon-radius</code></td>
+<td data-label="Default" style="text-align:left"><em>auto</em></td>
+<td data-label="Description" style="text-align:left">Border radius of the icon area.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-stacked-icon-inset</code></td>
-<td style="text-align:left"><code>3px</code></td>
-<td style="text-align:left">Inset used to calculate the icon area&#39;s border radius relative to the chip&#39;s border radius.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-stacked-icon-inset</code></td>
+<td data-label="Default" style="text-align:left"><code>3px</code></td>
+<td data-label="Description" style="text-align:left">Inset used to calculate the icon area&#39;s border radius relative to the chip&#39;s border radius.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-stacked-name-size</code></td>
-<td style="text-align:left"><code>0.85em</code></td>
-<td style="text-align:left">Font size of the name label in stacked/vertical chips.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-stacked-name-size</code></td>
+<td data-label="Default" style="text-align:left"><code>0.85em</code></td>
+<td data-label="Description" style="text-align:left">Font size of the name label in stacked/vertical chips.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-stacked-name-weight</code></td>
-<td style="text-align:left"><code>500</code></td>
-<td style="text-align:left">Font weight of the name label in stacked/vertical chips.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-stacked-name-weight</code></td>
+<td data-label="Default" style="text-align:left"><code>500</code></td>
+<td data-label="Description" style="text-align:left">Font weight of the name label in stacked/vertical chips.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-stacked-name-tracking</code></td>
-<td style="text-align:left"><code>0.03em</code></td>
-<td style="text-align:left">Letter spacing of the name label in stacked/vertical chips.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-stacked-name-tracking</code></td>
+<td data-label="Default" style="text-align:left"><code>0.03em</code></td>
+<td data-label="Description" style="text-align:left">Letter spacing of the name label in stacked/vertical chips.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-stacked-name-opacity</code></td>
-<td style="text-align:left"><code>0.6</code></td>
-<td style="text-align:left">Opacity of the name label in stacked/vertical chips.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-stacked-name-opacity</code></td>
+<td data-label="Default" style="text-align:left"><code>0.6</code></td>
+<td data-label="Description" style="text-align:left">Opacity of the name label in stacked/vertical chips.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-stacked-name-color</code></td>
-<td style="text-align:left"><code>inherit</code></td>
-<td style="text-align:left">Color of the name label in stacked/vertical chips.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-stacked-name-color</code></td>
+<td data-label="Default" style="text-align:left"><code>inherit</code></td>
+<td data-label="Description" style="text-align:left">Color of the name label in stacked/vertical chips.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-stacked-value-weight</code></td>
-<td style="text-align:left"><code>700</code></td>
-<td style="text-align:left">Font weight of the value in stacked/vertical chips.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-stacked-value-weight</code></td>
+<td data-label="Default" style="text-align:left"><code>700</code></td>
+<td data-label="Description" style="text-align:left">Font weight of the value in stacked/vertical chips.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-stacked-column-gap</code></td>
-<td style="text-align:left"><code>10px</code></td>
-<td style="text-align:left">Horizontal gap between the icon and text columns in stacked chips.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-stacked-column-gap</code></td>
+<td data-label="Default" style="text-align:left"><code>10px</code></td>
+<td data-label="Description" style="text-align:left">Horizontal gap between the icon and text columns in stacked chips.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-stacked-row-gap</code></td>
-<td style="text-align:left"><code>4px</code></td>
-<td style="text-align:left">Vertical gap between the name and value rows in stacked/vertical chips.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-stacked-row-gap</code></td>
+<td data-label="Default" style="text-align:left"><code>4px</code></td>
+<td data-label="Description" style="text-align:left">Vertical gap between the name and value rows in stacked/vertical chips.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>--awc-vertical-icon-gap</code></td>
-<td style="text-align:left"><code>6px</code></td>
-<td style="text-align:left">Bottom margin of the icon in vertical chips.</td>
+<td data-label="Variable" style="text-align:left"><code>--awc-vertical-icon-gap</code></td>
+<td data-label="Default" style="text-align:left"><code>6px</code></td>
+<td data-label="Description" style="text-align:left">Bottom margin of the icon in vertical chips.</td>
 </tr>
 </tbody></table>
 <h4 id="card-mod-example"><a class="anchor" href="#card-mod-example" aria-hidden="true">#</a>Card mod example</h4>
@@ -1977,32 +1989,32 @@ chips:
 </tr>
 </thead>
 <tbody><tr>
-<td id="opt-cloud_coverage" style="text-align:left"><code>cloud_coverage</code> (weather attribute, %)</td>
-<td style="text-align:left">Sets the number of clouds, so 30 % cloud cover looks different from 70 %. In rain, snow and storms a cover below 70 % opens the cloud deck and leaves gaps, while at least 60 % of the usual clouds stay.</td>
+<td data-label="Source" id="opt-cloud_coverage" style="text-align:left"><code>cloud_coverage</code> (weather attribute, %)</td>
+<td data-label="Effect" style="text-align:left">Sets the number of clouds, so 30 % cloud cover looks different from 70 %. In rain, snow and storms a cover below 70 % opens the cloud deck and leaves gaps, while at least 60 % of the usual clouds stay.</td>
 </tr>
 <tr>
-<td id="opt-visibility" style="text-align:left"><code>visibility</code> (weather attribute, km or mi)</td>
-<td style="text-align:left">Below 20 km a thin haze appears that gets denser towards the ground; at 2 km it is at full strength.</td>
+<td data-label="Source" id="opt-visibility" style="text-align:left"><code>visibility</code> (weather attribute, km or mi)</td>
+<td data-label="Effect" style="text-align:left">Below 20 km a thin haze appears that gets denser towards the ground; at 2 km it is at full strength.</td>
 </tr>
 <tr>
-<td id="opt-humidity" style="text-align:left"><code>humidity</code> (weather attribute, %)</td>
-<td style="text-align:left">Above 80 % humidity the air gets slightly hazy as well.</td>
+<td data-label="Source" id="opt-humidity" style="text-align:left"><code>humidity</code> (weather attribute, %)</td>
+<td data-label="Effect" style="text-align:left">Above 80 % humidity the air gets slightly hazy as well.</td>
 </tr>
 <tr>
-<td id="opt-dew_point" style="text-align:left"><code>dew_point</code> + <code>temperature</code> (weather attributes)</td>
-<td style="text-align:left">When the temperature is within 2.5 °C of the dew point, ground mist drifts along the bottom of the card at night and in the morning (sun below 12°), not during downpours.</td>
+<td data-label="Source" id="opt-dew_point" style="text-align:left"><code>dew_point</code> + <code>temperature</code> (weather attributes)</td>
+<td data-label="Effect" style="text-align:left">When the temperature is within 2.5 °C of the dew point, ground mist drifts along the bottom of the card at night and in the morning (sun below 12°), not during downpours.</td>
 </tr>
 <tr>
-<td style="text-align:left"><code>precipitation_entity</code> (sensor, mm/h or in/h)</td>
-<td style="text-align:left">Sets the rain and snow density: light drizzle just above 0 mm/h, a downpour from about 8 mm/h. The weather entity has no standard attribute for this, so the value comes from a sensor you choose in the editor.</td>
+<td data-label="Source" style="text-align:left"><code>precipitation_entity</code> (sensor, mm/h or in/h)</td>
+<td data-label="Effect" style="text-align:left">Sets the rain and snow density: light drizzle just above 0 mm/h, a downpour from about 8 mm/h. The weather entity has no standard attribute for this, so the value comes from a sensor you choose in the editor.</td>
 </tr>
 <tr>
-<td style="text-align:left">Sun elevation (<code>sun_entity</code>)</td>
-<td style="text-align:left"><strong>Blue hour:</strong> from sunset until the sun is 6° below the horizon (and before sunrise) the sky stays deep blue with a warm glow at the horizon, and the stars come out one by one until about 8°.</td>
+<td data-label="Source" style="text-align:left">Sun elevation (<code>sun_entity</code>)</td>
+<td data-label="Effect" style="text-align:left"><strong>Blue hour:</strong> from sunset until the sun is 6° below the horizon (and before sunrise) the sky stays deep blue with a warm glow at the horizon, and the stars come out one by one until about 8°.</td>
 </tr>
 <tr>
-<td style="text-align:left">Weather state + sun elevation</td>
-<td style="text-align:left"><strong>Sun rays:</strong> soft beams fan out from the sun in <code>partlycloudy</code> and <code>cloudy</code> weather, strongest with a low sun (below 35°) and not under a closed cloud cover (95 % or more).</td>
+<td data-label="Source" style="text-align:left">Weather state + sun elevation</td>
+<td data-label="Effect" style="text-align:left"><strong>Sun rays:</strong> soft beams fan out from the sun in <code>partlycloudy</code> and <code>cloudy</code> weather, strongest with a low sun (below 35°) and not under a closed cloud cover (95 % or more).</td>
 </tr>
 </tbody></table>
 <p>Cloud cover and precipitation are rounded into steps, so small sensor changes do not rebuild the scene every few minutes. Haze, ground mist and sun rays need <code>perf_effects</code> 1 or higher. The blue hour works in every mode, but it tints the sky only in the <code>standalone</code> card style, because the <code>immersive</code> style has no sky of its own.</p>
@@ -2017,34 +2029,34 @@ chips:
 </tr>
 </thead>
 <tbody><tr>
-<td id="opt-effect_blue_hour" style="text-align:left"><code>effect_blue_hour</code></td>
-<td style="text-align:left"><code>boolean</code></td>
-<td style="text-align:left"><code>true</code></td>
-<td style="text-align:left">Blue hour after sunset and before sunrise. Off: the night starts right at sunset.</td>
+<td data-label="Option" id="opt-effect_blue_hour" style="text-align:left"><code>effect_blue_hour</code></td>
+<td data-label="Type" style="text-align:left"><code>boolean</code></td>
+<td data-label="Default" style="text-align:left"><code>true</code></td>
+<td data-label="Description" style="text-align:left">Blue hour after sunset and before sunrise. Off: the night starts right at sunset.</td>
 </tr>
 <tr>
-<td id="opt-effect_sun_rays" style="text-align:left"><code>effect_sun_rays</code></td>
-<td style="text-align:left"><code>boolean</code></td>
-<td style="text-align:left"><code>true</code></td>
-<td style="text-align:left">Sun rays through broken clouds.</td>
+<td data-label="Option" id="opt-effect_sun_rays" style="text-align:left"><code>effect_sun_rays</code></td>
+<td data-label="Type" style="text-align:left"><code>boolean</code></td>
+<td data-label="Default" style="text-align:left"><code>true</code></td>
+<td data-label="Description" style="text-align:left">Sun rays through broken clouds.</td>
 </tr>
 <tr>
-<td id="opt-effect_haze" style="text-align:left"><code>effect_haze</code></td>
-<td style="text-align:left"><code>boolean</code></td>
-<td style="text-align:left"><code>true</code></td>
-<td style="text-align:left">Haze from low visibility or humid air.</td>
+<td data-label="Option" id="opt-effect_haze" style="text-align:left"><code>effect_haze</code></td>
+<td data-label="Type" style="text-align:left"><code>boolean</code></td>
+<td data-label="Default" style="text-align:left"><code>true</code></td>
+<td data-label="Description" style="text-align:left">Haze from low visibility or humid air.</td>
 </tr>
 <tr>
-<td id="opt-effect_ground_mist" style="text-align:left"><code>effect_ground_mist</code></td>
-<td style="text-align:left"><code>boolean</code></td>
-<td style="text-align:left"><code>true</code></td>
-<td style="text-align:left">Ground mist near the dew point.</td>
+<td data-label="Option" id="opt-effect_ground_mist" style="text-align:left"><code>effect_ground_mist</code></td>
+<td data-label="Type" style="text-align:left"><code>boolean</code></td>
+<td data-label="Default" style="text-align:left"><code>true</code></td>
+<td data-label="Description" style="text-align:left">Ground mist near the dew point.</td>
 </tr>
 <tr>
-<td id="opt-effect_cloud_coverage" style="text-align:left"><code>effect_cloud_coverage</code></td>
-<td style="text-align:left"><code>boolean</code></td>
-<td style="text-align:left"><code>true</code></td>
-<td style="text-align:left">Measured cloud cover sets the number of clouds. Off: a fixed amount per weather state. Sun rays still stay away under a closed cloud cover.</td>
+<td data-label="Option" id="opt-effect_cloud_coverage" style="text-align:left"><code>effect_cloud_coverage</code></td>
+<td data-label="Type" style="text-align:left"><code>boolean</code></td>
+<td data-label="Default" style="text-align:left"><code>true</code></td>
+<td data-label="Description" style="text-align:left">Measured cloud cover sets the number of clouds. Off: a fixed amount per weather state. Sun rays still stay away under a closed cloud cover.</td>
 </tr>
 </tbody></table>
 <div class="code"><div class="code-bar"><span>yaml</span><span class="code-actions"><button type="button" class="try" data-example="{&quot;weather_entity&quot;:&quot;weather.demo&quot;,&quot;effect_haze&quot;:false,&quot;effect_ground_mist&quot;:false}">Show live</button><button type="button" class="copy">Copy</button></span></div><pre><code>type: custom:atmo-weather-card
@@ -2064,24 +2076,24 @@ effect_ground_mist: false</code></pre></div><p>Shooting stars and comets have th
 </tr>
 </thead>
 <tbody><tr>
-<td style="text-align:left"><strong>Follow your HA theme</strong></td>
-<td style="text-align:left"><code>sun_entity: sun.sun</code></td>
-<td style="text-align:left">The card shows the sun during the day and the moon at night, syncing its colors to whatever your Home Assistant theme is doing. Android and iOS can auto-toggle dark mode based on sunrise and sunset — this is exactly what the card was designed for.</td>
+<td data-label="Mode" style="text-align:left"><strong>Follow your HA theme</strong></td>
+<td data-label="Config" style="text-align:left"><code>sun_entity: sun.sun</code></td>
+<td data-label="What it does" style="text-align:left">The card shows the sun during the day and the moon at night, syncing its colors to whatever your Home Assistant theme is doing. Android and iOS can auto-toggle dark mode based on sunrise and sunset — this is exactly what the card was designed for.</td>
 </tr>
 <tr>
-<td style="text-align:left"><strong>Follow the sun</strong></td>
-<td style="text-align:left"><code>sun_entity: sun.sun</code><br><code>theme_entity: sun.sun</code></td>
-<td style="text-align:left">The card switches between light and dark at the real sunrise and sunset, regardless of what your Home Assistant theme is doing. Its colors match the time of day no matter what the rest of your dashboard looks like.</td>
+<td data-label="Mode" style="text-align:left"><strong>Follow the sun</strong></td>
+<td data-label="Config" style="text-align:left"><code>sun_entity: sun.sun</code><br><code>theme_entity: sun.sun</code></td>
+<td data-label="What it does" style="text-align:left">The card switches between light and dark at the real sunrise and sunset, regardless of what your Home Assistant theme is doing. Its colors match the time of day no matter what the rest of your dashboard looks like.</td>
 </tr>
 <tr>
-<td style="text-align:left"><strong>Force light or dark</strong></td>
-<td style="text-align:left"><code>card_color_mode: dark</code><br>or <code>card_color_mode: light</code></td>
-<td style="text-align:left">Locks the card&#39;s colors to one value. The sky still follows <code>sun_entity</code>, so you still get the moon and stars at night — only the card&#39;s colors are forced.</td>
+<td data-label="Mode" style="text-align:left"><strong>Force light or dark</strong></td>
+<td data-label="Config" style="text-align:left"><code>card_color_mode: dark</code><br>or <code>card_color_mode: light</code></td>
+<td data-label="What it does" style="text-align:left">Locks the card&#39;s colors to one value. The sky still follows <code>sun_entity</code>, so you still get the moon and stars at night — only the card&#39;s colors are forced.</td>
 </tr>
 <tr>
-<td style="text-align:left"><strong>Custom logic</strong></td>
-<td style="text-align:left"><code>theme_entity: sensor.my_custom_mode</code></td>
-<td style="text-align:left"><code>theme_entity</code> can point at any entity — a template sensor, an <code>input_boolean</code>, or anything else. The card switches to its dark look when the state is <code>dark</code>, <code>night</code>, <code>evening</code>, <code>on</code>, <code>true</code>, or <code>below_horizon</code>. Anything else counts as light. Useful for rules like &quot;dark after 9pm&quot; or &quot;dark when it&#39;s overcast&quot;.</td>
+<td data-label="Mode" style="text-align:left"><strong>Custom logic</strong></td>
+<td data-label="Config" style="text-align:left"><code>theme_entity: sensor.my_custom_mode</code></td>
+<td data-label="What it does" style="text-align:left"><code>theme_entity</code> can point at any entity — a template sensor, an <code>input_boolean</code>, or anything else. The card switches to its dark look when the state is <code>dark</code>, <code>night</code>, <code>evening</code>, <code>on</code>, <code>true</code>, or <code>below_horizon</code>. Anything else counts as light. Useful for rules like &quot;dark after 9pm&quot; or &quot;dark when it&#39;s overcast&quot;.</td>
 </tr>
 </tbody></table>
 </section>
@@ -2102,37 +2114,37 @@ effect_ground_mist: false</code></pre></div><p>Shooting stars and comets have th
 </tr>
 </thead>
 <tbody><tr>
-<td id="opt-low" style="text-align:left"><code>low</code></td>
-<td style="text-align:left">Older tablets, wall panels, battery saving</td>
-<td style="text-align:left">24</td>
-<td style="text-align:left">0.5</td>
-<td style="text-align:left">0</td>
-<td style="text-align:left">1</td>
-<td style="text-align:left">none</td>
-<td style="text-align:left">0.5 / 0.5</td>
-<td style="text-align:left">4</td>
+<td data-label="Preset" id="opt-low" style="text-align:left"><code>low</code></td>
+<td data-label="Made for" style="text-align:left">Older tablets, wall panels, battery saving</td>
+<td data-label="Frame rate" style="text-align:left">24</td>
+<td data-label="Cloud detail" style="text-align:left">0.5</td>
+<td data-label="Effects" style="text-align:left">0</td>
+<td data-label="Sharpness" style="text-align:left">1</td>
+<td data-label="Birds and planes" style="text-align:left">none</td>
+<td data-label="Bird / plane frequency" style="text-align:left">0.5 / 0.5</td>
+<td data-label="Birds per flock" style="text-align:left">4</td>
 </tr>
 <tr>
-<td id="opt-default" style="text-align:left"><code>default</code></td>
-<td style="text-align:left">Most dashboards</td>
-<td style="text-align:left">30</td>
-<td style="text-align:left">1.5</td>
-<td style="text-align:left">1</td>
-<td style="text-align:left">2</td>
-<td style="text-align:left">both</td>
-<td style="text-align:left">1.0 / 1.0</td>
-<td style="text-align:left">8</td>
+<td data-label="Preset" id="opt-default" style="text-align:left"><code>default</code></td>
+<td data-label="Made for" style="text-align:left">Most dashboards</td>
+<td data-label="Frame rate" style="text-align:left">30</td>
+<td data-label="Cloud detail" style="text-align:left">1.5</td>
+<td data-label="Effects" style="text-align:left">1</td>
+<td data-label="Sharpness" style="text-align:left">2</td>
+<td data-label="Birds and planes" style="text-align:left">both</td>
+<td data-label="Bird / plane frequency" style="text-align:left">1.0 / 1.0</td>
+<td data-label="Birds per flock" style="text-align:left">8</td>
 </tr>
 <tr>
-<td id="opt-ultra" style="text-align:left"><code>ultra</code></td>
-<td style="text-align:left">Desktops and large wall displays</td>
-<td style="text-align:left">60</td>
-<td style="text-align:left">2.0</td>
-<td style="text-align:left">2</td>
-<td style="text-align:left">2</td>
-<td style="text-align:left">both</td>
-<td style="text-align:left">1.5 / 1.5</td>
-<td style="text-align:left">12</td>
+<td data-label="Preset" id="opt-ultra" style="text-align:left"><code>ultra</code></td>
+<td data-label="Made for" style="text-align:left">Desktops and large wall displays</td>
+<td data-label="Frame rate" style="text-align:left">60</td>
+<td data-label="Cloud detail" style="text-align:left">2.0</td>
+<td data-label="Effects" style="text-align:left">2</td>
+<td data-label="Sharpness" style="text-align:left">2</td>
+<td data-label="Birds and planes" style="text-align:left">both</td>
+<td data-label="Bird / plane frequency" style="text-align:left">1.5 / 1.5</td>
+<td data-label="Birds per flock" style="text-align:left">12</td>
 </tr>
 </tbody></table>
 <p>Every preset also uses <code>animation_speed: 1</code>, <code>bird_animation_speed: 0.3</code>, <code>star_animation_speed: 0.5</code> and <code>fauna_birds_at_night: true</code>.</p>
@@ -2156,46 +2168,46 @@ perf_fps: 30 # Ultra quality at 30 fps; the editor shows "Custom"</code></pre></
 </tr>
 </thead>
 <tbody><tr>
-<td id="opt-perf_mode" style="text-align:left"><code>perf_mode</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td style="text-align:left"><code>default</code></td>
-<td style="text-align:left">Performance preset: <code>low</code>, <code>default</code> or <code>ultra</code>. See the table above.</td>
+<td data-label="Option" id="opt-perf_mode" style="text-align:left"><code>perf_mode</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left"><code>default</code></td>
+<td data-label="Description" style="text-align:left">Performance preset: <code>low</code>, <code>default</code> or <code>ultra</code>. See the table above.</td>
 </tr>
 <tr>
-<td id="opt-perf_fps" style="text-align:left"><code>perf_fps</code></td>
-<td style="text-align:left"><code>number</code></td>
-<td style="text-align:left"><em>preset</em></td>
-<td style="text-align:left">Animation frame rate: <code>24</code>, <code>30</code>, <code>45</code> or <code>60</code>. <code>30</code> saves battery, <code>60</code> is smoother. Shooting stars, comets, birds and planes appear equally often at every frame rate. See <a href="#editor-preview-stutters-or-fps-looks-wrong-after-installupdate">Troubleshooting: Editor preview stutters or FPS looks wrong after install/update</a>.</td>
+<td data-label="Option" id="opt-perf_fps" style="text-align:left"><code>perf_fps</code></td>
+<td data-label="Type" style="text-align:left"><code>number</code></td>
+<td data-label="Default" style="text-align:left"><em>preset</em></td>
+<td data-label="Description" style="text-align:left">Animation frame rate: <code>24</code>, <code>30</code>, <code>45</code> or <code>60</code>. <code>30</code> saves battery, <code>60</code> is smoother. Shooting stars, comets, birds and planes appear equally often at every frame rate. See <a href="#editor-preview-stutters-or-fps-looks-wrong-after-installupdate">Troubleshooting: Editor preview stutters or FPS looks wrong after install/update</a>.</td>
 </tr>
 <tr>
-<td id="opt-perf_cloud_quality" style="text-align:left"><code>perf_cloud_quality</code></td>
-<td style="text-align:left"><code>number</code></td>
-<td style="text-align:left"><em>preset</em></td>
-<td style="text-align:left">Cloud detail. Controls how many puffs each cloud shape gets. <code>0.5</code> = low, <code>1</code> = medium, <code>1.5</code> = high, <code>2</code> = ultra.</td>
+<td data-label="Option" id="opt-perf_cloud_quality" style="text-align:left"><code>perf_cloud_quality</code></td>
+<td data-label="Type" style="text-align:left"><code>number</code></td>
+<td data-label="Default" style="text-align:left"><em>preset</em></td>
+<td data-label="Description" style="text-align:left">Cloud detail. Controls how many puffs each cloud shape gets. <code>0.5</code> = low, <code>1</code> = medium, <code>1.5</code> = high, <code>2</code> = ultra.</td>
 </tr>
 <tr>
-<td id="opt-perf_effects" style="text-align:left"><code>perf_effects</code></td>
-<td style="text-align:left"><code>number</code></td>
-<td style="text-align:left"><em>preset</em></td>
-<td style="text-align:left">Weather effects. <code>0</code> turns off shooting stars, comets, fog banks, sun rays, haze and ground mist; the fog haze, the wind display (with fewer lines), the blue hour and the cloud amount from data stay. <code>1</code> is the normal amount. <code>2</code> brings more shooting stars and comets (comets about 1.8× as often) and turns on the two cloud options below. See <a href="#no-night-effects-starscomets-are-visible">Troubleshooting: No night effects (stars/comets) are visible</a>.</td>
+<td data-label="Option" id="opt-perf_effects" style="text-align:left"><code>perf_effects</code></td>
+<td data-label="Type" style="text-align:left"><code>number</code></td>
+<td data-label="Default" style="text-align:left"><em>preset</em></td>
+<td data-label="Description" style="text-align:left">Weather effects. <code>0</code> turns off shooting stars, comets, fog banks, sun rays, haze and ground mist; the fog haze, the wind display (with fewer lines), the blue hour and the cloud amount from data stay. <code>1</code> is the normal amount. <code>2</code> brings more shooting stars and comets (comets about 1.8× as often) and turns on the two cloud options below. See <a href="#no-night-effects-starscomets-are-visible">Troubleshooting: No night effects (stars/comets) are visible</a>.</td>
 </tr>
 <tr>
-<td id="opt-perf_dpr" style="text-align:left"><code>perf_dpr</code></td>
-<td style="text-align:left"><code>number</code></td>
-<td style="text-align:left"><em>preset</em></td>
-<td style="text-align:left">Canvas sharpness (device pixel ratio). <code>0.5</code> = low, <code>1</code> = medium, <code>1.5</code> = high, <code>2</code> = full retina. Lower values reduce GPU load on high-DPI screens.</td>
+<td data-label="Option" id="opt-perf_dpr" style="text-align:left"><code>perf_dpr</code></td>
+<td data-label="Type" style="text-align:left"><code>number</code></td>
+<td data-label="Default" style="text-align:left"><em>preset</em></td>
+<td data-label="Description" style="text-align:left">Canvas sharpness (device pixel ratio). <code>0.5</code> = low, <code>1</code> = medium, <code>1.5</code> = high, <code>2</code> = full retina. Lower values reduce GPU load on high-DPI screens.</td>
 </tr>
 <tr>
-<td id="opt-cloud_sun_angle_lighting" style="text-align:left"><code>cloud_sun_angle_lighting</code></td>
-<td style="text-align:left"><code>boolean</code></td>
-<td style="text-align:left"><em>auto</em></td>
-<td style="text-align:left">YAML only. Lights clouds from the current sun angle. On by default when <code>perf_effects</code> is <code>2</code>.</td>
+<td data-label="Option" id="opt-cloud_sun_angle_lighting" style="text-align:left"><code>cloud_sun_angle_lighting</code></td>
+<td data-label="Type" style="text-align:left"><code>boolean</code></td>
+<td data-label="Default" style="text-align:left"><em>auto</em></td>
+<td data-label="Description" style="text-align:left">YAML only. Lights clouds from the current sun angle. On by default when <code>perf_effects</code> is <code>2</code>.</td>
 </tr>
 <tr>
-<td id="opt-cloud_breathing_shapes" style="text-align:left"><code>cloud_breathing_shapes</code></td>
-<td style="text-align:left"><code>boolean</code></td>
-<td style="text-align:left"><em>auto</em></td>
-<td style="text-align:left">YAML only. Slowly reshapes clouds over time. On by default when <code>perf_effects</code> is <code>2</code>.</td>
+<td data-label="Option" id="opt-cloud_breathing_shapes" style="text-align:left"><code>cloud_breathing_shapes</code></td>
+<td data-label="Type" style="text-align:left"><code>boolean</code></td>
+<td data-label="Default" style="text-align:left"><em>auto</em></td>
+<td data-label="Description" style="text-align:left">YAML only. Slowly reshapes clouds over time. On by default when <code>perf_effects</code> is <code>2</code>.</td>
 </tr>
 </tbody></table>
 <h3 id="sky--light"><a class="anchor" href="#sky--light" aria-hidden="true">#</a>Sky &amp; light</h3>
@@ -2211,10 +2223,10 @@ perf_fps: 30 # Ultra quality at 30 fps; the editor shows "Custom"</code></pre></
 </tr>
 </thead>
 <tbody><tr>
-<td id="opt-wind_style" style="text-align:left"><code>wind_style</code></td>
-<td style="text-align:left"><code>string</code></td>
-<td id="opt-lines" style="text-align:left"><code>lines</code></td>
-<td style="text-align:left">Wind display. <code>lines</code> draws long wind lines (left in the image), <code>flow</code> a field of short streaks (right), <code>off</code> hides it. Direction follows <code>wind_bearing</code> of the weather entity, strength follows the wind speed. Shown in windy weather, and in rain, hail or snow from 40 km/h.</td>
+<td data-label="Option" id="opt-wind_style" style="text-align:left"><code>wind_style</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" id="opt-lines" style="text-align:left"><code>lines</code></td>
+<td data-label="Description" style="text-align:left">Wind display. <code>lines</code> draws long wind lines (left in the image), <code>flow</code> a field of short streaks (right), <code>off</code> hides it. Direction follows <code>wind_bearing</code> of the weather entity, strength follows the wind speed. Shown in windy weather, and in rain, hail or snow from 40 km/h.</td>
 </tr>
 </tbody></table>
 <p>The switches for the blue hour, sun rays, haze, ground mist and the cloud amount from data are explained in <a href="#weather-data">Weather Data &amp; Sky Light</a>.</p>
@@ -2230,34 +2242,34 @@ perf_fps: 30 # Ultra quality at 30 fps; the editor shows "Custom"</code></pre></
 </tr>
 </thead>
 <tbody><tr>
-<td id="opt-effect_shooting_stars" style="text-align:left"><code>effect_shooting_stars</code></td>
-<td style="text-align:left"><code>boolean</code></td>
-<td style="text-align:left"><code>true</code></td>
-<td style="text-align:left">Shooting stars on clear nights.</td>
+<td data-label="Option" id="opt-effect_shooting_stars" style="text-align:left"><code>effect_shooting_stars</code></td>
+<td data-label="Type" style="text-align:left"><code>boolean</code></td>
+<td data-label="Default" style="text-align:left"><code>true</code></td>
+<td data-label="Description" style="text-align:left">Shooting stars on clear nights.</td>
 </tr>
 <tr>
-<td id="opt-shooting_star_rate" style="text-align:left"><code>shooting_star_rate</code></td>
-<td style="text-align:left"><code>number</code></td>
-<td style="text-align:left"><code>1</code></td>
-<td style="text-align:left">How often shooting stars appear. Range <code>0.25</code> to <code>3</code>. <code>1</code> is about one every 12 seconds on Ultra.</td>
+<td data-label="Option" id="opt-shooting_star_rate" style="text-align:left"><code>shooting_star_rate</code></td>
+<td data-label="Type" style="text-align:left"><code>number</code></td>
+<td data-label="Default" style="text-align:left"><code>1</code></td>
+<td data-label="Description" style="text-align:left">How often shooting stars appear. Range <code>0.25</code> to <code>3</code>. <code>1</code> is about one every 12 seconds on Ultra.</td>
 </tr>
 <tr>
-<td id="opt-effect_comets" style="text-align:left"><code>effect_comets</code></td>
-<td style="text-align:left"><code>boolean</code></td>
-<td style="text-align:left"><code>true</code></td>
-<td style="text-align:left">Comets on clear nights.</td>
+<td data-label="Option" id="opt-effect_comets" style="text-align:left"><code>effect_comets</code></td>
+<td data-label="Type" style="text-align:left"><code>boolean</code></td>
+<td data-label="Default" style="text-align:left"><code>true</code></td>
+<td data-label="Description" style="text-align:left">Comets on clear nights.</td>
 </tr>
 <tr>
-<td id="opt-comet_rate" style="text-align:left"><code>comet_rate</code></td>
-<td style="text-align:left"><code>number</code></td>
-<td style="text-align:left"><code>1</code></td>
-<td style="text-align:left">How often comets appear. Range <code>0.25</code> to <code>3</code>. <code>1</code> is about one a minute on Ultra.</td>
+<td data-label="Option" id="opt-comet_rate" style="text-align:left"><code>comet_rate</code></td>
+<td data-label="Type" style="text-align:left"><code>number</code></td>
+<td data-label="Default" style="text-align:left"><code>1</code></td>
+<td data-label="Description" style="text-align:left">How often comets appear. Range <code>0.25</code> to <code>3</code>. <code>1</code> is about one a minute on Ultra.</td>
 </tr>
 <tr>
-<td id="opt-star_animation_speed" style="text-align:left"><code>star_animation_speed</code></td>
-<td style="text-align:left"><code>number</code></td>
-<td style="text-align:left"><em>preset</em></td>
-<td style="text-align:left">Star twinkle speed. Range <code>0</code> to <code>2</code>, applied on top of <code>animation_speed</code>. <code>0</code> stops twinkling; every preset uses <code>0.5</code>, so <code>1.0</code> twinkles twice as fast.</td>
+<td data-label="Option" id="opt-star_animation_speed" style="text-align:left"><code>star_animation_speed</code></td>
+<td data-label="Type" style="text-align:left"><code>number</code></td>
+<td data-label="Default" style="text-align:left"><em>preset</em></td>
+<td data-label="Description" style="text-align:left">Star twinkle speed. Range <code>0</code> to <code>2</code>, applied on top of <code>animation_speed</code>. <code>0</code> stops twinkling; every preset uses <code>0.5</code>, so <code>1.0</code> twinkles twice as fast.</td>
 </tr>
 </tbody></table>
 <div class="code"><div class="code-bar"><span>yaml</span><span class="code-actions"><button type="button" class="try" data-example="{&quot;weather_entity&quot;:&quot;weather.demo&quot;,&quot;shooting_star_rate&quot;:2,&quot;comet_rate&quot;:0.5}">Show live</button><button type="button" class="copy">Copy</button></span></div><pre><code>type: custom:atmo-weather-card
@@ -2275,58 +2287,58 @@ comet_rate: 0.5 # half as many comets</code></pre></div><h3 id="birds--planes"><
 </tr>
 </thead>
 <tbody><tr>
-<td id="opt-perf_fauna" style="text-align:left"><code>perf_fauna</code></td>
-<td style="text-align:left"><code>number</code></td>
-<td style="text-align:left"><em>preset</em></td>
-<td style="text-align:left"><code>0</code> = no birds or planes, <code>1</code> = birds only, <code>2</code> = birds and planes. Separate from <code>perf_effects</code>. See <a href="#no-birds-or-planes-are-visible">Troubleshooting: No birds or planes are visible</a>.</td>
+<td data-label="Option" id="opt-perf_fauna" style="text-align:left"><code>perf_fauna</code></td>
+<td data-label="Type" style="text-align:left"><code>number</code></td>
+<td data-label="Default" style="text-align:left"><em>preset</em></td>
+<td data-label="Description" style="text-align:left"><code>0</code> = no birds or planes, <code>1</code> = birds only, <code>2</code> = birds and planes. Separate from <code>perf_effects</code>. See <a href="#no-birds-or-planes-are-visible">Troubleshooting: No birds or planes are visible</a>.</td>
 </tr>
 <tr>
-<td id="opt-fauna_birds" style="text-align:left"><code>fauna_birds</code></td>
-<td style="text-align:left"><code>boolean</code></td>
-<td style="text-align:left"><code>true</code></td>
-<td style="text-align:left">Birds on or off. Birds need <code>perf_fauna</code> <code>1</code> or higher.</td>
+<td data-label="Option" id="opt-fauna_birds" style="text-align:left"><code>fauna_birds</code></td>
+<td data-label="Type" style="text-align:left"><code>boolean</code></td>
+<td data-label="Default" style="text-align:left"><code>true</code></td>
+<td data-label="Description" style="text-align:left">Birds on or off. Birds need <code>perf_fauna</code> <code>1</code> or higher.</td>
 </tr>
 <tr>
-<td id="opt-fauna_bird_density" style="text-align:left"><code>fauna_bird_density</code></td>
-<td style="text-align:left"><code>number</code></td>
-<td style="text-align:left"><em>preset</em></td>
-<td style="text-align:left">How often bird flocks appear. Range <code>0.5</code> to <code>2.0</code>. <code>0.5</code> = sparse (Low), <code>1.0</code> = Default, <code>1.5</code> = Ultra, <code>2.0</code> = frequent.</td>
+<td data-label="Option" id="opt-fauna_bird_density" style="text-align:left"><code>fauna_bird_density</code></td>
+<td data-label="Type" style="text-align:left"><code>number</code></td>
+<td data-label="Default" style="text-align:left"><em>preset</em></td>
+<td data-label="Description" style="text-align:left">How often bird flocks appear. Range <code>0.5</code> to <code>2.0</code>. <code>0.5</code> = sparse (Low), <code>1.0</code> = Default, <code>1.5</code> = Ultra, <code>2.0</code> = frequent.</td>
 </tr>
 <tr>
-<td id="opt-fauna_bird_flock_size" style="text-align:left"><code>fauna_bird_flock_size</code></td>
-<td style="text-align:left"><code>number</code></td>
-<td style="text-align:left"><em>preset</em></td>
-<td style="text-align:left">Average birds per flock. Range <code>1</code> to <code>20</code>. The presets use <code>4</code> (Low), <code>8</code> (Default) and <code>12</code> (Ultra). The real flock size varies by about ±2, and single birds pass now and then.</td>
+<td data-label="Option" id="opt-fauna_bird_flock_size" style="text-align:left"><code>fauna_bird_flock_size</code></td>
+<td data-label="Type" style="text-align:left"><code>number</code></td>
+<td data-label="Default" style="text-align:left"><em>preset</em></td>
+<td data-label="Description" style="text-align:left">Average birds per flock. Range <code>1</code> to <code>20</code>. The presets use <code>4</code> (Low), <code>8</code> (Default) and <code>12</code> (Ultra). The real flock size varies by about ±2, and single birds pass now and then.</td>
 </tr>
 <tr>
-<td id="opt-bird_animation_speed" style="text-align:left"><code>bird_animation_speed</code></td>
-<td style="text-align:left"><code>number</code></td>
-<td style="text-align:left"><em>preset</em></td>
-<td style="text-align:left">Bird speed and wing flapping. Range <code>0</code> to <code>3</code>, applied on top of <code>animation_speed</code>.</td>
+<td data-label="Option" id="opt-bird_animation_speed" style="text-align:left"><code>bird_animation_speed</code></td>
+<td data-label="Type" style="text-align:left"><code>number</code></td>
+<td data-label="Default" style="text-align:left"><em>preset</em></td>
+<td data-label="Description" style="text-align:left">Bird speed and wing flapping. Range <code>0</code> to <code>3</code>, applied on top of <code>animation_speed</code>.</td>
 </tr>
 <tr>
-<td id="opt-fauna_birds_at_night" style="text-align:left"><code>fauna_birds_at_night</code></td>
-<td style="text-align:left"><code>boolean</code></td>
-<td style="text-align:left"><code>true</code></td>
-<td style="text-align:left">Birds can appear at night. Set to <code>false</code> for daytime-only birds. Planes are not affected.</td>
+<td data-label="Option" id="opt-fauna_birds_at_night" style="text-align:left"><code>fauna_birds_at_night</code></td>
+<td data-label="Type" style="text-align:left"><code>boolean</code></td>
+<td data-label="Default" style="text-align:left"><code>true</code></td>
+<td data-label="Description" style="text-align:left">Birds can appear at night. Set to <code>false</code> for daytime-only birds. Planes are not affected.</td>
 </tr>
 <tr>
-<td id="opt-fauna_planes" style="text-align:left"><code>fauna_planes</code></td>
-<td style="text-align:left"><code>boolean</code></td>
-<td style="text-align:left"><code>true</code></td>
-<td style="text-align:left">Planes on or off. Planes need <code>perf_fauna: 2</code>. With <code>fauna_birds: false</code> and <code>perf_fauna: 2</code> only planes fly.</td>
+<td data-label="Option" id="opt-fauna_planes" style="text-align:left"><code>fauna_planes</code></td>
+<td data-label="Type" style="text-align:left"><code>boolean</code></td>
+<td data-label="Default" style="text-align:left"><code>true</code></td>
+<td data-label="Description" style="text-align:left">Planes on or off. Planes need <code>perf_fauna: 2</code>. With <code>fauna_birds: false</code> and <code>perf_fauna: 2</code> only planes fly.</td>
 </tr>
 <tr>
-<td id="opt-fauna_plane_density" style="text-align:left"><code>fauna_plane_density</code></td>
-<td style="text-align:left"><code>number</code></td>
-<td style="text-align:left"><em>preset</em></td>
-<td style="text-align:left">How often planes appear. Range <code>0.5</code> to <code>2.0</code>. <code>0.5</code> = sparse (Low), <code>1.0</code> = Default, <code>1.5</code> = Ultra, <code>2.0</code> = frequent.</td>
+<td data-label="Option" id="opt-fauna_plane_density" style="text-align:left"><code>fauna_plane_density</code></td>
+<td data-label="Type" style="text-align:left"><code>number</code></td>
+<td data-label="Default" style="text-align:left"><em>preset</em></td>
+<td data-label="Description" style="text-align:left">How often planes appear. Range <code>0.5</code> to <code>2.0</code>. <code>0.5</code> = sparse (Low), <code>1.0</code> = Default, <code>1.5</code> = Ultra, <code>2.0</code> = frequent.</td>
 </tr>
 <tr>
-<td id="opt-fauna_plane_speed" style="text-align:left"><code>fauna_plane_speed</code></td>
-<td style="text-align:left"><code>number</code></td>
-<td style="text-align:left"><code>1.0</code></td>
-<td style="text-align:left">Plane speed. Range <code>0.25</code> to <code>3</code>. Near (bigger) planes always fly faster than distant ones; this scales all of them.</td>
+<td data-label="Option" id="opt-fauna_plane_speed" style="text-align:left"><code>fauna_plane_speed</code></td>
+<td data-label="Type" style="text-align:left"><code>number</code></td>
+<td data-label="Default" style="text-align:left"><code>1.0</code></td>
+<td data-label="Description" style="text-align:left">Plane speed. Range <code>0.25</code> to <code>3</code>. Near (bigger) planes always fly faster than distant ones; this scales all of them.</td>
 </tr>
 </tbody></table>
 <h4 id="custom-fauna-configuration"><a class="anchor" href="#custom-fauna-configuration" aria-hidden="true">#</a>Custom Fauna Configuration</h4>
@@ -2348,10 +2360,10 @@ fauna_plane_speed: 1.5 # Planes 50% faster</code></pre></div><h3 id="animation">
 </tr>
 </thead>
 <tbody><tr>
-<td id="opt-animation_speed" style="text-align:left"><code>animation_speed</code></td>
-<td style="text-align:left"><code>number</code></td>
-<td style="text-align:left"><em>preset</em></td>
-<td style="text-align:left">Speed of all motion. Range <code>0</code> to <code>3</code>. <code>0</code> freezes animated motion, <code>1.0</code> is normal speed, <code>2.0</code> is double speed.</td>
+<td data-label="Option" id="opt-animation_speed" style="text-align:left"><code>animation_speed</code></td>
+<td data-label="Type" style="text-align:left"><code>number</code></td>
+<td data-label="Default" style="text-align:left"><em>preset</em></td>
+<td data-label="Description" style="text-align:left">Speed of all motion. Range <code>0</code> to <code>3</code>. <code>0</code> freezes animated motion, <code>1.0</code> is normal speed, <code>2.0</code> is double speed.</td>
 </tr>
 </tbody></table>
 <h4 id="animation-speed-control"><a class="anchor" href="#animation-speed-control" aria-hidden="true">#</a>Animation Speed Control</h4>

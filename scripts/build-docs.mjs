@@ -170,6 +170,14 @@ export async function buildDocs({ version, source, template, srcDir }) {
   content = content.replace(/<a name="([^"]+)"><\/a>\n?/g, (all, name) =>
     ids.has(name) ? "" : `<span id="${name}"></span>`,
   );
+  // Column titles go onto every cell, so narrow screens can show a table row as a labeled block.
+  content = content.replace(/<table>[\s\S]*?<\/table>/g, (table) => {
+    const labels = [...table.matchAll(/<th[^>]*>([\s\S]*?)<\/th>/g)].map((m) => m[1].replace(/<[^>]+>/g, "").trim().replace(/"/g, "&quot;"));
+    return table.replace(/<tr>([\s\S]*?)<\/tr>/g, (row, cells) => {
+      let i = 0;
+      return `<tr>${cells.replace(/<td(?=[\s>])/g, () => `<td data-label="${labels[i++] ?? ""}"`)}</tr>`;
+    });
+  });
   const allIds = [...content.matchAll(/ id="([^"]+)"/g)].map((m) => m[1]);
   const twice = allIds.filter((id, i) => allIds.indexOf(id) !== i);
   if (twice.length) throw new Error(`Duplicate ids in the documentation: ${twice.join(", ")}`);

@@ -16,8 +16,9 @@
   header p { color: var(--muted); margin: 0 0 20px; }
   header a { color: var(--link); text-decoration: none; }
   .layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 24px; align-items: start; }
-  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } .stage { position: static; } }
   .stage { position: sticky; top: 16px; }
+  /* Must come after the .stage rule above, or the card stays sticky on phones and covers the controls. */
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } .stage { position: static; } }
   atmo-weather-card { display: block; width: 100%; }
   .status { margin-top: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--muted); font-size: 12.5px; }
   .status b { color: var(--text); font-weight: 600; }

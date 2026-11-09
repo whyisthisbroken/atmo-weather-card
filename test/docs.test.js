@@ -77,3 +77,16 @@ test("YAML examples get a live button with demo entities", async () => {
   assert.deepEqual(cfg, { weather_entity: "weather.demo", chips: [{ entity: "sensor.outside_humidity" }] });
   assert.ok(html.endsWith('["sensor.outside_humidity","weather.demo"]'));
 });
+
+test("tables and the demo stay readable on phones", () => {
+  const page = read("docs/index.html");
+  assert.match(page, /@media \(max-width: 900px\) \{\s*table, tbody, tr, td \{ display: block; \}/);
+  const cells = [...page.matchAll(/<td(?=[\s>])[^>]*>/g)].map((m) => m[0]);
+  assert.ok(cells.length > 100);
+  for (const cell of cells) assert.match(cell, /data-label="[^"]+"/);
+  // The phone rule must come after the sticky rule, or the card covers the controls.
+  const demo = read("docs/demo.html");
+  const sticky = demo.indexOf(".stage { position: sticky");
+  const phone = demo.search(/@media \(max-width: 900px\) \{[^\n]*\.stage \{ position: static; \}/);
+  assert.ok(sticky > 0 && phone > sticky);
+});

@@ -114,7 +114,19 @@
     .side { position: static; max-height: none; }
     .side .nav-group { display: none; }
     .live, main { grid-column: 1; }
-    .top nav { margin-left: 0; }
+    .top { position: static; }
+    .top nav { margin-left: 0; gap: 6px 16px; }
+  }
+  /* Narrow screens: every table row becomes a small block, the column title sits in front of each value (data-label). */
+  @media (max-width: 900px) {
+    table, tbody, tr, td { display: block; }
+    table { overflow: visible; }
+    thead { display: none; }
+    tr { border-bottom: 1px solid var(--line); padding: 10px 0; }
+    td { border: 0; padding: 2px 0; }
+    td:first-child { white-space: normal; overflow-wrap: anywhere; font-weight: 600; }
+    td[data-label]:not(:first-child)::before { content: attr(data-label); display: inline-block; min-width: 6.5em; margin-right: 8px;
+      font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
   }
   @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 </style>
