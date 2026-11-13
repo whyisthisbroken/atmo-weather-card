@@ -965,7 +965,6 @@ class AtmosphericWeatherCard extends HTMLElement {
           hide_label: true,
           fancy_unit: true,
           value_weight: "600",
-          behind_effects: true,
         },
         { entity: weatherEntity, attribute: "humidity", name: "HMD" },
         { entity: weatherEntity, attribute: "wind_speed", name: "Wind" },

@@ -128,6 +128,8 @@ test("getStubConfig finds a weather entity and renders", () => {
   const config = Card.getStubConfig(hass);
 
   assert.equal(config.weather_entity, "weather.home");
+  // New cards keep every chip in front of the sky.
+  assert.ok(config.chips.every((c) => c.behind_effects !== true));
   animate(mountCard(config, hass));
 });
 

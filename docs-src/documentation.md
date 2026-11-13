@@ -206,7 +206,6 @@ chips:
     position_x: 16px
     padding: 0px 8px
     fancy_unit: true
-    behind_effects: true
     value_weight: "700"
   - entity: weather.your_weather_entity
     forecast: daily
@@ -353,7 +352,6 @@ chips:
     background: false
     position_x: 16px
     padding: 0px 8px
-    behind_effects: true
     fancy_unit: true
     value_weight: "700"
   - attribute: precipitation_probability
