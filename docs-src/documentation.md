@@ -15,6 +15,8 @@ These entities connect the card to Home Assistant. Only `weather_entity` is requ
 | `moon_phase_entity`  | `string` | —       | _Recommended._ Displays the correct moon phase (e.g., `sensor.moon_phase`).                                                                                                                                                             |
 | `precipitation_entity` | `string` | —     | _Optional._ A sensor with the current rain intensity in mm/h (or in/h). The editor lists only sensors with one of these units. Rain and snow then follow the measured amount, from drizzle to downpour. Without it the density follows the weather state. See [Weather Data & Sky Light](#weather-data). |
 
+Have a weather station? Wind, temperature, humidity, dew point, cloud cover and visibility can come from your own sensors instead of the weather entity, see [Your own sensors](#your-own-sensors).
+
 ## Examples
 
 The card is meant to be pretty flexible. You can customize these examples however you like, mix different elements, or combine them with other Home Assistant cards. If you want the exact look from the screenshots, use the [weather icons](#weather-icons) guide.
@@ -444,7 +446,10 @@ The visual editor groups settings into collapsible panels, top to bottom. The ed
 
 ```
 Card editor
-├─ weather_entity, precipitation_entity    (always visible, top)
+├─ weather_entity                          (always visible, top)
+├─ Your own sensors (optional) ▸ precipitation_entity, wind_speed_entity,
+│     wind_bearing_entity, temperature_entity, humidity_entity,
+│     dew_point_entity, cloud_coverage_entity, visibility_entity
 ├─ Sun & Moon
 │  ├─ sun_entity, moon_phase_entity
 │  └─ Position & size ▸ celestial_position, celestial_alignment,
@@ -973,7 +978,7 @@ Full option reference (including the `bar` equivalents and `gauge_entity`/`gauge
 
 <a name="weather-data"></a>
 
-The card reads optional attributes of your weather entity and uses them to make each scene match the real sky. Every attribute is optional: if your weather integration does not provide one, the card looks exactly as it does without it. Nothing needs to be configured.
+The card reads optional attributes of your weather entity, or the readings of [your own sensors](#your-own-sensors), and uses them to make each scene match the real sky. Every attribute is optional: if your weather integration does not provide one, the card looks exactly as it does without it. Nothing needs to be configured.
 
 | Source                                         | Effect                                                                                                                                                                                                 |
 | :--------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -986,6 +991,35 @@ The card reads optional attributes of your weather entity and uses them to make 
 | Weather state + sun elevation                  | **Sun rays:** soft beams fan out from the sun in `partlycloudy` and `cloudy` weather, strongest with a low sun (below 35°) and not under a closed cloud cover (95 % or more).                         |
 
 Cloud cover and precipitation are rounded into steps, so small sensor changes do not rebuild the scene every few minutes. Haze, ground mist and sun rays need `perf_effects` 1 or higher. The golden and the blue hour work in every mode, but they tint the sky only in the `standalone` card style, because the `immersive` style has no sky of its own; the golden light on the clouds shows in both styles.
+
+### Your own sensors
+
+A weather station on your house measures the wind, the temperature and the humidity where you live, often every minute, while a weather service models them for a grid of several kilometres. Every reading the card uses can come from a sensor of your own instead of the weather entity. In the editor they sit at the top under **Your own sensors (optional)**; each picker lists only sensors that fit, by unit or device class.
+
+| Option                  | Type     | Default | Replaces                         | Description |
+| :---------------------- | :------- | :------ | :------------------------------- | :---------- |
+| `wind_speed_entity`     | `string` | —       | `wind_speed`                     | Wind speed in km/h, mph, m/s or kn. Moves the sky and drives the wind lines, the compass and the speed in wind direction chips. |
+| `wind_bearing_entity`   | `string` | —       | `wind_bearing`                   | Where the wind comes from, in degrees or as a compass point like `NW`. Turns the sky, the compass and turning chip icons. |
+| `temperature_entity`    | `string` | —       | `temperature`                    | Temperature in °C or °F, for ground mist. |
+| `humidity_entity`       | `string` | —       | `humidity`                       | Relative humidity in %, for haze and ground mist. |
+| `dew_point_entity`      | `string` | —       | `dew_point`                      | Dew point in °C or °F. Without it, but with your own temperature or humidity, the card works the dew point out from both. |
+| `cloud_coverage_entity` | `string` | —       | `cloud_coverage`                 | Cloud cover in %. Sets the amount of clouds. |
+| `visibility_entity`     | `string` | —       | `visibility`                     | Visibility in km, mi or m, for haze. |
+| `precipitation_entity`  | `string` | —       | —                                | Rain rate in mm/h or in/h, see the table above. |
+
+```yaml
+type: custom:atmo-weather-card
+weather_entity: weather.home
+wind_speed_entity: sensor.station_wind_speed
+wind_bearing_entity: sensor.station_wind_direction
+temperature_entity: sensor.station_temperature
+humidity_entity: sensor.station_humidity
+```
+
+- **The weather state stays with the weather entity.** Sunny, rain or a thunderstorm decide what kind of weather the card shows; your sensors decide how strong it is. If your station measures rain while the weather service still says sunny, it does not rain on the card.
+- **Units come from the sensor**, so a station in °F, mph or miles works as it is.
+- **A sensor that is missing, unknown or unavailable** falls back to the value of the weather entity, so the card keeps working while the station is offline.
+- **Chips are separate.** A chip shows whatever entity you give it; pick your station sensors there too. A wind direction chip with **Show wind speed** uses `wind_speed_entity` when it is set, also on a wind direction sensor.
 
 Each of these effects can be switched off on its own, in the editor under **Performance & effects** › **Sky & light** or in YAML:
 
@@ -1363,6 +1397,12 @@ The card reads the measured weather data, not only the weather state (see [Weath
 3. Ground mist forms when the temperature is close to the dew point. Switch off **Ground mist** (`effect_ground_mist: false`).
 
 Check the values under **Developer Tools** › **States** on your weather entity first. Some providers report a cloud cover that does not fit the weather state.
+
+#### My station sensor is not in the list of my own sensors
+
+1. Each picker lists only sensors that fit: wind speed in km/h, mph, m/s or kn; wind direction with the device class `wind_direction` or the unit °; temperature and dew point in °C or °F; humidity with the device class `humidity`; cloud cover in % without a device class; visibility in km, mi or m.
+2. Check the unit and device class of your sensor under **Developer Tools** › **States**. A sensor without a unit can get one in its entity settings, or through a template sensor.
+3. In YAML any sensor works; the card reads its state as a number, or a wind direction like `NW`.
 
 #### Rain looks too light or too heavy
 

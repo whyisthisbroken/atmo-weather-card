@@ -5,6 +5,8 @@ import {
   adjustParams,
   computeAtmosphere,
   easeGoldenLight,
+  dewPointC,
+  mergeWeatherSensors,
   readWeatherData,
 } from "../src/atmo-weather-atmosphere.js";
 
@@ -179,4 +181,46 @@ test("the golden light glides to a new sun position instead of jumping", () => {
     biggest = Math.max(biggest, Math.abs(a.golden - b.golden), Math.abs(a.sunset - b.sunset));
   }
   assert.ok(biggest < 0.25, String(biggest));
+});
+
+test("your own sensors replace the readings of the weather entity", () => {
+  const weather = { wind_speed: 10, wind_speed_unit: "km/h", wind_bearing: 90, temperature: 20, temperature_unit: "°C", humidity: 50, dew_point: 9, visibility: 20 };
+  const st = (state, unit, extra) => ({ state, attributes: { ...(unit ? { unit_of_measurement: unit } : {}), ...extra } });
+  const out = mergeWeatherSensors(weather, {
+    wind_speed: st("12.5", "mph"),
+    wind_bearing: st("NW"),
+    visibility: st("unavailable", "km"),
+  });
+  assert.equal(out.wind_speed, 12.5);
+  assert.equal(out.wind_speed_unit, "mph");
+  // A compass point counts as degrees.
+  assert.equal(out.wind_bearing, 315);
+  // An unavailable sensor keeps the weather value.
+  assert.equal(out.visibility, 20);
+  assert.equal(out.temperature, 20);
+  assert.equal(weather.wind_speed, 10, "the weather entity is not changed");
+  // Without sensors nothing changes.
+  assert.deepEqual(mergeWeatherSensors(weather, {}), { ...weather, dew_point_unit: "°C" });
+});
+
+test("your own temperature and humidity work out the dew point, in any unit", () => {
+  near(dewPointC(20, 50), 9.3);
+  assert.equal(dewPointC(20, null), null);
+  const weather = { temperature: 10, temperature_unit: "°C", humidity: 60, dew_point: 2 };
+  // A station in °F: its own temperature, the dew point worked out to fit.
+  const f = mergeWeatherSensors(weather, {
+    temperature: { state: "68", attributes: { unit_of_measurement: "°F" } },
+    humidity: { state: "50", attributes: { unit_of_measurement: "%" } },
+  });
+  assert.equal(f.dew_point, 9.3);
+  assert.equal(f.dew_point_unit, "°C");
+  const data = readWeatherData(f);
+  near(data.temperature, 20);
+  near(data.dewPoint, 9.3);
+  // A dew point sensor wins, with its own unit.
+  const own = mergeWeatherSensors(weather, {
+    temperature: { state: "68", attributes: { unit_of_measurement: "°F" } },
+    dew_point: { state: "50", attributes: { unit_of_measurement: "°F" } },
+  });
+  near(readWeatherData(own).dewPoint, 10);
 });

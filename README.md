@@ -23,7 +23,7 @@ The documentation runs every example live, and the [demo](https://whyisthisbroke
 - **Wind you can see** — direction and strength from your weather entity, drawn as wind lines or a flow field; clouds, rain and snow drift the same way, and an optional compass on the card or a chip with a turning arrow shows where it comes from
 - **Sun and moon** that follow the real sun position, with sunrise and sunset colors, live moon phases and a moon tilted for your latitude
 - **Night sky** with stars, shooting stars and comets, and **birds and planes** passing by; near planes fly faster than distant ones
-- **Real weather data** shapes the sky: the measured cloud cover sets the clouds, low visibility or humid air adds haze, ground mist forms near the dew point, and an optional precipitation sensor sets how hard it rains
+- **Real weather data** shapes the sky: the measured cloud cover sets the clouds, low visibility or humid air adds haze, ground mist forms near the dew point, and an optional precipitation sensor sets how hard it rains; every reading can come from your own weather station instead
 - **Sky light** with a golden hour that turns the sky and clouds gold, orange and violet at sunset, a blue hour after sunset and before sunrise, stars that come out one by one, and soft sun rays through broken clouds
 - **Every effect can be switched off** on its own, and shooting stars, comets, birds and planes have their own frequency
 - **Chips** for any entity or attribute, weather forecasts, ring and bar gauges, free positioning and many styles

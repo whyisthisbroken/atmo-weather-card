@@ -974,3 +974,24 @@ test("times follow the time format of the Home Assistant profile", () => {
   assert.match(shown("language"), /6:05\sPM/);
   assert.match(shown(), /6:05\sPM/);
 });
+
+test("your own sensors drive the wind, and a change of a sensor updates the card", () => {
+  const hass = makeHass();
+  hass.states["sensor.station_wind"] = { entity_id: "sensor.station_wind", state: "10", attributes: { unit_of_measurement: "mph" } };
+  hass.states["sensor.station_dir"] = { entity_id: "sensor.station_dir", state: "270", attributes: { unit_of_measurement: "°", device_class: "wind_direction" } };
+  const card = mountCard({
+    wind_speed_entity: "sensor.station_wind",
+    wind_bearing_entity: "sensor.station_dir",
+    chips: [{ entity: "sensor.station_dir", bearing_format: "cardinal", bearing_speed: true }],
+  }, hass);
+  assert.ok(Math.abs(card._windKmh - 16.09) < 0.01, String(card._windKmh));
+  assert.equal(card._windBearing, 270);
+  // The wind direction sensor chip shows the station speed in its unit.
+  assert.match(text(chips(card)[0]), /W · 10 mph/);
+  // Only the sensor changes, not the weather entity: the card follows.
+  card.hass = { ...hass, states: { ...hass.states, "sensor.station_dir": { ...hass.states["sensor.station_dir"], state: "90" } } };
+  assert.equal(card._windBearing, 90);
+  // Unavailable: back to the weather entity.
+  card.hass = { ...hass, states: { ...hass.states, "sensor.station_dir": { ...hass.states["sensor.station_dir"], state: "unavailable" } } };
+  assert.equal(card._windBearing, Number(hass.states["weather.home"].attributes.wind_bearing));
+});

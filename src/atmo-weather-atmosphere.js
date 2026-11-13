@@ -9,6 +9,73 @@ const num = (v) => {
   return Number.isFinite(n) ? n : null;
 };
 
+// Options for readings from your own sensors, for example a weather station,
+// and the weather attribute each one replaces.
+export const SENSOR_OPTIONS = Object.freeze({
+  wind_speed_entity: "wind_speed",
+  wind_bearing_entity: "wind_bearing",
+  temperature_entity: "temperature",
+  humidity_entity: "humidity",
+  dew_point_entity: "dew_point",
+  cloud_coverage_entity: "cloud_coverage",
+  visibility_entity: "visibility",
+});
+// The unit attribute that goes with a reading.
+const SENSOR_UNITS = {
+  wind_speed: "wind_speed_unit",
+  temperature: "temperature_unit",
+  dew_point: "dew_point_unit",
+  visibility: "visibility_unit",
+};
+const POINTS = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+// A wind direction in degrees, or as a compass point like "NW".
+function bearingOf(state) {
+  const n = num(state);
+  if (n != null) return n;
+  const i = POINTS.indexOf(String(state || "").trim().toUpperCase());
+  return i >= 0 ? i * 22.5 : null;
+}
+// Dew point in °C from temperature in °C and relative humidity (Magnus).
+export function dewPointC(tempC, humidity) {
+  if (tempC == null || humidity == null || humidity <= 0) return null;
+  const g = Math.log(Math.min(humidity, 100) / 100) + (17.62 * tempC) / (243.12 + tempC);
+  return Math.round(((243.12 * g) / (17.62 - g)) * 10) / 10;
+}
+
+// The weather attributes with the readings of your own sensors laid over
+// them. `readings` maps a weather attribute to the state object of its
+// sensor. A sensor that is missing, unknown or unavailable keeps the value of
+// the weather entity. Without a dew point sensor, but with your own
+// temperature or humidity, the dew point is worked out from both, so it fits
+// the station.
+export function mergeWeatherSensors(attrs, readings) {
+  const base = attrs || {};
+  const out = { ...base };
+  // The dew point of the weather entity is in the unit of its temperature.
+  if (out.dew_point != null && !out.dew_point_unit && out.temperature_unit)
+    out.dew_point_unit = out.temperature_unit;
+  const own = new Set();
+  for (const [attr, obj] of Object.entries(readings || {})) {
+    if (!obj) continue;
+    const value = attr === "wind_bearing" ? bearingOf(obj.state) : num(obj.state);
+    if (value == null) continue;
+    out[attr] = value;
+    own.add(attr);
+    const unit = obj.attributes && obj.attributes.unit_of_measurement;
+    if (SENSOR_UNITS[attr] && unit) out[SENSOR_UNITS[attr]] = unit;
+  }
+  if (!own.has("dew_point") && (own.has("temperature") || own.has("humidity"))) {
+    const t = num(out.temperature);
+    const tC = t != null && String(out.temperature_unit || "").includes("F") ? ((t - 32) * 5) / 9 : t;
+    const dp = dewPointC(tC, num(out.humidity));
+    if (dp != null) {
+      out.dew_point = dp;
+      out.dew_point_unit = "°C";
+    }
+  }
+  return out;
+}
+
 // Normalizes the attributes the effects use: km, mm/h and degrees Celsius.
 // The rain amount only comes from the optional precipitation sensor.
 export function readWeatherData(attrs, precipEntity) {
@@ -27,10 +94,12 @@ export function readWeatherData(attrs, precipEntity) {
   if (precipitation != null && precUnit.startsWith("in")) precipitation *= 25.4;
   let temperature = num(a.temperature),
     dewPoint = num(a.dew_point);
-  if (String(a.temperature_unit || "").includes("F")) {
-    if (temperature != null) temperature = ((temperature - 32) * 5) / 9;
-    if (dewPoint != null) dewPoint = ((dewPoint - 32) * 5) / 9;
-  }
+  const toC = (v) => ((v - 32) * 5) / 9;
+  if (temperature != null && String(a.temperature_unit || "").includes("F"))
+    temperature = toC(temperature);
+  // The dew point can come from its own sensor with its own unit.
+  if (dewPoint != null && String(a.dew_point_unit || a.temperature_unit || "").includes("F"))
+    dewPoint = toC(dewPoint);
   return {
     coverage: num(a.cloud_coverage),
     precipitation,

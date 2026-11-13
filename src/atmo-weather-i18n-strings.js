@@ -421,6 +421,19 @@ const ROWS = [
   ["Bottom left", "Unten links"],
   ["Bottom center", "Unten Mitte"],
   ["Bottom right", "Unten rechts"],
+  ["Your own sensors (optional)", "Eigene Sensoren (optional)"],
+  ["Use readings from your own weather station instead of the weather entity. Empty fields use the weather entity, and so does a sensor that is unavailable. The weather itself (sunny, rain, storm) always comes from the weather entity.", "Werte der eigenen Wetterstation statt der Wetter-Entität. Leere Felder nehmen die Wetter-Entität, ebenso ein Sensor, der nicht verfügbar ist. Das Wetter selbst (Sonne, Regen, Gewitter) kommt immer von der Wetter-Entität."],
+  ["Wind direction", "Windrichtung"],
+  ["Dew point", "Taupunkt"],
+  ["Cloud cover", "Bewölkung"],
+  ["Visibility", "Sichtweite"],
+  ["Moves the sky, the wind lines and the compass. Sensors in km/h, mph, m/s or kn.", "Bewegt Himmel, Windlinien und Kompass. Sensoren in km/h, mph, m/s oder kn."],
+  ["Where the wind comes from, in degrees or as a compass point like NW.", "Woher der Wind kommt, in Grad oder als Himmelsrichtung wie NW."],
+  ["With the humidity it decides on ground mist.", "Entscheidet zusammen mit der Luftfeuchte über Bodennebel."],
+  ["Humid air makes haze and, near the dew point, ground mist.", "Feuchte Luft macht Dunst und nahe am Taupunkt Bodennebel."],
+  ["Empty: worked out from your temperature and humidity.", "Leer: wird aus deiner Temperatur und Luftfeuchte berechnet."],
+  ["Sets the amount of clouds. A sensor in %.", "Bestimmt die Menge der Wolken. Ein Sensor in %."],
+  ["Low visibility makes haze. Sensors in km, mi or m.", "Geringe Sichtweite macht Dunst. Sensoren in km, mi oder m."],
 ];
 
 export const TRANSLATIONS = Object.freeze({

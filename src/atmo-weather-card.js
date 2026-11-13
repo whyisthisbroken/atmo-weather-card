@@ -31,7 +31,9 @@ import {
 import {
   adjustParams,
   computeAtmosphere,
+  mergeWeatherSensors,
   readWeatherData,
+  SENSOR_OPTIONS,
 } from "./atmo-weather-atmosphere.js";
 import {
   CONFIG_DEFAULTS,
@@ -671,9 +673,16 @@ class AtmosphericWeatherCard extends HTMLElement {
     const precipObj = cfg.precipitation_entity
       ? hass.states[cfg.precipitation_entity]
       : null;
+    // Readings of your own sensors, by the weather attribute they replace.
+    const readings = {};
+    for (const [opt, attr] of Object.entries(SENSOR_OPTIONS))
+      if (cfg[opt]) readings[attr] = hass.states[cfg[opt]] || null;
+    const sensorObjs = Object.values(readings);
     if (this._lastSnapshot) {
       let changed =
         wObj !== this._refW ||
+        sensorObjs.length !== (this._refSensors || []).length ||
+        sensorObjs.some((o, i) => o !== this._refSensors[i]) ||
         sunObj !== this._refSun ||
         moonObj !== this._refMoon ||
         themeObj !== this._refTheme ||
@@ -720,6 +729,7 @@ class AtmosphericWeatherCard extends HTMLElement {
     this._refTheme = themeObj;
     this._refStatus = statusObj;
     this._refPrecip = precipObj;
+    this._refSensors = sensorObjs;
     this._refSysDark = hass.themes && hass.themes.darkMode;
     const refs = new Map();
     for (const s of this._chips) {
@@ -735,7 +745,12 @@ class AtmosphericWeatherCard extends HTMLElement {
     ) {
       this._moonRotationRad = (51 - hass.config.latitude) * (Math.PI / 180);
     }
-    const wEntity = wObj || FALLBACK_WEATHER;
+    const wBase = wObj || FALLBACK_WEATHER;
+    const wEntity = sensorObjs.length
+      ? { ...wBase, attributes: mergeWeatherSensors(wBase.attributes, readings) }
+      : wBase;
+    // Live chips that show the wind speed next to the direction read it too.
+    this._sceneAttrs = wEntity.attributes;
     const sunEntity = this._config.sun_entity
       ? hass.states[this._config.sun_entity]
       : null;
@@ -2550,14 +2565,18 @@ class AtmosphericWeatherCard extends HTMLElement {
         !/°\s*$/.test(String(formatted))
       )
         formatted = `${formatted}°`;
-      // The speed comes from the same weather entity, with its own unit.
+      // The speed comes from the same weather entity, with its own unit. Live
+      // chips use your own wind speed sensor when one is set, then also on a
+      // wind direction sensor chip.
       const wEnt = hass.states[chip.entity];
+      const ownSpeed = !isForecast && !!this._config.wind_speed_entity && this._sceneAttrs;
+      const speedAttrs = ownSpeed ? this._sceneAttrs : wEnt && wEnt.attributes;
       // Only next to a known direction, never after N/A.
-      const speed = chip.bearing_speed === true && chip.attribute === "wind_bearing" && Number.isFinite(parseFloat(raw))
-        ? parseFloat(isForecast ? fcEntry && fcEntry.wind_speed : wEnt && wEnt.attributes.wind_speed)
+      const speed = chip.bearing_speed === true && (chip.attribute === "wind_bearing" || ownSpeed) && Number.isFinite(parseFloat(raw))
+        ? parseFloat(isForecast ? fcEntry && fcEntry.wind_speed : speedAttrs && speedAttrs.wind_speed)
         : NaN;
       if (Number.isFinite(speed)) {
-        const speedUnit = (wEnt && wEnt.attributes.wind_speed_unit) || "km/h";
+        const speedUnit = (speedAttrs && speedAttrs.wind_speed_unit) || "km/h";
         const value = new Intl.NumberFormat(lang, { maximumFractionDigits: 1 }).format(speed);
         const u = unit ? (/^[°%]/.test(unit) ? unit : ` ${unit}`) : "";
         formatted = `${formatted}${u} · ${value} ${speedUnit}`;

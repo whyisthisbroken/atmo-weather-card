@@ -239,8 +239,43 @@ test("the precipitation sensor picker lists only rain rate sensors", async () =>
   assert.deepEqual(field.selector, {
     entity: { domain: "sensor", include_entities: ["sensor.radar_now", "sensor.us_rain"] },
   });
-  assert.equal(form.schema[0].name, "weather_entity");
+  // It sits with your own sensors, below the weather entity.
+  assert.ok(form.closest("details.own-sensors"));
   assert.equal(form.computeLabel(field), "Precipitation Sensor");
+});
+
+test("your own sensors: each picker lists only fitting sensors", async () => {
+  const s = (unit, device_class) => ({ state: "1", attributes: { unit_of_measurement: unit, ...(device_class ? { device_class } : {}) } });
+  const hass = makeHass({
+    states: {
+      "sensor.station_wind": s("km/h", "wind_speed"),
+      "sensor.station_gust_mph": s("mph"),
+      "sensor.station_dir": s("°", "wind_direction"),
+      "sensor.station_temp": s("°C", "temperature"),
+      "sensor.station_humidity": s("%", "humidity"),
+      "sensor.battery": s("%", "battery"),
+      "sensor.clouds": s("%"),
+      "sensor.visibility": s("km", "distance"),
+      "sensor.power": s("W", "power"),
+    },
+  });
+  const { editor } = await mountEditor({ weather_entity: "weather.home" }, hass);
+  const group = editor.shadowRoot.querySelector("details.own-sensors");
+  // Closed until a sensor of your own is set.
+  assert.equal(group.open, false);
+  const form = group.querySelector("ha-form");
+  // Only the sensors of this test; the test Home Assistant brings a few more.
+  const list = (name) =>
+    form.schema.find((x) => x.name === name).selector.entity.include_entities.filter((id) => id in hass.states && /station|battery|clouds|visibility|power/.test(id));
+  assert.deepEqual(list("wind_speed_entity"), ["sensor.station_wind", "sensor.station_gust_mph"]);
+  assert.deepEqual(list("wind_bearing_entity"), ["sensor.station_dir"]);
+  assert.deepEqual(list("temperature_entity"), ["sensor.station_temp"]);
+  assert.deepEqual(list("dew_point_entity"), ["sensor.station_temp"]);
+  assert.deepEqual(list("humidity_entity"), ["sensor.station_humidity"]);
+  assert.deepEqual(list("cloud_coverage_entity"), ["sensor.clouds"]);
+  assert.deepEqual(list("visibility_entity"), ["sensor.visibility"]);
+  const set = await mountEditor({ weather_entity: "weather.home", wind_speed_entity: "sensor.station_wind" }, hass);
+  assert.equal(set.editor.shadowRoot.querySelector("details.own-sensors").open, true);
 });
 
 test("a chosen precipitation sensor stays in the list", async () => {
