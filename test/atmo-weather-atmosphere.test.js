@@ -5,6 +5,7 @@ import {
   adjustParams,
   computeAtmosphere,
   easeGoldenLight,
+  easeHazeMist,
   goldenSource,
   dewPointC,
   mergeWeatherSensors,
@@ -183,6 +184,35 @@ test("the golden light glides to a new sun position instead of jumping", () => {
     biggest = Math.max(biggest, Math.abs(a.golden - b.golden), Math.abs(a.sunset - b.sunset));
   }
   assert.ok(biggest < 0.25, String(biggest));
+});
+
+test("haze and ground mist glide to a new reading instead of jumping", () => {
+  const card = { _atmo: { haze: 0.2, mist: 0 }, _frameScale: 1 };
+  // A card that just appeared starts at the current reading.
+  assert.deepEqual(easeHazeMist(card), { haze: 0.2, mist: 0 });
+  // An hourly update moves the gap from 3 to 1 degree: 0 to 0.6 mist.
+  card._atmo = { haze: 0.2, mist: 0.6 };
+  const first = easeHazeMist(card).mist;
+  assert.ok(first > 0 && first < 0.03, String(first));
+  // About a second later it is still on the way, after three seconds nearly there.
+  for (let i = 1; i < 30; i++) easeHazeMist(card);
+  assert.ok(card._hazeMist.mist > 0.3 && card._hazeMist.mist < 0.5, String(card._hazeMist.mist));
+  for (let i = 30; i < 90; i++) easeHazeMist(card);
+  assert.ok(card._hazeMist.mist > 0.55, String(card._hazeMist.mist));
+  for (let i = 0; i < 600; i++) easeHazeMist(card);
+  assert.deepEqual(card._hazeMist, { haze: 0.2, mist: 0.6 });
+  // The sun climbs above 12 degrees: the mist fades out, it does not vanish.
+  card._atmo = { haze: 0.2, mist: 0 };
+  assert.ok(easeHazeMist(card).mist > 0.55);
+  // The same time at 60 fps: half the frame, the same speed.
+  const slow = { _atmo: { haze: 0, mist: 0 }, _frameScale: 1 };
+  const fast = { _atmo: { haze: 0, mist: 0 }, _frameScale: 0.5 };
+  easeHazeMist(slow);
+  easeHazeMist(fast);
+  slow._atmo = fast._atmo = { haze: 1, mist: 1 };
+  for (let i = 0; i < 30; i++) easeHazeMist(slow);
+  for (let i = 0; i < 60; i++) easeHazeMist(fast);
+  near(slow._hazeMist.mist, fast._hazeMist.mist);
 });
 
 test("your own sensors replace the readings of the weather entity", () => {

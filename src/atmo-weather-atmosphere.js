@@ -285,6 +285,28 @@ export function drawTwilight(card, ctx, w, h) {
 
 const mix = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
 
+// Haze and ground mist glide to a new reading over about three seconds
+// instead of jumping, also when the sun crosses 12 degrees. A weather service
+// often reports once an hour, so one update can move the mist a lot.
+// Call once per frame.
+export function easeHazeMist(card) {
+  const a = card._atmo;
+  const target = { haze: (a && a.haze) || 0, mist: (a && a.mist) || 0 };
+  const cur = card._hazeMist;
+  if (!cur) {
+    card._hazeMist = target;
+    return target;
+  }
+  const k = 1 - Math.pow(HAZE_MIST_EASE, card._frameScale || 1);
+  for (const key of ["haze", "mist"]) {
+    const d = target[key] - cur[key];
+    cur[key] = Math.abs(d) < 0.002 ? target[key] : cur[key] + d * k;
+  }
+  return cur;
+}
+// Per frame at 30 fps: 95 % of the way after about three seconds.
+const HAZE_MIST_EASE = 0.97;
+
 // Home Assistant moves the sun every two minutes near the horizon. The light
 // glides to each of these small steps in about a second instead of jumping.
 // A big change (a new dashboard, another weather, a time picked in the demo)
@@ -397,7 +419,7 @@ export function drawGoldenLight(card, ctx, w, h) {
 
 // A thin veil that thickens towards the ground: low visibility or humid air.
 export function drawHaze(card, ctx, w, h) {
-  const a = card._atmo;
+  const a = card._hazeMist || card._atmo;
   if (!a || a.haze <= 0.01) return;
   const color = card._isTimeNight
     ? "62,70,88"
@@ -422,7 +444,7 @@ export function drawHaze(card, ctx, w, h) {
 
 // Ground mist: a low band with a few soft banks drifting slowly.
 export function drawMist(card, ctx, w, h) {
-  const a = card._atmo;
+  const a = card._hazeMist || card._atmo;
   if (!a || a.mist <= 0.01) return;
   const color = card._isTimeNight
     ? "92,100,118"

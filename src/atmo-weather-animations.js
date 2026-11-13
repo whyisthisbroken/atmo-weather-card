@@ -2,6 +2,7 @@ import {
   drawGoldenLight,
   drawGoldenSky,
   easeGoldenLight,
+  easeHazeMist,
   drawHaze,
   drawMist,
   drawSunRays,
@@ -1218,6 +1219,7 @@ export function renderAnimationFrame(
 
   drawTwilight(card, bg, w, h);
   easeGoldenLight(card);
+  easeHazeMist(card);
   drawGoldenSky(card, bg, w, h);
   if (rs.glow && rs.glow.drawPhase === "bg") card._drawCelestialGlow(bg, w, h);
   card._drawStars(bg, w, h, dpr);
