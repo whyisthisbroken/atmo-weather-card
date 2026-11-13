@@ -459,8 +459,9 @@ Card editor
 ├─ Chips
 │  ├─ the chips list (tabs per chip: Data, Text, Icon, Look, Position, Tap)
 │  ├─ Quick add ▸ temperature, humidity, wind, rain chance, tomorrow
-│  ├─ Chip area ▸ chip_area_position, chip_area_layout, chip_style,
-│  │              chip_area_background, card_background_style
+│  ├─ Chip area ▸ chip_area_position, chip_area_layout,
+│  │              chip_area_columns or chip_area_scroll_count (by layout),
+│  │              chip_style, chip_area_background, card_background_style
 │  └─ Fine tuning ▸ gaps, sizes and colors of all chips
 ├─ Image
 │  ├─ image_day, image_night (with preview)
@@ -502,7 +503,7 @@ The sections below document every option, including type, default, and behavior.
 | `card_square`      | `boolean`           | `false`     | Forces the card into a perfect square. Highly useful for grid layouts.                                                                                                                                                                                                                                                                                                          |
 | `card_full_width`  | `boolean`           | `false`     | Stretches the card edge-to-edge by removing side margins.                                                                                                                                                                                                                                                                                                                       |
 | `card_offset`      | `string`            | `0px`       | Shifts the card using CSS margin (e.g., `"-50px 0px 0px 0px"`). Useful when layering cards.                                                                                                                                                                                                                                                                                     |
-| `card_stack_order` | `number`            | _auto_      | Manually sets the z-index (e.g., `1`, `0`, `-1`). Useful for forcing an immersive card to display in front of cards with solid backgrounds. See [Troubleshooting: Card always stays in front of other cards](#card-always-stays-in-front-of-other-cards) and [Card appears behind other cards or becomes hard to see](#card-appears-behind-other-cards-or-becomes-hard-to-see). |
+| `card_stack_order` | `number`            | `1`         | Sets the z-index (e.g., `2`, `0`, `-1`). Higher values sit in front of other cards. Useful for forcing an immersive card to display in front of cards with solid backgrounds. See [Troubleshooting: Card always stays in front of other cards](#card-always-stays-in-front-of-other-cards) and [Card appears behind other cards or becomes hard to see](#card-appears-behind-other-cards-or-becomes-hard-to-see). |
 | `card_tap_action`  | `object`            | —           | A standard Home Assistant [tap action](https://www.home-assistant.io/dashboards/actions/).                                                                                                                                                                                                                                                                                      |
 
 ### Theme & Filters
@@ -705,7 +706,7 @@ Chip
 ├─ Icon      ▸ hide_icon, icon, icon_path, icon_size, icon_padding,
 │              icon_background, icon_background_color
 ├─ Look      ▸ Type: text, ring or bar, with the ring_* or bar_* options
-│                    and Ring/Bar entity (gauge_entity, gauge_attribute)
+│                    and Ring entity or Bar entity (gauge_entity, gauge_attribute)
 │              Layout: style, align, chip_round, background, background_color,
 │                      width, height, padding, inner_gap, text_gap
 ├─ Position  ▸ position, position_anchor, position_x, position_y, behind_effects
@@ -715,7 +716,7 @@ Chip
 **Reset all styles** at the bottom of an open chip removes its style overrides, so it follows the chip area settings again.
 
 > [!TIP]
-> Changing the entity in **Data**, in **Label** (`name_sensor`), in **Sub value** (`sub_value_entity`) or in **Ring/Bar entity** (`gauge_entity`) clears that field's attribute automatically, because the old attribute may not exist on the new entity.
+> Changing the entity in **Data**, in **Label** (`name_sensor`), in **Sub value** (`sub_value_entity`) or in **Ring entity** or **Bar entity** (`gauge_entity`) clears that field's attribute automatically, because the old attribute may not exist on the new entity.
 
 ### Row options
 
@@ -728,11 +729,11 @@ Chip
 | `chips`                      | `list`    | —             | The list of chips to display. Each entry is an object with its own settings (see below).                                                                                                                                                                                                              |
 | `chip_area_position`         | `string`  | `bottom-left` | Where the chips row is positioned.                                                                                                                                                                                                                                                                    |
 | `chip_area_layout`           | `string`  | `wrap`        | Row behavior. `wrap` moves overflowing chips to a new line, `horizontal-scroll` keeps them on one line with a hidden scrollbar and edge fades, `vertical-scroll` stacks them in a scrollable column, `grid` arranges them in equal columns. `scroll` is accepted as an alias for `horizontal-scroll`. |
-| `chip_area_columns`          | `number`  | `3`           | Number of equal-width columns when `chip_area_layout: grid` is active.                                                                                                                                                                                                                                |
+| `chip_area_columns`          | `number`  | `1`           | Number of equal-width columns when `chip_area_layout: grid` is active.                                                                                                                                                                                                                                |
 | `chip_area_align`            | `string`  | `start`       | How chips align inside the chip area. Options: `start`, `center`, `end`, `spread`. |
 | `chip_area_width`            | `string`  | —             | Limits the full row width (e.g., `60%` or `200px`). Useful to place the chips row next to the top text instead of spanning the card.                                                                                                                                                                  |
 | `chip_area_height`           | `string`  | —             | Sets the height of the chips row (e.g., `120px`).                                                                                                                                                                                                                                                     |
-| `chip_padding`               | `string`  | `5px 10px`    | Inner padding of each chip (e.g., `5px 10px`).                                                                                                                                                                                                                                                        |
+| `chip_padding`               | `string`  | `5px 10px`    | Inner padding of each chip (e.g., `5px 10px`). Without a value inline chips use `5px 10px`, stacked chips `6px 10px 6px 6px` and vertical chips `6px 10px`.                                                                                                                                                                                                                                                        |
 | `chip_area_padding`          | `string`  | —             | Padding of the outer chips container (the wrapper around all chips).                                                                                                                                                                                                                                  |
 | `chip_area_gap`              | `string`  | `8px`         | Space between chips.                                                                                                                                                                                                                                                                                  |
 | `chip_gap`                   | `string`  | `6px`         | Space between the icon and text inside each chip.                                                                                                                                                                                                                                                     |
@@ -1298,12 +1299,12 @@ This explains how to create an image for your own home and use it in the card.
 
 #### Card always stays in front of other cards
 
-1. Lower **Layer Order** (`card_stack_order`) to `0`, or to `-1` for an immersive card.
+1. Lower **Layer Order** (`card_stack_order`) to `0`, or to `-1` for an immersive card. Without a value of its own the card sits at `1`.
 2. Lower values move the card behind other cards, higher values in front.
 
 #### Card appears behind other cards or becomes hard to see
 
-1. Increase `card_stack_order` step by step (for example `1`, then `2`).
+1. Increase **Layer Order** (`card_stack_order`) step by step (for example `2`, then `3`). Without a value of its own the card sits at `1`.
 2. Check `card_offset` and card placement if cards visually overlap.
 
 #### Attribute shows N/A after changing a chip's sensor

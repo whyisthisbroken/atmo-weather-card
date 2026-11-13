@@ -61,10 +61,20 @@ test("the editor help links point at sections of the documentation", () => {
 });
 
 test("the documentation search finds options and sections", () => {
-  const search = JSON.parse(docPages.chips.match(/const SEARCH = (\[.*?\]);\n/s)[1]);
+  const indexOf = (html) => JSON.parse(html.match(/<script type="application\/json" id="search-index">(.*?)<\/script>/s)[1]);
+  const search = indexOf(docPages.chips);
+  // Every docs page, the overview too, carries the same index and the shared search.
+  for (const html of [...Object.values(docPages), read("docs/docs/index.html")]) {
+    assert.deepEqual(indexOf(html), search);
+    assert.ok(html.includes('<script type="module" src="../site.js"></script>'));
+    assert.ok(!html.includes("SEARCH.filter"), "search code is in site.js only");
+  }
+  assert.ok(read("docs-src/site.js").includes('getElementById("search-index")'));
   const options = search.filter((o) => o.k === "option");
   assert.ok(options.length >= 150, `only ${options.length} options in the search`);
   assert.ok(search.some((o) => o.k === "section"));
+  // The troubleshooting questions can be searched too.
+  assert.ok(search.some((o) => o.k === "question" && o.n === "Clouds, rain or the sun cover a chip"));
   for (const name of ["bearing_icon", "bearing_speed", "wind_compass", "behind_effects"])
     assert.ok(options.some((o) => o.n === name), `${name} is not in the search`);
   for (const o of search) {

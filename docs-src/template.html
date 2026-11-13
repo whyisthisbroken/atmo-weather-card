@@ -142,7 +142,7 @@
 <div class="shell" id="top">
   <aside class="side">
     <div class="search">
-      <input id="search" type="search" placeholder="Search options, e.g. perf_mode" autocomplete="off" aria-label="Search the documentation">
+      <input id="search" type="search" placeholder="Search, e.g. perf_mode or compass" autocomplete="off" aria-label="Search the documentation">
       <div class="results" id="results" hidden></div>
     </div>
     {{NAV}}
@@ -173,11 +173,11 @@
   </div>
 </footer>
 
+<script type="application/json" id="search-index">{{SEARCH}}</script>
 <script type="module" src="../site.js"></script>
 <script type="module">
   const ICONS = {{ICONS}};
   const ENTITIES = {{ENTITIES}};
-  const SEARCH = {{SEARCH}};
   const svg = (d) => `<svg viewBox="0 0 24 24" style="width:var(--mdc-icon-size,20px);height:var(--mdc-icon-size,20px);display:block;fill:currentColor"><path d="${d}"/></svg>`;
   const iconFor = (name) => ICONS[String(name || "").replace(/^mdi:/, "")] || ICONS["help-circle-outline"];
   const COND_ICON = { sunny: "weather-sunny", "clear-night": "weather-night", partlycloudy: "weather-partly-cloudy", cloudy: "weather-cloudy", rainy: "weather-rainy", pouring: "weather-pouring", "lightning-rainy": "weather-lightning-rainy", lightning: "weather-lightning", snowy: "weather-snowy", "snowy-rainy": "weather-snowy-rainy", hail: "weather-hail", fog: "weather-fog", windy: "weather-windy" };
@@ -336,31 +336,6 @@
   document.getElementById("reset").onclick = () => { state.condition = "sunny"; state.night = false; title.textContent = "Default card"; document.querySelectorAll(".code.showing").forEach((c) => c.classList.remove("showing")); mount(DEFAULT); syncButtons(); };
   mount(DEFAULT); syncButtons();
   setInterval(() => card && (card.hass = buildHass()), 1000);
-
-  // Search over every option and section of every page.
-  const input = document.getElementById("search"), results = document.getElementById("results");
-  let sel = 0;
-  const show = () => {
-    const q = input.value.trim().toLowerCase();
-    if (!q) { results.hidden = true; return; }
-    const qq = q.replace(/\s+/g, "_");
-    const hits = SEARCH.filter((o) => (o.k === "option" ? o.n.includes(qq) : o.n.toLowerCase().includes(q)))
-      .sort((a, b) => (a.k === b.k ? 0 : a.k === "option" ? -1 : 1)).slice(0, 14);
-    sel = 0;
-    results.innerHTML = hits.length
-      ? hits.map((o, i) => `<a href="${o.u}" class="${i === 0 ? "sel" : ""}">${o.k === "option" ? `<code>${o.n}</code>` : `<b>${o.n}</b>`} <small>· ${o.w}</small></a>`).join("")
-      : '<div class="none">Nothing found.</div>';
-    results.hidden = false;
-  };
-  input.addEventListener("input", show);
-  input.addEventListener("keydown", (e) => {
-    const links = [...results.querySelectorAll("a")];
-    if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); sel = (sel + (e.key === "ArrowDown" ? 1 : links.length - 1)) % Math.max(1, links.length); links.forEach((a, i) => a.classList.toggle("sel", i === sel)); }
-    if (e.key === "Enter" && links[sel]) { location.href = links[sel].getAttribute("href"); results.hidden = true; }
-    if (e.key === "Escape") results.hidden = true;
-  });
-  results.addEventListener("click", () => (results.hidden = true));
-  document.addEventListener("click", (e) => { if (!e.target.closest(".search")) results.hidden = true; });
 
   // Highlight the section in view.
   const navLinks = [...document.querySelectorAll(".nav-sub a")];

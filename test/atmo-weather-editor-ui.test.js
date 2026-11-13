@@ -1,5 +1,6 @@
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
 import { errors, makeHass, runFrames } from "./helpers/dom.js";
 
@@ -440,7 +441,9 @@ test("sliders without a saved value show what the card uses", async () => {
     return Number(slider.querySelector(".awc-slider-num").value);
   };
   assert.equal(await value("sun_moon", "Size (px)"), 62);
-  assert.equal(await value("appearance", "Layer Order"), 0);
+  // The card sits at z-index 1 without card_stack_order.
+  assert.equal(await value("appearance", "Layer Order"), 1);
+  assert.match(readFileSync(new URL("../src/atmo-weather-styles.js", import.meta.url), "utf8"),/#card-root \{[^}]*z-index: var\(--awc-stack-order, 1\)/);
   assert.equal(await value("performance", "Star Twinkle Speed"), 0.5);
   assert.equal(await value("performance", "Animation Speed"), 1);
 });

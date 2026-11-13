@@ -232,18 +232,23 @@ export async function renderDocs({ source }) {
   return { pages, where, examples, entities, md };
 }
 
-// Search entries: every option row and every level 3 heading, with its page.
+// Search entries: every option row, every level 3 heading and every question of the troubleshooting page.
 function searchIndex(pages) {
   const out = [];
   const seen = new Set();
   for (const p of pages) {
     let section = p.label;
-    const parts = p.html.split(/(<h3 id="[^"]+">[\s\S]*?<\/h3>|<td[^>]* id="opt-[^"]+")/);
+    const parts = p.html.split(/(<h[34] id="[^"]+">[\s\S]*?<\/h[34]>|<td[^>]* id="opt-[^"]+")/);
     for (const part of parts) {
-      const h = /^<h3 id="([^"]+)">(?:<a[^>]*>#<\/a>)?([\s\S]*?)<\/h3>/.exec(part);
+      const h = /^<h([34]) id="([^"]+)">(?:<a[^>]*>#<\/a>)?([\s\S]*?)<\/h[34]>/.exec(part);
+      if (h && h[1] === "3") {
+        section = h[3].replace(/<[^>]+>/g, "");
+        out.push({ n: section, k: "section", u: `${p.file}.html#${h[2]}`, w: p.label });
+        continue;
+      }
       if (h) {
-        section = h[2].replace(/<[^>]+>/g, "");
-        out.push({ n: section, k: "section", u: `${p.file}.html#${h[1]}`, w: p.label });
+        if (p.file === "troubleshooting")
+          out.push({ n: h[3].replace(/<[^>]+>/g, ""), k: "question", u: `${p.file}.html#${h[2]}`, w: p.label });
         continue;
       }
       const o = /^<td[^>]* id="opt-([^"]+)"/.exec(part);
@@ -287,7 +292,8 @@ export async function buildDocs({ version, source, template, overview, srcDir })
     README,
     ICONS: JSON.stringify(icons),
     ENTITIES: JSON.stringify([...entities].sort()),
-    SEARCH: JSON.stringify(searchIndex(pages)),
+    // Inside a <script> tag, so no "<" may end it early.
+    SEARCH: JSON.stringify(searchIndex(pages)).replace(/</g, "\\u003c"),
   };
   const out = new Map();
   pages.forEach((p, i) => {

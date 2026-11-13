@@ -558,7 +558,8 @@ const PREPARED_POSITION_GRIDS = Object.freeze(
 // Runtime defaults of number options outside the performance presets.
 const SLIDER_DEFAULTS = Object.freeze({
   image_scale: 100,
-  card_stack_order: 0,
+  // The card sits at layer 1 when no order is set.
+  card_stack_order: 1,
   // Sun and moon are drawn with a radius of 31 px when no size is set.
   celestial_size: 62,
 });
