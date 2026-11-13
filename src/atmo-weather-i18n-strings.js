@@ -298,7 +298,6 @@ const ROWS = [
   ["Sizes", "Größen"],
   ["Sky & light", "Himmel & Licht"],
   ["Small info tiles with sensor values or the forecast", "Kleine Info-Felder mit Sensorwerten oder der Vorhersage"],
-  ["Smoother", "Flüssiger"],
   ["Solid", "Einfarbig"],
   ["Speed", "Geschwindigkeit"],
   ["Spread", "Verteilt"],

@@ -355,7 +355,7 @@ test("a preset turns birds and planes back on", async () => {
 test("a preset writes only perf_mode and removes own values", async () => {
   const { editor, emitted } = await mountEditor({
     weather_entity: "weather.home",
-    perf_fps: 45,
+    perf_fps: 60,
     fauna_bird_density: 0.7,
     perf_fauna: 1,
   });

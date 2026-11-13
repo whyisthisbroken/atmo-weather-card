@@ -1047,15 +1047,25 @@ Pick a `perf_mode` preset first. A preset sets every option below whose default 
 
 | Preset    | Made for                                  | Frame rate | Cloud detail | Effects | Sharpness | Birds and planes | Bird / plane frequency | Birds per flock |
 | :-------- | :---------------------------------------- | :--------- | :----------- | :------ | :-------- | :--------------- | :--------------------- | :-------------- |
-| `low`     | Older tablets, wall panels, battery saving | 24         | 0.5          | 0       | 1         | none             | 0.5 / 0.5              | 4               |
+| `low`     | Older tablets, wall panels, battery saving | 20         | 0.5          | 0       | 1         | none             | 0.5 / 0.5              | 4               |
 | `default` | Most dashboards                           | 30         | 1.5          | 1       | 2         | both             | 1.0 / 1.0              | 8               |
 | `ultra`   | Desktops and large wall displays          | 60         | 2.0          | 2       | 2         | both             | 1.5 / 1.5              | 12              |
 
 Every preset also uses `animation_speed: 1`, `bird_animation_speed: 0.3`, `star_animation_speed: 0.5` and `fauna_birds_at_night: true`.
 
+### How the modes differ
+
+- **`low`** saves where it counts: fewer frames, a lower resolution and no extra effects. The weather itself, the golden and the blue hour stay.
+- **`default`** shows the full picture at 30 frames per second. Almost every effect is on, because the effects cost little.
+- **`ultra`** shows the same picture twice as smoothly, at 60 frames per second, with a few extras on top (see the table below).
+
+The frame rate decides most of the load, not the effects. `ultra` costs more than `default` almost only because of the doubled frame rate: `ultra` at 30 fps costs about the same as `default`. Turning off effects, cloud detail or birds in `default` saves only a fraction of that.
+
+**Frame rates are 20, 30 or 60.** Screens refresh 60 times per second, and the card can only skip whole refreshes: every third (20 fps), every second (30 fps) or none (60 fps). Values in between would run at the next lower rate, 24 at 20 and 45 at 30, so the card turns older settings of `24` and `45` into `20` and `30`, which is what they showed anyway. Every frame rate moves the scene at the same speed and shows shooting stars, comets, birds and planes equally often; a higher one only moves more smoothly.
+
 ### What each mode shows
 
-The columns follow `perf_effects` (`0` in `low`, `1` in `default`, `2` in `ultra`), birds and planes follow `perf_fauna`. If you set one of them yourself, the column of that value applies. Every frame rate shows the same things at the same speed; a higher one only moves more smoothly.
+The columns follow `perf_effects` (`0` in `low`, `1` in `default`, `2` in `ultra`), birds and planes follow `perf_fauna`. If you set one of them yourself, the column of that value applies.
 
 | Feature | low | default | ultra |
 | :------ | :-: | :-----: | :---: |
@@ -1093,7 +1103,7 @@ Some things depend on more than the mode:
 - **Switches.** Every effect with a switch (`effect_*`, `fauna_birds`, `fauna_planes`, `wind_style: off`) stays off when you turn it off, in every mode. A switch cannot turn on what the mode leaves out: with `perf_effects: 0`, `effect_sun_rays: true` still draws no sun rays.
 
 > [!TIP]
-> The card stutters? Lower one value at a time, in this order: `perf_dpr`, `perf_fps`, `perf_effects`, `perf_fauna`. On high-DPI screens `perf_dpr` helps the most. See also [Performance is weak on older devices](#performance-is-weak-on-older-devices).
+> The card stutters? Lower one value at a time, in this order: `perf_fps` (it costs the most), `perf_dpr` (on high-DPI screens with a weak graphics chip), `perf_effects`, `perf_fauna`. See also [Performance is weak on older devices](#performance-is-weak-on-older-devices).
 
 ```yaml
 type: custom:atmo-weather-card
@@ -1109,7 +1119,7 @@ The options below follow the groups of the editor panel **Performance & effects*
 | Option                     | Type      | Default   | Description |
 | :------------------------- | :-------- | :-------- | :---------- |
 | `perf_mode`                | `string`  | `default` | Performance preset: `low`, `default` or `ultra`. See the table above. |
-| `perf_fps`                 | `number`  | _preset_  | Animation frame rate: `24`, `30`, `45` or `60`. `30` saves battery, `60` is smoother. Shooting stars, comets, birds and planes appear equally often at every frame rate. See [Troubleshooting: Editor preview stutters or FPS looks wrong after install/update](#editor-preview-stutters-or-fps-looks-wrong-after-installupdate). |
+| `perf_fps`                 | `number`  | _preset_  | Animation frame rate: `20`, `30` or `60`. `20` and `30` save battery, `60` is the smoothest and costs the most. Older values `24` and `45` run as `20` and `30`, see [How the modes differ](#how-the-modes-differ). Shooting stars, comets, birds and planes appear equally often at every frame rate. See [Troubleshooting: Editor preview stutters or FPS looks wrong after install/update](#editor-preview-stutters-or-fps-looks-wrong-after-installupdate). |
 | `perf_cloud_quality`       | `number`  | _preset_  | Cloud detail. Controls how many puffs each cloud shape gets. `0.5` = low, `1` = medium, `1.5` = high, `2` = ultra. |
 | `perf_effects`             | `number`  | _preset_  | Weather effects. `0` turns off shooting stars, comets, the Milky Way, fog banks, sun rays, haze, ground mist and the soft clouds around the sun and moon, and draws simpler clouds and fewer wind lines; the weather scene, the fog haze, the golden hour, the blue hour and the cloud amount from data stay. `1` is the normal amount. `2` makes comets about 1.8 times as frequent, gives shooting stars longer tails and stars brighter halos, draws 1.5 times as many wind lines and turns on the two cloud options below. See [What each mode shows](#what-each-mode-shows). See [Troubleshooting: No night effects (stars/comets) are visible](#no-night-effects-starscomets-are-visible). |
 | `perf_dpr`                 | `number`  | _preset_  | Canvas sharpness (device pixel ratio). `0.5` = low, `1` = medium, `1.5` = high, `2` = full retina. Lower values reduce GPU load on high-DPI screens. |
@@ -1499,6 +1509,6 @@ Check the values under **Developer Tools** › **States** on your weather entity
 #### Performance is weak on older devices
 
 1. Set `perf_mode: low`.
-2. Or keep a higher preset and lower single values, in this order: `perf_dpr`, `perf_fps`, `perf_effects`, `perf_fauna`.
-3. On high-DPI displays, reducing `perf_dpr` usually helps the most.
+2. Or keep a higher preset and lower single values, in this order: `perf_fps`, `perf_dpr`, `perf_effects`, `perf_fauna`.
+3. The frame rate costs the most: `30` instead of `60` halves the work. On high-DPI displays with a weak graphics chip, a lower `perf_dpr` helps as well.
 4. Switch off single effects you do not need, see [Performance](#performance). Anything that is off costs nothing.

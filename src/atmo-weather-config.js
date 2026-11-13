@@ -38,7 +38,7 @@ export const CONFIG_DEFAULTS = Object.freeze({
 // that option itself; a value set in the editor or in YAML wins ("custom").
 export const PERF_PRESETS = Object.freeze({
   low: Object.freeze({
-    perf_fps: 24,
+    perf_fps: 20,
     perf_cloud_quality: 0.5,
     perf_effects: 0,
     perf_fauna: 0,
@@ -136,6 +136,11 @@ export function migrateConfig(raw) {
   }
   delete c.celestial_moon_style;
   if (c.chip_area_layout === "scroll") c.chip_area_layout = "horizontal-scroll";
+  // A 60 Hz screen shows whole frames only: 24 fps ran at 20 and 45 at 30.
+  // The choice is 20, 30 or 60 now; old values keep the rate they really had.
+  const fps = Number(c.perf_fps);
+  if (fps === 24) c.perf_fps = 20;
+  else if (fps === 45) c.perf_fps = 30;
   if (Array.isArray(c.chips)) {
     c.chips = c.chips.map((chip) => {
       if (!chip || typeof chip !== "object") return chip;

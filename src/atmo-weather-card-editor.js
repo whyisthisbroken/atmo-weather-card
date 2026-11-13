@@ -5586,9 +5586,8 @@ class AtmosphericWeatherCardEditor extends LitElement {
     };
     const DESCS = {
       perf_fps: {
-        24: "Battery saver",
+        20: "Battery saver",
         30: "Balanced",
-        45: "Smoother",
         60: "Maximum smoothness",
       },
       perf_cloud_quality: {
@@ -5670,9 +5669,8 @@ class AtmosphericWeatherCardEditor extends LitElement {
       ${this._renderGroup(
         "Graphics",
         html`${perfButtons("perf_fps", LABELS.perf_fps, [
-          { value: 24, label: "24" },
+          { value: 20, label: "20" },
           { value: 30, label: "30" },
-          { value: 45, label: "45" },
           { value: 60, label: "60" },
         ])}
         ${perfButtons("perf_cloud_quality", LABELS.perf_cloud_quality, [

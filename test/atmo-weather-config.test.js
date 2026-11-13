@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert";
 
-import { migrateConfig, readFlag, readNumber } from "../src/atmo-weather-config.js";
+import { migrateConfig, PERF_PRESETS, readFlag, readNumber } from "../src/atmo-weather-config.js";
 
 test("chip card_tap_action migrates to tap_action", () => {
   const action = { action: "more-info" };
@@ -152,4 +152,13 @@ test("flags and numbers are read from YAML values", () => {
   assert.equal(readNumber("2.5", 1, 0, 3), 2.5);
   assert.equal(readNumber(9, 1, 0, 3), 3);
   assert.equal(readNumber("fast", 1, 0, 3), 1);
+});
+
+test("frame rates are 20, 30 or 60, and old values keep the rate they really had", () => {
+  // A 60 Hz screen draws whole frames: 24 fps ran at 20, 45 at 30.
+  assert.equal(migrateConfig({ perf_fps: 24 }).perf_fps, 20);
+  assert.equal(migrateConfig({ perf_fps: "45" }).perf_fps, 30);
+  for (const fps of [20, 30, 60]) assert.equal(migrateConfig({ perf_fps: fps }).perf_fps, fps);
+  assert.ok(!("perf_fps" in migrateConfig({})));
+  assert.deepEqual(Object.values(PERF_PRESETS).map((p) => p.perf_fps), [20, 30, 60]);
 });
