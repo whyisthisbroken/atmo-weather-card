@@ -334,7 +334,7 @@
         'sensor.rain_rate': { entity_id: 'sensor.rain_rate', state: String(state.values.precipitation), attributes: { unit_of_measurement: 'mm/h' } },
         'sensor.time': { entity_id: 'sensor.time', state: new Date(virtualNow()).toISOString(), attributes: {} },
       },
-      themes: { darkMode: night }, locale: { language: 'en' },
+      themes: { darkMode: night }, locale: { language: 'en', time_format: '24' },
       config: { latitude: 52.15, longitude: 7.32, unit_system: { temperature: '°C' } },
       formatEntityState: (s) => s.state,
       formatEntityAttributeValue: (s, a) => String(s.attributes[a]),

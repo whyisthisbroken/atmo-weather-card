@@ -160,9 +160,22 @@ export function fcFingerprint(fc) {
     s += `|${f.datetime}|${f.condition}|${f.temperature}|${f.templow != null ? f.templow : ""}|${f.precipitation_probability != null ? f.precipitation_probability : ""}`;
   return s;
 }
-export function fcLabel(dt, daily, locale) {
+// Time options for toLocaleTimeString that follow the time format of the
+// Home Assistant profile: "12", "24", "system" (the browser) or "language"
+// (the default of the language).
+export function timeFormatOptions(haLocale) {
+  const tf = haLocale && haLocale.time_format;
+  if (tf === "24") return { hourCycle: "h23" };
+  if (tf === "12") return { hour12: true };
+  if (tf === "system") {
+    const h12 = new Intl.DateTimeFormat(undefined, { hour: "numeric" }).resolvedOptions().hour12;
+    return h12 ? { hour12: true } : { hourCycle: "h23" };
+  }
+  return {};
+}
+export function fcLabel(dt, daily, locale, haLocale) {
   const d = new Date(dt);
   return daily
     ? d.toLocaleDateString(locale, { weekday: "short" })
-    : d.toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit" });
+    : d.toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit", ...timeFormatOptions(haLocale) });
 }

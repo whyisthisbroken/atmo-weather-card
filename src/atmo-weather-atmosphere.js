@@ -67,7 +67,7 @@ export function adjustParams(params, data) {
 }
 
 // How much warm low sun reaches the scene in each weather state.
-const GOLDEN_STATES = { sunny: 1, partlycloudy: 1, windy: 0.9, "windy-variant": 0.7, exceptional: 1, cloudy: 0.45, fog: 0.3 };
+const GOLDEN_STATES = { sunny: 1, "clear-night": 1, partlycloudy: 1, windy: 0.9, "windy-variant": 0.7, exceptional: 1, cloudy: 0.45, fog: 0.3 };
 
 // Strength (0..1) of every sky light effect for the current conditions.
 export function computeAtmosphere(
@@ -112,12 +112,19 @@ export function computeAtmosphere(
   }
   // Golden hour: below about 12 degrees the light turns warm, and in the last
   // few degrees before the horizon it deepens to the orange of a sunset.
-  // Only where the sun gets through.
-  if (!isTimeNight && elev != null && elev < 12) {
+  // After sunset the afterglow fades over the blue hour until 6 degrees
+  // down, so the change from day to night has no jump. Only where the sun
+  // gets through.
+  if (elev != null && elev < 12) {
     const sunny = GOLDEN_STATES[state] || 0;
-    const s = clamp((12 - elev) / 10, 0, 1);
-    out.golden = sunny * s * s * (3 - 2 * s);
-    out.sunset = sunny * clamp((3 - elev) / 4, 0, 1);
+    if (!isTimeNight) {
+      const s = clamp((12 - elev) / 10, 0, 1);
+      out.golden = sunny * s * s * (3 - 2 * s);
+      out.sunset = sunny * clamp((3 - elev) / 4, 0, 1);
+    } else {
+      out.golden = sunny * clamp((elev + 6) / 5.2, 0, 1);
+      out.sunset = sunny;
+    }
   }
   if (!isTimeNight && (elev == null || elev > 0)) {
     const base = state === "partlycloudy" ? 1 : state === "cloudy" ? 0.6 : 0;
@@ -194,23 +201,30 @@ export function drawTwilight(card, ctx, w, h) {
 const mix = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
 
 // Home Assistant moves the sun every two minutes near the horizon. The light
-// glides to each new value over a few seconds instead of jumping, and starts
-// at its value when the card appears. Call once per frame.
+// glides to each of these small steps in about a second instead of jumping.
+// A big change (a new dashboard, another weather, a time picked in the demo)
+// shows at once. Call once per frame.
 export function easeGoldenLight(card) {
   const a = card._atmo;
   const target = { g: (a && a.golden) || 0, s: (a && a.sunset) || 0 };
   const cur = card._golden;
-  if (!cur) {
+  if (
+    !cur ||
+    Math.abs(target.g - cur.g) > GOLDEN_SNAP ||
+    Math.abs(target.s - cur.s) > GOLDEN_SNAP
+  ) {
     card._golden = target;
     return target;
   }
-  const k = 1 - Math.pow(0.985, card._frameScale || 1);
+  const k = 1 - Math.pow(0.9, card._frameScale || 1);
   for (const key of ["g", "s"]) {
     const d = target[key] - cur[key];
     cur[key] = Math.abs(d) < 0.002 ? target[key] : cur[key] + d * k;
   }
   return cur;
 }
+// Larger than any two minute step of the sun.
+const GOLDEN_SNAP = 0.25;
 
 // Golden hour sky: warm light that rises from the horizon, gold at first,
 // then orange and rose at sunset with a touch of violet higher up. Drawn

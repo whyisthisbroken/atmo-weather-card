@@ -144,7 +144,13 @@ test("a low sun turns the light golden, and orange to violet at sunset", () => {
   // Only where the sun gets through, and never at night.
   assert.ok(sky({}, { state: "cloudy", sunElev: 2 }).golden < 0.5);
   assert.equal(sky({}, { state: "rainy", sunElev: 2 }).golden, 0);
-  assert.equal(sky({}, { isTimeNight: true, sunElev: -2 }).golden, 0);
+  // After sunset the afterglow fades over the blue hour, without a jump at sunset.
+  const day = sky({}, { sunElev: -0.8 });
+  const dusk = sky({}, { state: "clear-night", isTimeNight: true, sunElev: -0.9 });
+  assert.ok(Math.abs(day.golden - dusk.golden) < 0.05 && Math.abs(day.sunset - dusk.sunset) < 0.1);
+  assert.ok(sky({}, { state: "clear-night", isTimeNight: true, sunElev: -4 }).golden < 0.5);
+  assert.equal(sky({}, { state: "clear-night", isTimeNight: true, sunElev: -6 }).golden, 0);
+  assert.equal(sky({}, { state: "rainy", isTimeNight: true, sunElev: -2 }).golden, 0);
   assert.equal(sky({}, { sunElev: null }).golden, 0);
   const off = sky({}, { sunElev: 0, effects: { goldenHour: false } });
   assert.equal(off.golden, 0);
@@ -158,7 +164,19 @@ test("the golden light glides to a new sun position instead of jumping", () => {
   // Home Assistant moves the sun: the light follows over a few seconds.
   card._atmo = { golden: 0.6, sunset: 0.2 };
   const first = { ...easeGoldenLight(card) };
-  assert.ok(first.g > 0.4 && first.g < 0.41, String(first.g));
+  assert.ok(first.g > 0.4 && first.g < 0.45, String(first.g));
   for (let i = 0; i < 600; i++) easeGoldenLight(card);
   assert.deepEqual(card._golden, { g: 0.6, s: 0.2 });
+  // A big change, like a time picked in the demo, shows at once.
+  card._atmo = { golden: 0, sunset: 0 };
+  assert.deepEqual(easeGoldenLight(card), { g: 0, s: 0 });
+  // Every two minute step of a real sunset glides: none is that big.
+  let biggest = 0;
+  for (let e = 12; e > -6; e -= 0.5) {
+    const night = e < -0.833;
+    const a = sky({}, { state: night ? "clear-night" : "sunny", isTimeNight: night, sunElev: e });
+    const b = sky({}, { state: e - 0.5 < -0.833 ? "clear-night" : "sunny", isTimeNight: e - 0.5 < -0.833, sunElev: e - 0.5 });
+    biggest = Math.max(biggest, Math.abs(a.golden - b.golden), Math.abs(a.sunset - b.sunset));
+  }
+  assert.ok(biggest < 0.25, String(biggest));
 });

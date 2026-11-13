@@ -100,6 +100,7 @@ import {
   fcFilterPast,
   fcFingerprint,
   fcLabel,
+  timeFormatOptions,
   forecastUnavailableText,
   loadFigtreeFont,
   parseAnchor,
@@ -1151,6 +1152,7 @@ class AtmosphericWeatherCard extends HTMLElement {
         const timePart = d.toLocaleTimeString(locale, {
           hour: "numeric",
           minute: "2-digit",
+          ...timeFormatOptions(hass.locale),
         });
         if (dayDiff === 0) {
           formatted = timePart;
@@ -2642,7 +2644,7 @@ class AtmosphericWeatherCard extends HTMLElement {
     let name = (chip.name || "").toString().trim(),
       nameSig = name;
     if (!name && !chip.name_sensor && isForecast && fcDatetime) {
-      name = fcLabel(fcDatetime, chip.forecast !== "hourly", lang);
+      name = fcLabel(fcDatetime, chip.forecast !== "hourly", lang, hass && hass.locale);
       nameSig = `fc:${fcDatetime}`;
     }
     if (chip.name_sensor) {
@@ -4043,6 +4045,8 @@ class AtmosphericWeatherCard extends HTMLElement {
       cx = celestial.x,
       cy = celestial.y,
       isExceptional = (this._params.cloud || 0) === 0;
+    // Where the sun stood when the clouds were placed; they follow it from there.
+    this._celestialCloudAnchor = { x: cx, y: cy };
     const isNight = this._isNight,
       isDarkDay = !isNight && this._isThemeDark,
       isDarkDayImmersive = this._isDarkDayImmersive;

@@ -1282,6 +1282,11 @@ export function drawCelestialClouds(card, ctx, w, h, effectiveWind) {
   if (fadeOpacity <= 0) return;
   const len = card._celestialClouds.length;
   const animSpeed = card._animationSpeed * (card._frameScale || 1);
+  // A moving sun (dynamic_sun, dynamic_both) takes its clouds along.
+  const anchor = card._celestialCloudAnchor;
+  const now = anchor ? card._getCelestialPosition(w, h) : null;
+  const shiftX = now ? now.x - anchor.x : 0,
+    shiftY = now ? now.y - anchor.y : 0;
   ctx.globalAlpha = fadeOpacity;
   for (let i = 0; i < len; i++) {
     const cloud = card._celestialClouds[i];
@@ -1291,11 +1296,12 @@ export function drawCelestialClouds(card, ctx, w, h, effectiveWind) {
     cloud.breathPhase += cloud.breathSpeed * 0.5 * animSpeed;
     const driftX = Math.sin(cloud.driftPhase) * 12 * sunUnit;
     const driftY = Math.cos(cloud.driftPhase * 0.7) * 4 * sunUnit;
-    cloud.x = cloud.baseX + driftX + effectiveWind * 0.3;
-    cloud.y = cloud.baseY + driftY;
+    const baseX = cloud.baseX + shiftX;
+    cloud.x = baseX + driftX + effectiveWind * 0.3;
+    cloud.y = cloud.baseY + shiftY + driftY;
     const driftClamp = 60 * sunUnit;
-    if (cloud.x > cloud.baseX + driftClamp) cloud.x = cloud.baseX + driftClamp;
-    if (cloud.x < cloud.baseX - driftClamp) cloud.x = cloud.baseX - driftClamp;
+    if (cloud.x > baseX + driftClamp) cloud.x = baseX + driftClamp;
+    if (cloud.x < baseX - driftClamp) cloud.x = baseX - driftClamp;
     const breathScale = 1 + Math.sin(cloud.breathPhase) * 0.02;
     const vSquash = cloud._vSquash !== undefined ? cloud._vSquash : 0.55;
     const scaleX = cloud.scale * breathScale;

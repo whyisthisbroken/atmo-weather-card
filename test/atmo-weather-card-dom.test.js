@@ -957,3 +957,20 @@ test("degrees get their sign next to the turning icon or the speed, plain chips 
   assert.ok(!/°°/.test(both) && /90° · 20 km\/h/.test(both), both);
   assert.ok(/\b90\b/.test(plain) && !plain.includes("°"), plain);
 });
+
+test("times follow the time format of the Home Assistant profile", () => {
+  const at = new Date();
+  at.setHours(18, 5, 0, 0);
+  const shown = (time_format) => {
+    const hass = makeHass();
+    hass.locale = { language: "en", ...(time_format ? { time_format } : {}) };
+    hass.states["sensor.time"] = { entity_id: "sensor.time", state: at.toISOString(), attributes: {} };
+    document.body.replaceChildren();
+    return text(chips(mountCard({ chips: [{ entity: "sensor.time" }] }, hass))[0]);
+  };
+  assert.match(shown("24"), /\b18:05\b/);
+  assert.match(shown("12"), /6:05\sPM/);
+  // "language" and no setting keep the default of the language.
+  assert.match(shown("language"), /6:05\sPM/);
+  assert.match(shown(), /6:05\sPM/);
+});
