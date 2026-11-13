@@ -748,6 +748,38 @@ test("fancy_unit shows the unit once when Home Assistant formats it with a unit"
   assert.match(html, /<span class="fancy-unit">°C<\/span>/);
 });
 
+test("unit_format replaces the unit Home Assistant puts on a live value", () => {
+  // Like Home Assistant: weather attributes and sensor states come with their unit.
+  const hass = makeHass({ states: { "sensor.room": { entity_id: "sensor.room", state: "21.4", attributes: { unit_of_measurement: "°C" } } } });
+  hass.formatEntityAttributeValue = (entity, attribute) =>
+    attribute === "temperature" ? `${entity.attributes.temperature} ${entity.attributes.temperature_unit}`
+      : attribute === "humidity" ? `${entity.attributes.humidity} %` : `${entity.attributes[attribute]}`;
+  const card = mountCard({ chips: [
+    { entity: "weather.home", attribute: "temperature", unit_format: "°" },
+    { entity: "sensor.room", unit_format: "°" },
+    { entity: "weather.home", attribute: "humidity", unit_format: " pct" },
+  ] }, hass);
+  const text = chips(card).map((c) => c.querySelector(".chip-val").textContent.trim());
+  const t = hass.states["weather.home"].attributes.temperature;
+  const h = hass.states["weather.home"].attributes.humidity;
+  assert.deepEqual(text, [`${t}°`, "21.4°", `${h}pct`]);
+});
+
+test("a centered free chip moves by its offset", () => {
+  const card = mountCard({ chips: [
+    { entity: "weather.home", attribute: "temperature", position: "custom", position_anchor: "center", position_x: "40px", position_y: "-10px" },
+    { entity: "weather.home", attribute: "temperature", position: "custom", position_anchor: "top-center", position_x: "-20", position_y: "8px" },
+    { entity: "weather.home", attribute: "temperature", position: "custom", position_anchor: "center-right", position_x: "12px", position_y: "5%" },
+  ] });
+  const free = [...card.shadowRoot.querySelectorAll(".chip-free")];
+  assert.equal(free[0].style.left, "calc(50% + 40px)");
+  assert.equal(free[0].style.top, "calc(50% + -10px)");
+  assert.equal(free[1].style.left, "calc(50% + -20px)");
+  assert.equal(free[1].style.top, "8px");
+  assert.equal(free[2].style.right, "12px");
+  assert.equal(free[2].style.top, "calc(50% + 5%)");
+});
+
 test("the clouds fill a ring wider than the card so the wind carries no hole across it", () => {
   // Wind from the west keeps the ring overhang on the left where it was built.
   const hass = makeHass({ weather: "windy" });

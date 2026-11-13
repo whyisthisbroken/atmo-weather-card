@@ -2295,13 +2295,14 @@ class AtmosphericWeatherCard extends HTMLElement {
         if (anchorH === "left") wrapper.style.left = ox;
         else if (anchorH === "right") wrapper.style.right = ox;
         else {
-          wrapper.style.left = "50%";
+          // A centered chip moves by its offset too: right and down.
+          wrapper.style.left = r.posX === "pad" ? "50%" : `calc(50% + ${ox})`;
           tx.push("translateX(-50%)");
         }
         if (anchorV === "top") wrapper.style.top = oy;
         else if (anchorV === "bottom") wrapper.style.bottom = oy;
         else {
-          wrapper.style.top = "50%";
+          wrapper.style.top = r.posY === "pad" ? "50%" : `calc(50% + ${oy})`;
           tx.push("translateY(-50%)");
         }
         if (tx.length) wrapper.style.transform = tx.join(" ");
@@ -2782,6 +2783,20 @@ class AtmosphericWeatherCard extends HTMLElement {
       chip.fancy_unit === true &&
       (!chip.attribute || chip.attribute === "temperature");
     let inner;
+    // Home Assistant formats a live value with its unit ("12 °C"); unit_format
+    // replaces that unit instead of adding a second one ("12°").
+    if (hasUnitFormat && !isForecast && mainHaFormatted && !useFancyUnit) {
+      const s = hass.states[chip.entity];
+      const a = (s && s.attributes) || {};
+      const haUnit = chip.attribute
+        ? a[`${chip.attribute}_unit`] ||
+          (/temp|dew_point/.test(chip.attribute) ? a.temperature_unit : "") ||
+          (/humidity|cloud_coverage|probability/.test(chip.attribute)
+            ? "%"
+            : "")
+        : a.unit_of_measurement || "";
+      formatted = stripTrailingUnit(formatted, haUnit);
+    }
     const safeFormatted = escapeHtml(formatted);
     const safeUnit = escapeHtml(unit);
     const safeSubValue = escapeHtml(subValue);
