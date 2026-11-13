@@ -159,8 +159,9 @@
 </ol>
 <h4 id="card-shows-red-error-card-or-module-not-found"><a class="anchor" href="#card-shows-red-error-card-or-module-not-found" aria-hidden="true">#</a>Card shows red error card or module not found</h4>
 <ol>
-<li>Verify the resource URL is correct: <code>/local/atmo-weather-card/atmo-weather-card.js</code>.</li>
-<li>Verify all files exist in <code>config/www/atmo-weather-card/</code>:</li>
+<li>Installed through the Marketplace: check under <strong>Settings</strong> → <strong>Dashboards</strong> → <strong>⋮</strong> → <strong>Resources</strong> that a resource for <code>atmo-weather-card.js</code> exists, then clear the browser cache and reload.</li>
+<li>Installed by hand: verify the resource URL is correct: <code>/local/atmo-weather-card/atmo-weather-card.js</code>.</li>
+<li>Installed by hand: verify all files exist in <code>config/www/atmo-weather-card/</code>:</li>
 </ol>
 <ul>
 <li><code>atmo-weather-card.js</code></li>
@@ -172,7 +173,7 @@
 <ol>
 <li>Clear browser cache completely (cached images and files).</li>
 <li>Hard-refresh the dashboard.</li>
-<li>Verify the Lovelace resource still points to <code>/local/atmo-weather-card/atmo-weather-card.js</code>.</li>
+<li>Installed by hand: verify the Lovelace resource still points to <code>/local/atmo-weather-card/atmo-weather-card.js</code>, and that you copied both <code>.js</code> files.</li>
 <li>If needed, reload Home Assistant frontend once.</li>
 </ol>
 <h3 id="layout--editor"><a class="anchor" href="#layout--editor" aria-hidden="true">#</a>Layout &amp; Editor</h3>
@@ -197,6 +198,18 @@
 <li>Changing a chip&#39;s entity (<code>entity</code>, <code>name_sensor</code>, <code>sub_value_entity</code>, <code>gauge_entity</code>) clears its attribute field automatically, because the old attribute may not exist on the new entity.</li>
 <li>If the chip still shows N/A, pick the attribute again in the editor, or check in <strong>Developer Tools</strong> › <strong>States</strong> that the entity has this attribute.</li>
 </ol>
+<h4 id="clouds-rain-or-the-sun-cover-a-chip"><a class="anchor" href="#clouds-rain-or-the-sun-cover-a-chip" aria-hidden="true">#</a>Clouds, rain or the sun cover a chip</h4>
+<ol>
+<li>The chip most likely has <code>behind_effects: true</code>. It puts a free-positioned chip behind the weather animations, so a heavy sky covers it. New cards from older versions started with it on the big temperature chip, and older examples used it too.</li>
+<li>Remove the line from the chip, or open the chip in the editor and switch off <strong>Position</strong> › <strong>Behind animations</strong>.</li>
+</ol>
+<h4 id="the-wind-compass-covers-a-chip"><a class="anchor" href="#the-wind-compass-covers-a-chip" aria-hidden="true">#</a>The wind compass covers a chip</h4>
+<ol>
+<li>With <code>wind_compass_position: auto</code> the compass moves away from corners that hold chips. This covers the chip area and free-positioned chips anchored to a corner.</li>
+<li>A chip placed with an offset can still sit under it. Then pick a corner for the compass with <code>wind_compass_position</code>.</li>
+</ol>
+<h4 id="the-editor-is-in-english"><a class="anchor" href="#the-editor-is-in-english" aria-hidden="true">#</a>The editor is in English</h4>
+<p>The editor follows the language of your Home Assistant user profile. It speaks English and German; other languages show English.</p>
 <h3 id="data--effects"><a class="anchor" href="#data--effects" aria-hidden="true">#</a>Data &amp; Effects</h3>
 <h4 id="forecast-chip-shows-please-check-your-weather-provider"><a class="anchor" href="#forecast-chip-shows-please-check-your-weather-provider" aria-hidden="true">#</a>Forecast chip shows &quot;Please check your weather provider&quot;</h4>
 <p>The chip appears in German or English, following your Home Assistant language (other languages show English), and means the weather entity delivers no forecast of the requested type.</p>
@@ -210,6 +223,54 @@
 <li>Verify <code>weather_entity</code> exists and is currently available in Home Assistant.</li>
 <li>Confirm the entity has valid state/attributes (temperature, wind, etc.).</li>
 <li>If unavailable, fix entity availability first, then reload the dashboard.</li>
+</ol>
+<h4 id="the-card-always-shows-day-or-the-moon-is-always-full"><a class="anchor" href="#the-card-always-shows-day-or-the-moon-is-always-full" aria-hidden="true">#</a>The card always shows day, or the moon is always full</h4>
+<ol>
+<li>Day and night come from <code>sun_entity</code>. Without it the card always shows day. Set it to <code>sun.sun</code>.</li>
+<li><code>card_color_mode: day</code> keeps the sky in daylight, <code>night</code> keeps it at night. Remove it to follow the sun again.</li>
+<li>The moon phase comes from <code>moon_phase_entity</code>, for example <code>sensor.moon_phase</code> from the <strong>Moon</strong> integration. Without it the moon is always full.</li>
+</ol>
+<h4 id="the-card-colors-do-not-match-the-dashboard"><a class="anchor" href="#the-card-colors-do-not-match-the-dashboard" aria-hidden="true">#</a>The card colors do not match the dashboard</h4>
+<ol>
+<li>By default the card follows your Home Assistant theme. With <code>theme_entity</code> it follows that entity instead, and <code>card_color_mode: dark</code> or <code>light</code> locks the look.</li>
+<li>See <a href="appearance.html#color-mode">Color Mode</a> for the combinations.</li>
+</ol>
+<h4 id="clouds-haze-or-mist-on-a-clear-day"><a class="anchor" href="#clouds-haze-or-mist-on-a-clear-day" aria-hidden="true">#</a>Clouds, haze or mist on a clear day</h4>
+<p>The card reads the measured weather data, not only the weather state (see <a href="weather-data.html#weather-data">Weather Data &amp; Sky Light</a>):</p>
+<ol>
+<li>A high <code>cloud_coverage</code> adds clouds even when the state is <code>sunny</code>. Switch off <strong>Cloud amount from data</strong> (<code>effect_cloud_coverage: false</code>) for a fixed amount per weather state.</li>
+<li>Low <code>visibility</code> or humid air adds haze. Switch off <strong>Haze</strong> (<code>effect_haze: false</code>).</li>
+<li>Ground mist forms when the temperature is close to the dew point. Switch off <strong>Ground mist</strong> (<code>effect_ground_mist: false</code>).</li>
+</ol>
+<p>Check the values under <strong>Developer Tools</strong> › <strong>States</strong> on your weather entity first. Some providers report a cloud cover that does not fit the weather state.</p>
+<h4 id="rain-looks-too-light-or-too-heavy"><a class="anchor" href="#rain-looks-too-light-or-too-heavy" aria-hidden="true">#</a>Rain looks too light or too heavy</h4>
+<ol>
+<li>Without a precipitation sensor, the amount follows the weather state: <code>rainy</code> is moderate rain, <code>pouring</code> heavy rain.</li>
+<li>With <code>precipitation_entity</code> the measured amount sets it, from drizzle just above 0 mm/h to a downpour from about 8 mm/h.</li>
+<li>The editor lists only sensors in mm/h or in/h. A sensor in mm (the amount of a whole day or hour) does not show up and cannot be used, because it is no rain rate.</li>
+</ol>
+<h4 id="no-wind-lines-are-visible"><a class="anchor" href="#no-wind-lines-are-visible" aria-hidden="true">#</a>No wind lines are visible</h4>
+<ol>
+<li>Wind lines show in <code>windy</code> weather, and in rain, hail or snow from 40 km/h. In other weather there are none, even in strong wind.</li>
+<li>Check that <code>wind_style</code> is not <code>off</code>.</li>
+<li>Clouds, rain and snow still drift with the wind in every weather.</li>
+</ol>
+<h4 id="the-wind-blows-the-wrong-way"><a class="anchor" href="#the-wind-blows-the-wrong-way" aria-hidden="true">#</a>The wind blows the wrong way</h4>
+<ol>
+<li>The direction comes from <code>wind_bearing</code> of the weather entity, the direction the wind comes <strong>from</strong>, as in Home Assistant. Wind from the west (270°) blows to the right.</li>
+<li>Without <code>wind_bearing</code> the wind blows from left to right.</li>
+<li>Check the value under <strong>Developer Tools</strong> › <strong>States</strong> on your weather entity.</li>
+</ol>
+<h4 id="the-wind-compass-does-not-show"><a class="anchor" href="#the-wind-compass-does-not-show" aria-hidden="true">#</a>The wind compass does not show</h4>
+<ol>
+<li>The compass is off by default. Pick a style under <strong>Performance &amp; effects</strong> › <strong>Wind</strong> › <strong>Wind compass</strong> (<code>wind_compass</code>).</li>
+<li>It needs <code>wind_bearing</code> on the weather entity. Without a direction it stays hidden.</li>
+</ol>
+<h4 id="a-wind-direction-chip-shows-a-number-instead-of-wsw"><a class="anchor" href="#a-wind-direction-chip-shows-a-number-instead-of-wsw" aria-hidden="true">#</a>A wind direction chip shows a number instead of WSW</h4>
+<ol>
+<li>Set <strong>Wind direction as</strong> (<code>bearing_format</code>) on the chip to <code>cardinal</code> for <code>WSW</code>, or <code>both</code> for <code>WSW 250°</code>. Without it the chip shows the number as Home Assistant delivers it.</li>
+<li>This works on the <code>wind_bearing</code> attribute of a weather entity, live or forecast, and on a sensor with the device class <code>wind_direction</code>. A sensor without this device class keeps showing the number.</li>
+<li><strong>Show wind speed</strong> (<code>bearing_speed</code>) only works on chips that read <code>wind_bearing</code> of a weather entity, because a single sensor has no speed.</li>
 </ol>
 <h4 id="no-birds-or-planes-are-visible"><a class="anchor" href="#no-birds-or-planes-are-visible" aria-hidden="true">#</a>No birds or planes are visible</h4>
 <ol>

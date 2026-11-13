@@ -970,6 +970,8 @@ Full option reference (including the `bar` equivalents and `gauge_entity`/`gauge
 
 ## Weather Data & Sky Light
 
+<a name="weather-data"></a>
+
 The card reads optional attributes of your weather entity and uses them to make each scene match the real sky. Every attribute is optional: if your weather integration does not provide one, the card looks exactly as it does without it. Nothing needs to be configured.
 
 | Source                                         | Effect                                                                                                                                                                                                 |
@@ -1259,8 +1261,6 @@ This explains how to create an image for your own home and use it in the card.
 4. **Create day and night variants** by adjusting the prompt appropriately.
 5. **Upload the files** to your `config/www/images/` directory and reference them in the card config as `/local/images/my-house-day.png`.
 
-<a name="weather-data"></a>
-
 ## Troubleshooting
 
 ### Installation & Updates
@@ -1272,8 +1272,9 @@ This explains how to create an image for your own home and use it in the card.
 
 #### Card shows red error card or module not found
 
-1. Verify the resource URL is correct: `/local/atmo-weather-card/atmo-weather-card.js`.
-2. Verify all files exist in `config/www/atmo-weather-card/`:
+1. Installed through the Marketplace: check under **Settings** → **Dashboards** → **⋮** → **Resources** that a resource for `atmo-weather-card.js` exists, then clear the browser cache and reload.
+2. Installed by hand: verify the resource URL is correct: `/local/atmo-weather-card/atmo-weather-card.js`.
+3. Installed by hand: verify all files exist in `config/www/atmo-weather-card/`:
 
 - `atmo-weather-card.js`
 - `atmo-weather-card-editor.js`
@@ -1284,7 +1285,7 @@ This explains how to create an image for your own home and use it in the card.
 
 1. Clear browser cache completely (cached images and files).
 2. Hard-refresh the dashboard.
-3. Verify the Lovelace resource still points to `/local/atmo-weather-card/atmo-weather-card.js`.
+3. Installed by hand: verify the Lovelace resource still points to `/local/atmo-weather-card/atmo-weather-card.js`, and that you copied both `.js` files.
 4. If needed, reload Home Assistant frontend once.
 
 ### Layout & Editor
@@ -1310,6 +1311,20 @@ This explains how to create an image for your own home and use it in the card.
 1. Changing a chip's entity (`entity`, `name_sensor`, `sub_value_entity`, `gauge_entity`) clears its attribute field automatically, because the old attribute may not exist on the new entity.
 2. If the chip still shows N/A, pick the attribute again in the editor, or check in **Developer Tools** › **States** that the entity has this attribute.
 
+#### Clouds, rain or the sun cover a chip
+
+1. The chip most likely has `behind_effects: true`. It puts a free-positioned chip behind the weather animations, so a heavy sky covers it. New cards from older versions started with it on the big temperature chip, and older examples used it too.
+2. Remove the line from the chip, or open the chip in the editor and switch off **Position** › **Behind animations**.
+
+#### The wind compass covers a chip
+
+1. With `wind_compass_position: auto` the compass moves away from corners that hold chips. This covers the chip area and free-positioned chips anchored to a corner.
+2. A chip placed with an offset can still sit under it. Then pick a corner for the compass with `wind_compass_position`.
+
+#### The editor is in English
+
+The editor follows the language of your Home Assistant user profile. It speaks English and German; other languages show English.
+
 ### Data & Effects
 
 #### Forecast chip shows "Please check your weather provider"
@@ -1325,6 +1340,56 @@ The chip appears in German or English, following your Home Assistant language (o
 1. Verify `weather_entity` exists and is currently available in Home Assistant.
 2. Confirm the entity has valid state/attributes (temperature, wind, etc.).
 3. If unavailable, fix entity availability first, then reload the dashboard.
+
+#### The card always shows day, or the moon is always full
+
+1. Day and night come from `sun_entity`. Without it the card always shows day. Set it to `sun.sun`.
+2. `card_color_mode: day` keeps the sky in daylight, `night` keeps it at night. Remove it to follow the sun again.
+3. The moon phase comes from `moon_phase_entity`, for example `sensor.moon_phase` from the **Moon** integration. Without it the moon is always full.
+
+#### The card colors do not match the dashboard
+
+1. By default the card follows your Home Assistant theme. With `theme_entity` it follows that entity instead, and `card_color_mode: dark` or `light` locks the look.
+2. See [Color Mode](#color-mode) for the combinations.
+
+#### Clouds, haze or mist on a clear day
+
+The card reads the measured weather data, not only the weather state (see [Weather Data & Sky Light](#weather-data)):
+
+1. A high `cloud_coverage` adds clouds even when the state is `sunny`. Switch off **Cloud amount from data** (`effect_cloud_coverage: false`) for a fixed amount per weather state.
+2. Low `visibility` or humid air adds haze. Switch off **Haze** (`effect_haze: false`).
+3. Ground mist forms when the temperature is close to the dew point. Switch off **Ground mist** (`effect_ground_mist: false`).
+
+Check the values under **Developer Tools** › **States** on your weather entity first. Some providers report a cloud cover that does not fit the weather state.
+
+#### Rain looks too light or too heavy
+
+1. Without a precipitation sensor, the amount follows the weather state: `rainy` is moderate rain, `pouring` heavy rain.
+2. With `precipitation_entity` the measured amount sets it, from drizzle just above 0 mm/h to a downpour from about 8 mm/h.
+3. The editor lists only sensors in mm/h or in/h. A sensor in mm (the amount of a whole day or hour) does not show up and cannot be used, because it is no rain rate.
+
+#### No wind lines are visible
+
+1. Wind lines show in `windy` weather, and in rain, hail or snow from 40 km/h. In other weather there are none, even in strong wind.
+2. Check that `wind_style` is not `off`.
+3. Clouds, rain and snow still drift with the wind in every weather.
+
+#### The wind blows the wrong way
+
+1. The direction comes from `wind_bearing` of the weather entity, the direction the wind comes **from**, as in Home Assistant. Wind from the west (270°) blows to the right.
+2. Without `wind_bearing` the wind blows from left to right.
+3. Check the value under **Developer Tools** › **States** on your weather entity.
+
+#### The wind compass does not show
+
+1. The compass is off by default. Pick a style under **Performance & effects** › **Wind** › **Wind compass** (`wind_compass`).
+2. It needs `wind_bearing` on the weather entity. Without a direction it stays hidden.
+
+#### A wind direction chip shows a number instead of WSW
+
+1. Set **Wind direction as** (`bearing_format`) on the chip to `cardinal` for `WSW`, or `both` for `WSW 250°`. Without it the chip shows the number as Home Assistant delivers it.
+2. This works on the `wind_bearing` attribute of a weather entity, live or forecast, and on a sensor with the device class `wind_direction`. A sensor without this device class keeps showing the number.
+3. **Show wind speed** (`bearing_speed`) only works on chips that read `wind_bearing` of a weather entity, because a single sensor has no speed.
 
 #### No birds or planes are visible
 

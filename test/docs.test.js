@@ -91,6 +91,12 @@ test("README links into the documentation find their targets", () => {
   for (const m of readme.replace(/\r\n/g, "\n").matchAll(/^#+ (.+)$/gm))
     own.add(m[1].toLowerCase().replace(/[^\p{L}\p{N}\s-]/gu, "").trim().replace(/\s/g, "-"));
   for (const m of readme.matchAll(/\]\(#([^)]+)\)/g)) assert.ok(own.has(m[1]), `README #${m[1]} is missing`);
+  // The old anchors of a table row name sections of the page that row opens.
+  for (const row of readme.split(/\r?\n/).filter((l) => l.startsWith("| <a name="))) {
+    const file = /\/docs\/([a-z-]+)\.html\)/.exec(row)[1];
+    for (const [, id] of row.matchAll(/<a name="([^"]+)"><\/a>/g))
+      assert.equal(redirects[id], file, `README #${id} sits in the ${file} row`);
+  }
 });
 
 test("old links into the single docs page open the page that holds the section", () => {
@@ -98,6 +104,7 @@ test("old links into the single docs page open the page that holds the section",
   assert.equal(redirects["color-mode"], "appearance");
   assert.equal(redirects["opt-perf_mode"], "effects");
   assert.equal(redirects["weather-icons"], "guides");
+  assert.equal(redirects["weather-data"], "weather-data");
   // The landing page keeps its own sections.
   assert.ok(!("install" in redirects) && landingIds.has("install"));
   assert.match(landing, /location\.replace\(`docs\/\$\{to\[id\]\}\.html#\$\{id\}`\)/);
