@@ -245,11 +245,13 @@
     const n = type === "hourly" ? 24 : 7, step = type === "hourly" ? 3600e3 : 86400e3;
     return Array.from({ length: n }, (_, i) => ({ datetime: new Date(Date.now() + i * step).toISOString(), condition: conds[i % conds.length], temperature: 14 + ((i * 3) % 7), templow: 6 + (i % 4), precipitation_probability: [20, 10, 70, 40, 5, 80, 30][i % 7], humidity: 60 + (i % 5) * 4, uv_index: [3, 5, 2, 4, 6, 1, 3][i % 7] }));
   };
+  // The next time the clock shows h:m, today or tomorrow.
+  const nextAt = (h, m) => { const d = new Date(); d.setHours(h, m, 0, 0); if (d < Date.now()) d.setDate(d.getDate() + 1); return d.toISOString(); };
   function buildHass() {
     const states = {
       "weather.demo": { entity_id: "weather.demo", state: state.night && state.condition === "sunny" ? "clear-night" : state.condition,
         attributes: { temperature: 14, humidity: 64, uv_index: 3, precipitation_probability: 20, wind_speed: state.condition === "windy" ? 45 : 12, wind_bearing: 250, wind_speed_unit: "km/h", temperature_unit: "°C", friendly_name: "Home" } },
-      "sun.sun": { entity_id: "sun.sun", state: state.night ? "below_horizon" : "above_horizon", attributes: { elevation: state.night ? -12 : 32, azimuth: 200 } },
+      "sun.sun": { entity_id: "sun.sun", state: state.night ? "below_horizon" : "above_horizon", attributes: { elevation: state.night ? -12 : 32, azimuth: 200, next_rising: nextAt(6, 12), next_setting: nextAt(19, 41) } },
       "sensor.moon_phase": { entity_id: "sensor.moon_phase", state: "waxing_gibbous", attributes: {} },
       "sensor.time": { entity_id: "sensor.time", state: new Date().toISOString(), attributes: {} },
     };

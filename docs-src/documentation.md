@@ -1956,14 +1956,108 @@ The card then resolves the icon by the current weather state. For example, `rain
 
 ### Custom House Image
 
-This explains how to create an image for your own home and use it in the card.
+Put your own home into the sky. A drawing of the house sits in the card, by day in daylight colors and at night with lit windows; the card swaps the two at sunset.
 
-1. **Take a reference photo** from a corner angle to properly capture the depth of the house.
-2. **Generate a 3D model** using an AI image tool. Use a prompt similar to:
-   > _Isometric view of a modern minimalist architectural model section from the outside on solid white background. [Describe your floors/rooms]. Materials are matte white and light only. No complex textures, studio lighting, very clean, simplified shapes._
-3. **Remove the background** with an online tool or image editor and save the resulting image as a transparent PNG.
-4. **Create day and night variants** by adjusting the prompt appropriately.
-5. **Upload the files** to your `config/www/images/` directory and reference them in the card config as `/local/images/my-house-day.png`.
+<img width="640" alt="Custom house image in the card, by day in the sun and at night in the rain" src="images/example-house.webp" />
+
+1. **Take a reference photo** from a corner, so the picture shows two sides of the house and its depth.
+2. **Let an AI image tool draw it.** Upload the photo and use a prompt like this one. Asking for day and night in one picture keeps both drawings exactly alike:
+   > _Isometric illustration of this house from the outside, on a plain white background. Two versions side by side: on the left by day with light walls, on the right the same view at night with dark blue walls and warm light in every window. Clean lines, flat colors, no text._
+
+   <img width="480" alt="The house drawn by an AI tool, by day and at night" src="images/house-ai.webp" />
+3. **Cut out the two houses.** Crop each version to its own file, then remove the background with a background removal tool, so only the area around the house turns transparent and white walls stay. Save both as PNG.
+4. **Upload the files** to `config/www/images/` in Home Assistant, for example as `my-house-day.png` and `my-house-night.png`. They are then at `/local/images/my-house-day.png`.
+5. **Add them to the card.** `image_day` and `image_night` set the pictures, `image_alignment`, `image_scale`, `image_x` and `image_y` place them (see [Custom Images](#custom-images)). Put the sun and moon where the house does not cover them, and the values into the free space next to it.
+
+The card from the picture above: the time of the next sunset at the top, the outside temperature large at the bottom left, and three rooms next to the house. Replace the room sensors with your own.
+
+```yaml scene=sunny
+type: custom:atmo-weather-card
+weather_entity: weather.home
+sun_entity: sun.sun
+card_height: 300
+image_day: /local/images/my-house-day.png
+image_night: /local/images/my-house-night.png
+image_alignment: top-right
+image_scale: 72
+image_x: "40"
+image_y: "10"
+celestial_alignment: top-right
+celestial_x: 18
+celestial_y: 14
+celestial_size: 40
+chip_area_position: bottom-right
+chip_area_gap: 22px
+chip_area_padding: 0 18px 14px 0
+chips:
+  - entity: weather.home
+    attribute: temperature
+    position: custom
+    position_anchor: bottom-left
+    position_x: 20px
+    position_y: 40px
+    hide_icon: true
+    hide_label: true
+    background: false
+    unit_format: °
+    value_precision: 0
+    text_size: 72px
+    value_weight: "300"
+  - entity: weather.home
+    position: custom
+    position_anchor: bottom-left
+    position_x: 22px
+    position_y: 16px
+    hide_icon: true
+    hide_label: true
+    background: false
+    text_size: 15px
+  - entity: sun.sun
+    attribute: next_setting
+    name: Sunset
+    position: custom
+    position_anchor: top-left
+    position_x: 20px
+    position_y: 18px
+    hide_icon: true
+    background: false
+    text_size: 14px
+    label_size: 14px
+    value_weight: "500"
+  - entity: sensor.living_room_temperature
+    name: Living
+    style: vertical
+    align: start
+    hide_icon: true
+    background: false
+    unit_format: °
+    value_precision: 0
+    text_size: 22px
+    label_size: 13px
+    value_weight: "400"
+  - entity: sensor.bedroom_temperature
+    name: Bedroom
+    style: vertical
+    align: start
+    hide_icon: true
+    background: false
+    unit_format: °
+    value_precision: 0
+    text_size: 22px
+    label_size: 13px
+    value_weight: "400"
+  - entity: sensor.bath_temperature
+    name: Bath
+    style: vertical
+    align: start
+    hide_icon: true
+    background: false
+    unit_format: °
+    value_precision: 0
+    text_size: 22px
+    label_size: 13px
+    value_weight: "400"
+```
 
 ## Troubleshooting
 

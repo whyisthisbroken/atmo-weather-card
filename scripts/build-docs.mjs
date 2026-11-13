@@ -31,6 +31,12 @@ const ENTITY_MAP = {
   "weather.home": "weather.demo",
 };
 
+// Demo images: the placeholder image paths of the examples show the sample house.
+const IMAGE_MAP = {
+  "/local/images/my-house-day.png": "../images/house-day.webp",
+  "/local/images/my-house-night.png": "../images/house-night.webp",
+};
+
 // Same anchors as on GitHub.
 export const slug = (text) =>
   text
@@ -77,6 +83,7 @@ function liveConfig(obj, entities) {
       }
       return o;
     }
+    if (typeof v === "string" && IMAGE_MAP[v]) return IMAGE_MAP[v];
     if (typeof v === "string" && /^(weather|sensor|binary_sensor)\.[a-z0-9_]+$/.test(v)) {
       const id = ENTITY_MAP[v] || v;
       entities.add(id);
