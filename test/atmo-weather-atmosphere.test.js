@@ -5,6 +5,7 @@ import {
   adjustParams,
   computeAtmosphere,
   easeGoldenLight,
+  goldenSource,
   dewPointC,
   mergeWeatherSensors,
   windSpeedKmh,
@@ -239,4 +240,15 @@ test("wind speed and visibility are read in every unit Home Assistant offers", (
   near(windSpeedKmh(12, undefined), 12);
   near(readWeatherData({ visibility: 1000, visibility_unit: "ft" }).visibility, 0.3048);
   near(readWeatherData({ visibility: 1000, visibility_unit: "yd" }).visibility, 0.9144);
+});
+
+test("after sunset the afterglow stays on the horizon where the sun set, not at the moon", () => {
+  const card = { _isTimeNight: false, _getCelestialPosition: () => ({ x: 300, y: 150 }) };
+  assert.deepEqual(goldenSource(card, 400, 200), { x: 300, y: 150 });
+  // Night: the card now places the moon top left, the glow stays low on the right.
+  card._isTimeNight = true;
+  card._getCelestialPosition = () => ({ x: 40, y: 30 });
+  assert.deepEqual(goldenSource(card, 400, 200), { x: 300, y: 200 });
+  // A card that opens at night puts the glow bottom right.
+  assert.deepEqual(goldenSource({ _isTimeNight: true }, 400, 200), { x: 340, y: 200 });
 });

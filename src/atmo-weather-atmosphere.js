@@ -311,6 +311,19 @@ export function easeGoldenLight(card) {
 // Larger than any two minute step of the sun.
 const GOLDEN_SNAP = 0.25;
 
+// Where the warm light comes from. By day the sun. After sunset the card
+// places the moon instead, so the afterglow stays on the horizon below the
+// point where the sun was last seen (bottom right if the card never saw it).
+export function goldenSource(card, w, h) {
+  if (!card._isTimeNight) {
+    const c = card._getCelestialPosition(w, h);
+    if (w > 0 && h > 0) card._lastSunAt = { x: c.x / w, y: c.y / h };
+    return c;
+  }
+  const last = card._lastSunAt || { x: 0.85 };
+  return { x: last.x * w, y: h };
+}
+
 // Golden hour sky: warm light that rises from the horizon, gold at first,
 // then orange and rose at sunset with a touch of violet higher up. Drawn
 // behind the clouds.
@@ -337,7 +350,7 @@ export function drawGoldenSky(card, ctx, w, h) {
   ctx.fillStyle = card._goldenSkyGrad;
   ctx.fillRect(0, 0, w, h);
   // A bright warm halo where the sun stands.
-  const c = card._getCelestialPosition(w, h);
+  const c = goldenSource(card, w, h);
   const haloKey = `${key}|${Math.round(c.x)}|${Math.round(c.y)}`;
   if (!card._goldenHalo || card._goldenHaloKey !== haloKey) {
     const halo = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, Math.max(w, h) * 0.75);
@@ -361,7 +374,7 @@ export function drawGoldenLight(card, ctx, w, h) {
   if (!cur || cur.g <= 0.01) return;
   const g = cur.g,
     s = cur.s;
-  const c = card._getCelestialPosition(w, h);
+  const c = goldenSource(card, w, h);
   const key = `${Math.round(w)}|${Math.round(h)}|${Math.round(c.x)}|${Math.round(c.y)}|${Math.round(g * 60)}|${Math.round(s * 60)}`;
   if (!card._goldenLight || card._goldenLightKey !== key) {
     const r = Math.hypot(Math.max(c.x, w - c.x), Math.max(c.y, h - c.y));

@@ -1661,6 +1661,7 @@ class AtmosphericWeatherCard extends HTMLElement {
     const atm = (params && params.atmosphere) || "";
     const inactive =
       this._isTimeNight ||
+      (this._fx && this._fx.goldenHour === false) ||
       (atm !== "clear" && atm !== "fair" && atm !== "exceptional");
     if (inactive) {
       this._cssVar(root, "--gh-wash", "0", "_prevGhWash");

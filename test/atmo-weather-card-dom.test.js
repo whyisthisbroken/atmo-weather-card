@@ -1015,3 +1015,16 @@ test("the system time format follows the browser", async () => {
   assert.deepEqual(timeFormatOptions({ time_format: "system" }), h12 ? { hour12: true } : { hourCycle: "h23" });
   assert.deepEqual(timeFormatOptions(undefined), {});
 });
+
+test("effect_golden_hour off also turns off the warm glow of a low sun", () => {
+  const hass = makeHass();
+  hass.states["sun.sun"] = { entity_id: "sun.sun", state: "above_horizon", attributes: { elevation: 4 } };
+  hass.states["weather.home"] = { ...hass.states["weather.home"], state: "sunny" };
+  const wash = (cfg) => {
+    document.body.replaceChildren();
+    const card = mountCard({ sun_entity: "sun.sun", ...cfg }, hass);
+    return Number(card._elements.root.style.getPropertyValue("--gh-wash") || 0);
+  };
+  assert.ok(wash({}) > 0);
+  assert.equal(wash({ effect_golden_hour: false }), 0);
+});
