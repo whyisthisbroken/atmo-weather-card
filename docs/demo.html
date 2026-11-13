@@ -2,70 +2,91 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Atmo Weather Card — Live Demo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Cdefs%3E%3CradialGradient id=%27g%27 cx=%270.38%27 cy=%270.38%27%3E%3Cstop offset=%270%27 stop-color=%27%23fff1c7%27/%3E%3Cstop offset=%271%27 stop-color=%27%23f2b84b%27/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2713%27 fill=%27url(%23g)%27/%3E%3C/svg%3E">
+<title>Live demo · Atmo Weather Card</title>
+<script>try { const t = localStorage.getItem("atmo-theme"); if (t && t !== "auto") document.documentElement.dataset.theme = t; } catch {}</script>
+<link rel="stylesheet" href="site.css">
 <style>
-  :root {
-    --bg: #0d1117; --panel: #161b22; --line: #30363d; --text: #e6edf3; --muted: #8b949e;
-    --accent: #2ea44f; --link: #58a6ff; --warn: #d29922;
-  }
-  * { box-sizing: border-box; }
-  html, body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 -apple-system, "Segoe UI", Roboto, sans-serif; }
-  .page { max-width: 1060px; margin: 0 auto; padding: 28px 16px 48px; }
-  header h1 { font-size: 22px; margin: 0 0 4px; }
-  header p { color: var(--muted); margin: 0 0 20px; }
-  header a { color: var(--link); text-decoration: none; }
-  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 24px; align-items: start; }
-  .stage { position: sticky; top: 16px; }
+  .intro { padding: 36px 0 22px; }
+  .kicker { font-size: 12.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin: 0 0 8px; }
+  .intro h1 { font-size: clamp(30px, 3.6vw, 44px); line-height: 1.08; letter-spacing: -0.03em; margin: 0 0 8px; }
+  .intro p { color: var(--muted); font-size: 16.5px; margin: 0; max-width: 46em; }
+  .layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 28px; align-items: start; padding-bottom: 72px; }
+  .stage { position: sticky; top: calc(var(--top-h) + 20px); display: grid; gap: 12px; }
   /* Must come after the .stage rule above. On phones only the card itself stays on top (status and note scroll away),
      so the sky stays in view while moving the controls. display: contents makes the card a child of the tall grid. */
   @media (max-width: 900px) {
-    .layout { grid-template-columns: 1fr; gap: 12px; }
+    .layout { grid-template-columns: minmax(0, 1fr); gap: 14px; }
     .stage { position: static; display: contents; }
     #card-slot { position: sticky; top: 0; z-index: 10; padding: 8px 0; margin: -8px 0; background: var(--bg);
-      box-shadow: 0 10px 12px -10px rgba(0, 0, 0, 0.8); }
-    .status, .note { margin: 0; }
+      box-shadow: 0 12px 14px -12px rgba(0, 0, 0, 0.6); }
   }
-  atmo-weather-card { display: block; width: 100%; }
-  .status { margin-top: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--muted); font-size: 12.5px; }
-  .status b { color: var(--text); font-weight: 600; }
-  .status .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
-  .tag { padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); font-size: 12px; }
-  .tag.on { border-color: var(--accent); color: var(--text); background: rgba(46, 164, 79, 0.15); }
-  .note { margin-top: 10px; color: var(--muted); font-size: 12.5px; }
-  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
-  section h2 { font-size: 13px; margin: 0 0 2px; letter-spacing: 0.02em; }
-  section .desc { color: var(--muted); font-size: 12.5px; margin: 0 0 10px; }
-  .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 10px 0 6px; }
+  #card-slot atmo-weather-card { display: block; width: 100%; border-radius: 16px; box-shadow: var(--shadow); }
+  .status { padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); color: var(--muted); font-size: 13px; }
+  .status b { color: var(--text); font-weight: 650; }
+  .status .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .tag { padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); font-size: 12px; }
+  .tag.on { border-color: var(--accent); color: var(--text); background: color-mix(in srgb, var(--accent) 16%, transparent); }
+  .note { color: var(--muted); font-size: 13px; margin: 0; }
+
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+  .tabs { display: flex; gap: 2px; padding: 6px; border-bottom: 1px solid var(--line); overflow-x: auto; background: var(--raised); }
+  .tabs button { flex: none; border: 0; background: none; color: var(--muted); font: 650 13.5px var(--f-body); padding: 8px 12px; border-radius: 9px; cursor: pointer; }
+  .tabs button:hover { color: var(--text); }
+  .tabs button[aria-selected="true"] { background: var(--panel); color: var(--text); box-shadow: 0 1px 0 var(--line), 0 0 0 1px var(--line); }
+  section.tab { padding: 18px 18px 20px; }
+  section.tab h2 { font-size: 17px; margin: 0 0 2px; letter-spacing: -0.01em; }
+  section.tab .desc { color: var(--muted); font-size: 14px; margin: 0 0 12px; }
+  section.tab h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin: 18px 0 8px; }
+  .label { font-size: 12px; font-weight: 650; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin: 16px 0 8px; }
   .buttons { display: flex; flex-wrap: wrap; gap: 6px; }
-  button { background: #21262d; color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font-size: 13px; cursor: pointer; }
-  button:hover { background: #30363d; }
-  button.active { background: var(--accent); border-color: var(--accent); }
-  button:disabled { opacity: 0.45; cursor: not-allowed; }
-  .control { padding: 8px 0; border-top: 1px solid rgba(48, 54, 61, 0.6); }
-  .control:first-of-type { border-top: 0; }
-  .control .head { display: flex; align-items: center; gap: 8px; }
-  .control .name { flex: 1; }
-  .control .value { font: 12px ui-monospace, SFMono-Regular, monospace; color: var(--link); }
-  .control .hint { color: var(--muted); font-size: 12px; margin-top: 2px; }
-  .control input[type=range] { width: 100%; margin-top: 6px; accent-color: var(--accent); }
+  .buttons button { font: 600 13px var(--f-body); padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg); color: var(--text); cursor: pointer; }
+  .buttons button:hover { border-color: var(--muted); }
+  .buttons button.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .buttons button:disabled { opacity: 0.45; cursor: not-allowed; }
+  .control { padding: 10px 0; border-top: 1px solid var(--line); }
+  .control:first-child { border-top: 0; }
+  .control .head { display: flex; align-items: center; gap: 10px; }
+  .control .name { flex: 1; font-weight: 600; font-size: 14.5px; }
+  .control .value { font: 12.5px var(--f-mono); color: var(--accent); }
+  .control .hint { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .control input[type=range] { width: 100%; margin-top: 8px; accent-color: var(--accent); }
   .control.off .name, .control.off .value { opacity: 0.5; }
   .control.off input[type=range] { opacity: 0.35; }
-  .switch { position: relative; width: 32px; height: 18px; flex: none; }
+  .switch { position: relative; width: 36px; height: 20px; flex: none; }
   .switch input { opacity: 0; width: 0; height: 0; }
-  .switch span { position: absolute; inset: 0; background: #30363d; border-radius: 999px; transition: background 0.15s; cursor: pointer; }
-  .switch span::after { content: ""; position: absolute; left: 2px; top: 2px; width: 14px; height: 14px; border-radius: 50%; background: #c9d1d9; transition: transform 0.15s; }
+  .switch span { position: absolute; inset: 0; background: var(--line); border-radius: 999px; transition: background 0.15s; cursor: pointer; }
+  .switch span::after { content: ""; position: absolute; left: 2px; top: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform 0.15s; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); }
   .switch input:checked + span { background: var(--accent); }
-  .switch input:checked + span::after { transform: translateX(14px); background: #fff; }
-  .message { color: var(--warn); font-size: 12.5px; min-height: 1.2em; margin-top: 8px; }
+  .switch input:checked + span::after { transform: translateX(16px); }
+  .message { color: var(--warn); font-size: 13px; min-height: 1.2em; margin-top: 8px; }
+  .yaml { margin-top: 18px; }
+  .yaml summary { cursor: pointer; font-weight: 650; font-size: 14px; color: var(--link); }
+  .yaml pre { background: var(--code); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; overflow: auto; max-height: 360px; font: 12.5px/1.5 var(--f-mono); }
+  @media (prefers-reduced-motion: reduce) { .switch span, .switch span::after { transition: none; } }
 </style>
 </head>
 <body>
-<div class="page">
-  <header>
-    <h1>Atmo Weather Card — Live Demo</h1>
-    <p>The real card, running in your browser. Change the weather, the time of day and the measured data with the controls and watch the sky react. <a href="index.html">Documentation</a> · <a href="https://github.com/whyisthisbroken/atmo-weather-card">GitHub</a></p>
-  </header>
+<header class="top">
+  <div class="top-in">
+    <a class="brand" href="index.html"><span class="sun"></span>Atmo Weather Card</a>
+    <nav>
+      <a href="docs/index.html">Docs</a>
+      <a class="here" href="demo.html">Live demo</a>
+      <a href="index.html#install" class="hide-s">Install</a>
+      <a href="https://github.com/whyisthisbroken/atmo-weather-card">GitHub</a>
+      <span class="theme" role="group" aria-label="Color theme"><button type="button" data-t="auto">Auto</button><button type="button" data-t="light">Light</button><button type="button" data-t="dark">Dark</button></span>
+    </nav>
+  </div>
+</header>
+
+<main class="top-in" style="display:block">
+  <div class="intro">
+    <p class="kicker">Live demo</p>
+    <h1>Play with the weather.</h1>
+    <p>The real card, running in your browser. Change the weather, the time of day and the measured data and watch the sky react. Every control matches an option in the editor.</p>
+  </div>
 
   <div class="layout">
     <div class="stage">
@@ -74,9 +95,18 @@
       <p class="note">Clouds fade in about a second after a change, on purpose, to keep the card light on slower devices.</p>
     </div>
 
-    <div class="controls">
-      <section>
-        <h2>Scene</h2>
+    <div class="panel">
+      <div class="tabs" role="tablist" aria-label="Controls">
+        <button type="button" role="tab" data-tab="scene" aria-selected="true">Weather</button>
+        <button type="button" role="tab" data-tab="data">Data</button>
+        <button type="button" role="tab" data-tab="wind">Wind</button>
+        <button type="button" role="tab" data-tab="sky">Sky &amp; night</button>
+        <button type="button" role="tab" data-tab="fauna">Birds &amp; planes</button>
+        <button type="button" role="tab" data-tab="display">Display</button>
+      </div>
+
+      <section class="tab" data-tab="scene" role="tabpanel">
+        <h2>Weather and time of day</h2>
         <p class="desc">The weather state and the sun, as Home Assistant reports them.</p>
         <div class="label">Weather</div>
         <div class="buttons" id="conditions"></div>
@@ -92,19 +122,13 @@
         <div id="sun-slider"></div>
       </section>
 
-      <section>
+      <section class="tab" data-tab="data" role="tabpanel" hidden>
         <h2>Measured weather data</h2>
         <p class="desc">Optional values from your weather integration. Switch one off to see the card without it.</p>
         <div id="data"></div>
       </section>
 
-      <section>
-        <h2>Effects</h2>
-        <p class="desc">Every effect can be switched off on its own, in the editor under Performance &amp; effects.</p>
-        <div id="effects"></div>
-      </section>
-
-      <section>
+      <section class="tab" data-tab="wind" role="tabpanel" hidden>
         <h2>Wind</h2>
         <p class="desc">Always shown in windy weather; in rain, hail and snow from 40 km/h.</p>
         <div class="label">Display</div>
@@ -152,8 +176,11 @@
         </div>
       </section>
 
-      <section>
-        <h2>Night sky</h2>
+      <section class="tab" data-tab="sky" role="tabpanel" hidden>
+        <h2>Sky effects</h2>
+        <p class="desc">Every effect can be switched off on its own, in the editor under Performance &amp; effects.</p>
+        <div id="effects"></div>
+        <h3>Night sky</h3>
         <p class="desc">Shooting stars and comets appear on their own on clear nights. Switch them off, change how often they come, or spawn one right now.</p>
         <div id="night-controls"></div>
         <div class="label">Spawn now</div>
@@ -164,14 +191,14 @@
         <div class="message" id="spawn-message"></div>
       </section>
 
-      <section>
+      <section class="tab" data-tab="fauna" role="tabpanel" hidden>
         <h2>Birds &amp; planes</h2>
         <p class="desc">Birds fly by day, planes by day and night. Near planes cross the sky faster than distant ones.</p>
         <div id="fauna-controls"></div>
         <div class="message" id="fauna-message"></div>
       </section>
 
-      <section>
+      <section class="tab" data-tab="display" role="tabpanel" hidden>
         <h2>Display</h2>
         <div class="label">Card height</div>
         <div class="buttons" id="height">
@@ -187,10 +214,19 @@
         </div>
         <div class="label">Reset</div>
         <div class="buttons"><button id="reset">Back to the start</button></div>
+        <details class="yaml"><summary>Show the YAML of this card</summary><pre id="yaml"></pre></details>
       </section>
     </div>
   </div>
-</div>
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    <span>Atmo Weather Card · MIT license</span>
+    <nav><a href="index.html">Home</a><a href="docs/index.html">Documentation</a><a href="https://github.com/whyisthisbroken/atmo-weather-card/releases">Releases</a><a href="https://github.com/whyisthisbroken/atmo-weather-card/discussions">Discussions</a></nav>
+  </div>
+</footer>
+<script type="module" src="site.js"></script>
 <script type="module">
   import './atmo-weather-card.js';
 
@@ -457,6 +493,28 @@
   setInterval(() => { card.hass = buildHass(); }, 1000);
 
   update();
+
+  // Tabs: one group of controls at a time, remembered in the address (#wind).
+  const tabs = [...document.querySelectorAll('.tabs button')];
+  const panels = [...document.querySelectorAll('section.tab')];
+  const openTab = (name) => {
+    if (!tabs.some((t) => t.dataset.tab === name)) name = 'scene';
+    tabs.forEach((t) => t.setAttribute('aria-selected', String(t.dataset.tab === name)));
+    panels.forEach((p) => (p.hidden = p.dataset.tab !== name));
+  };
+  tabs.forEach((t) => t.addEventListener('click', () => { openTab(t.dataset.tab); history.replaceState(null, '', '#' + t.dataset.tab); }));
+  openTab(location.hash.slice(1));
+
+  // The YAML of the card on screen, without the demo-only parts.
+  const yamlBox = document.getElementById('yaml');
+  const toYaml = (o, ind = '') => Object.entries(o).map(([k, v]) => Array.isArray(v)
+    ? `${ind}${k}:\n` + v.map((it) => { const l = toYaml(it, ind + '    ').split('\n'); return `${ind}  - ${l[0].trim()}\n${l.slice(1).join('\n')}`; }).join('\n').replace(/\n+$/, '')
+    : v && typeof v === 'object' ? `${ind}${k}:\n${toYaml(v, ind + '  ')}` : `${ind}${k}: ${v}`).join('\n');
+  setInterval(() => {
+    if (!yamlBox.closest('details').open) return;
+    const cfg = buildConfig();
+    yamlBox.textContent = toYaml({ ...cfg, weather_entity: 'weather.home' });
+  }, 500);
 </script>
 </body>
 </html>

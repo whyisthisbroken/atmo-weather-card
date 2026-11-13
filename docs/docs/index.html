@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<!-- Start page of the documentation (docs/docs/index.html). npm run build fills the {{...}} placeholders. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Cdefs%3E%3CradialGradient id=%27g%27 cx=%270.38%27 cy=%270.38%27%3E%3Cstop offset=%270%27 stop-color=%27%23fff1c7%27/%3E%3Cstop offset=%271%27 stop-color=%27%23f2b84b%27/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2713%27 fill=%27url(%23g)%27/%3E%3C/svg%3E">
+<title>Documentation · Atmo Weather Card</title>
+<script>try { const t = localStorage.getItem("atmo-theme"); if (t && t !== "auto") document.documentElement.dataset.theme = t; } catch {}</script>
+<link rel="stylesheet" href="../site.css">
+<style>
+  .hero { padding: 56px 0 28px; }
+  .kicker { font-size: 12.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin: 0 0 10px; }
+  h1 { font-size: clamp(34px, 4.4vw, 52px); line-height: 1.05; letter-spacing: -0.03em; margin: 0 0 14px; }
+  .lead { font-size: 18px; color: var(--muted); max-width: 40em; margin: 0 0 26px; }
+  .search { position: relative; max-width: 560px; }
+  .search input { width: 100%; padding: 13px 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); color: var(--text); font: inherit; font-size: 16px; box-shadow: var(--shadow); }
+  .results { position: absolute; left: 0; right: 0; top: 100%; margin-top: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; z-index: 5; max-height: 360px; overflow: auto; box-shadow: var(--shadow); }
+  .results a { display: block; padding: 8px 14px; color: var(--text); font-size: 14px; }
+  .results a code { border: 0; background: none; padding: 0; }
+  .results a small { color: var(--muted); }
+  .results a:hover, .results a.sel { background: var(--raised); text-decoration: none; }
+  .results .none { padding: 10px 14px; color: var(--muted); }
+  .cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; padding: 28px 0 80px; }
+  .doc-card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 20px; color: var(--text); display: grid; gap: 6px; align-content: start; transition: border-color 0.2s, transform 0.2s; }
+  .doc-card:hover { text-decoration: none; border-color: var(--accent); transform: translateY(-2px); }
+  .doc-card b { font-size: 17px; }
+  .doc-card span:last-child { color: var(--muted); font-size: 14.5px; }
+  .doc-group { font-size: 11.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+  .more { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 22px; }
+  @media (max-width: 980px) { .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 560px) { .cards { grid-template-columns: minmax(0, 1fr); } }
+  @media (prefers-reduced-motion: reduce) { .doc-card { transition: none; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-in narrow">
+    <a class="brand" href="../index.html"><span class="sun"></span>Atmo Weather Card</a>
+    <span class="ver">2026.11.5</span>
+    <nav>
+      <a class="here" href="index.html">Docs</a>
+      <a href="../demo.html">Live demo</a>
+      <a href="../index.html#install" class="hide-s">Install</a>
+      <a href="https://github.com/whyisthisbroken/atmo-weather-card">GitHub</a>
+      <span class="theme" role="group" aria-label="Color theme"><button type="button" data-t="auto">Auto</button><button type="button" data-t="light">Light</button><button type="button" data-t="dark">Dark</button></span>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <p class="kicker">Documentation</p>
+    <h1>Everything the card can do.</h1>
+    <p class="lead">Every option with examples that run live on the page. Pick a topic, or search for an option by name.</p>
+    <div class="search">
+      <input id="search" type="search" placeholder="Search options, e.g. wind_compass" autocomplete="off" aria-label="Search the documentation">
+      <div class="results" id="results" hidden></div>
+    </div>
+    <div class="more"><a class="btn primary" href="setup.html">Start with the setup</a><a class="btn" href="../demo.html">Try the live demo</a></div>
+  </section>
+  <section class="cards"><a class="doc-card" href="setup.html"><span class="doc-group">Start</span><b>Getting started</b><span>Entities, the first card and where the options live.</span></a><a class="doc-card" href="examples.html"><span class="doc-group">Start</span><b>Examples</b><span>Complete cards to copy, each one runs live.</span></a><a class="doc-card" href="appearance.html"><span class="doc-group">Customize</span><b>Appearance</b><span>Card style, colors, sun and moon, images and embedded cards.</span></a><a class="doc-card" href="chips.html"><span class="doc-group">Customize</span><b>Chips & forecasts</b><span>Values, forecasts, rings and bars, in a row or anywhere.</span></a><a class="doc-card" href="weather-data.html"><span class="doc-group">Sky & effects</span><b>Weather data & sky light</b><span>How cloud cover, rain, haze and mist shape the sky.</span></a><a class="doc-card" href="effects.html"><span class="doc-group">Sky & effects</span><b>Effects & performance</b><span>Presets, wind and compass, night sky, birds and planes.</span></a><a class="doc-card" href="guides.html"><span class="doc-group">Help</span><b>Guides</b><span>Layering, weather icons and your own house picture.</span></a><a class="doc-card" href="troubleshooting.html"><span class="doc-group">Help</span><b>Troubleshooting</b><span>When something looks wrong after an install or update.</span></a></section>
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    <span>Atmo Weather Card · MIT license</span>
+    <nav><a href="../index.html">Home</a><a href="../demo.html">Live demo</a><a href="https://github.com/whyisthisbroken/atmo-weather-card/releases">Releases</a><a href="https://github.com/whyisthisbroken/atmo-weather-card/discussions">Discussions</a></nav>
+  </div>
+</footer>
+<script type="module" src="../site.js"></script>
+<script type="module">
+  const SEARCH = [{"n":"Forecast Slider","k":"section","u":"examples.html#forecast-slider","w":"Examples"},{"n":"Forecast &amp; Mini-graph","k":"section","u":"examples.html#forecast--mini-graph","w":"Examples"},{"n":"Forecast &amp; Ring Chip","k":"section","u":"examples.html#forecast--ring-chip","w":"Examples"},{"n":"Where to find things in the editor","k":"section","u":"appearance.html#where-to-find-things-in-the-editor","w":"Appearance"},{"n":"Card Style &amp; Layout","k":"section","u":"appearance.html#card-style--layout","w":"Appearance"},{"n":"Theme &amp; Filters","k":"section","u":"appearance.html#theme--filters","w":"Appearance"},{"n":"Color Mode","k":"section","u":"appearance.html#color-mode","w":"Appearance"},{"n":"Sun &amp; Moon","k":"section","u":"appearance.html#sun--moon","w":"Appearance"},{"n":"Custom Images","k":"section","u":"appearance.html#custom-images","w":"Appearance"},{"n":"Embedded Cards","k":"section","u":"appearance.html#embedded-cards","w":"Appearance"},{"n":"CSS Variables","k":"section","u":"appearance.html#css-variables","w":"Appearance"},{"n":"Chips in the editor","k":"section","u":"chips.html#chips-in-the-editor","w":"Chips & forecasts"},{"n":"Row options","k":"section","u":"chips.html#row-options","w":"Chips & forecasts"},{"n":"Per-chip options","k":"section","u":"chips.html#per-chip-options","w":"Chips & forecasts"},{"n":"Per-chip style overrides","k":"section","u":"chips.html#per-chip-style-overrides","w":"Chips & forecasts"},{"n":"Ring &amp; Bar gauge options","k":"section","u":"chips.html#ring--bar-gauge-options","w":"Chips & forecasts"},{"n":"Chips &amp; Forecasts","k":"section","u":"chips.html#chips--forecasts","w":"Chips & forecasts"},{"n":"Graphics","k":"section","u":"effects.html#graphics","w":"Effects & performance"},{"n":"Sky &amp; light","k":"section","u":"effects.html#sky--light","w":"Effects & performance"},{"n":"Wind","k":"section","u":"effects.html#wind","w":"Effects & performance"},{"n":"Night sky","k":"section","u":"effects.html#night-sky","w":"Effects & performance"},{"n":"Birds &amp; planes","k":"section","u":"effects.html#birds--planes","w":"Effects & performance"},{"n":"Animation","k":"section","u":"effects.html#animation","w":"Effects & performance"},{"n":"Layout &amp; Layering","k":"section","u":"guides.html#layout--layering","w":"Guides"},{"n":"Weather Icons","k":"section","u":"guides.html#weather-icons","w":"Guides"},{"n":"Custom House Image","k":"section","u":"guides.html#custom-house-image","w":"Guides"},{"n":"Installation &amp; Updates","k":"section","u":"troubleshooting.html#installation--updates","w":"Troubleshooting"},{"n":"Layout &amp; Editor","k":"section","u":"troubleshooting.html#layout--editor","w":"Troubleshooting"},{"n":"Data &amp; Effects","k":"section","u":"troubleshooting.html#data--effects","w":"Troubleshooting"},{"n":"Display &amp; Performance","k":"section","u":"troubleshooting.html#display--performance","w":"Troubleshooting"}];
+  const input = document.getElementById("search"), results = document.getElementById("results");
+  let sel = 0;
+  const show = () => {
+    const q = input.value.trim().toLowerCase();
+    if (!q) { results.hidden = true; return; }
+    const qq = q.replace(/\s+/g, "_");
+    const hits = SEARCH.filter((o) => (o.k === "option" ? o.n.includes(qq) : o.n.toLowerCase().includes(q)))
+      .sort((a, b) => (a.k === b.k ? 0 : a.k === "option" ? -1 : 1)).slice(0, 14);
+    sel = 0;
+    results.innerHTML = hits.length
+      ? hits.map((o, i) => `<a href="${o.u}" class="${i === 0 ? "sel" : ""}">${o.k === "option" ? `<code>${o.n}</code>` : `<b>${o.n}</b>`} <small>· ${o.w}</small></a>`).join("")
+      : '<div class="none">Nothing found.</div>';
+    results.hidden = false;
+  };
+  input.addEventListener("input", show);
+  input.addEventListener("keydown", (e) => {
+    const links = [...results.querySelectorAll("a")];
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); sel = (sel + (e.key === "ArrowDown" ? 1 : links.length - 1)) % Math.max(1, links.length); links.forEach((a, i) => a.classList.toggle("sel", i === sel)); }
+    if (e.key === "Enter" && links[sel]) location.href = links[sel].getAttribute("href");
+    if (e.key === "Escape") results.hidden = true;
+  });
+  document.addEventListener("click", (e) => { if (!e.target.closest(".search")) results.hidden = true; });
+</script>
+</body>
+</html>

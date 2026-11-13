@@ -33,7 +33,9 @@ await Promise.all(
 );
 await copyFile(`${FONT_DIR}/LICENSE`, "dist/figtree-LICENSE.txt");
 
-// docs/ is the GitHub Pages site. index.html (the documentation) is built from
-// docs-src/; demo.html (the live demo) is written by hand.
+// docs/ is the GitHub Pages site. index.html (the landing page) and docs/*.html
+// (the documentation) are built from docs-src/; demo.html (the live demo) is
+// written by hand. site.css and site.js are shared by all of them.
 await cp("dist", "docs", { recursive: true });
+await Promise.all(["site.css", "site.js"].map((f) => copyFile(`docs-src/${f}`, `docs/${f}`)));
 await writeDocs(version);

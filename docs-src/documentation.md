@@ -522,6 +522,19 @@ The sections below document every option, including type, default, and behavior.
 | `card_mask_horizontal` | `boolean` | `true`    | _(Immersive only)_ Fades the left and right edges. Set to `false` to disable.                                                                                                                                                                                          |
 | `theme_entity`         | `string`  | —         | Drives the card's color scheme from any entity's state instead of your HA theme. Commonly set to `sun.sun` to sync the card with sunrise/sunset. See [Colors](#color-mode).                                                                                            |
 
+### Color Mode
+
+The card's appearance depends on your **`sun_entity`** (sun or moon) and your **`card_color_mode`** (light or dark).
+
+#### How to set this up
+
+| Mode                     | Config                                                                        | What it does                                                                                                                                                                                                                                                                                                             |
+| :----------------------- | :---------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Follow your HA theme** | `sun_entity: sun.sun`                                                         | The card shows the sun during the day and the moon at night, syncing its colors to whatever your Home Assistant theme is doing. Android and iOS can auto-toggle dark mode based on sunrise and sunset — this is exactly what the card was designed for.                                                                  |
+| **Follow the sun**       | `sun_entity: sun.sun`<br>`theme_entity: sun.sun` | The card switches between light and dark at the real sunrise and sunset, regardless of what your Home Assistant theme is doing. Its colors match the time of day no matter what the rest of your dashboard looks like.                                                                                                   |
+| **Force light or dark**  | `card_color_mode: dark`<br>or `card_color_mode: light`            | Locks the card's colors to one value. The sky still follows `sun_entity`, so you still get the moon and stars at night — only the card's colors are forced.                                                                                                                                                              |
+| **Custom logic**         | `theme_entity: sensor.my_custom_mode`            | `theme_entity` can point at any entity — a template sensor, an `input_boolean`, or anything else. The card switches to its dark look when the state is `dark`, `night`, `evening`, `on`, `true`, or `below_horizon`. Anything else counts as light. Useful for rules like "dark after 9pm" or "dark when it's overcast". |
+
 ### Sun & Moon
 
 The sun and moon share a single position and the card swaps them based on your `sun_entity`. See [Colors](#color-mode) for the full details. The card also automatically generates a dynamic **sunrise and sunset effect** based on the sun's elevation, and **rotates the moon** accurately based on your Home Assistant latitude setting.
@@ -533,6 +546,140 @@ The sun and moon share a single position and the card swaps them based on your `
 | `celestial_alignment` | `string` | `top-left` | Where the sun and moon anchor inside the card. Uses a 9-cell grid (e.g., `top-left`, `center`, `bottom-right`). Also accepts `left`, `right` as shorthand.                                                                                                              |
 | `celestial_x`         | `number` | `0`        | Horizontal offset in pixels from the anchored position.                                                                                                                                                                                                                 |
 | `celestial_y`         | `number` | `0`        | Vertical offset in pixels from the anchored position.                                                                                                                                                                                                                   |
+
+### Custom Images
+
+You can add your own images (such as a house image) to the card. This works in both standalone and immersive modes. See the [Custom House Image](#custom-house-image) tutorial for a step-by-step guide.
+
+| Option            | Type     | Default     | Description                                                                                                                                               |
+| :---------------- | :------- | :---------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `image_day`       | `string` | —           | File path for the daytime image (e.g., `/local/house-day.png`).                                                                                           |
+| `image_night`     | `string` | —           | File path for the nighttime image. Falls back to the day image if left empty.                                                                             |
+| `image_scale`     | `number` | `100`       | Image size as a percentage of the total card height.                                                                                                      |
+| `image_alignment` | `string` | `top-right` | Image placement. Options: `top-left`, `top-center`, `top-right`, `center-left`, `center`, `center-right`, `bottom-left`, `bottom-center`, `bottom-right`. |
+| `image_x`         | `string` | `0`         | Horizontal offset from the selected image alignment. Accepts pixels or CSS values such as `-20` or `10%`.                                                 |
+| `image_y`         | `string` | `0`         | Vertical offset from the selected image alignment. Accepts pixels or CSS values such as `10` or `-5%`.                                                    |
+| `status_entity`   | `string` | —           | Entity to monitor for a status-specific image (for example a door sensor).                                                                                |
+| `status_day`      | `string` | —           | Day image to show while `status_entity` is active, open, or home.                                                                                         |
+| `status_night`    | `string` | —           | Night image to show while `status_entity` is active, open, or home.                                                                                       |
+
+### Embedded Cards
+
+You can embed other Home Assistant cards directly inside this card. This is useful for adding buttons, specific sensors, weather forecasts, graphs and more.
+
+| Option                   | Type     | Default  | Description                                                                                                 |
+| :----------------------- | :------- | :------- | :---------------------------------------------------------------------------------------------------------- |
+| `custom_cards`           | `list`   | —        | A list of cards to display. You can use standard Home Assistant cards or custom ones.                       |
+| `custom_cards_position`  | `string` | _auto_   | Where the embedded cards sit: `top`, `center` or `bottom`, each optionally with `-left`, `-center` or `-right` (for example `bottom-right`). Without it the cards sit at the bottom, on the side opposite the chips. |
+| `custom_cards_css_class` | `string` | —        | Assigns a custom CSS class to the container, making it easy to style with `card_mod`.                       |
+| `custom_width`           | `string` | —        | _Used directly on the nested cards._ Forces a specific width for an individual card (e.g., `100%`, `50px`). |
+| `custom_height`          | `string` | —        | _Used directly on the nested cards._ Forces a specific height for an individual card (e.g., `150px`).       |
+
+**Basic Example:**
+
+```yaml
+custom_cards_position: bottom
+custom_cards:
+  - type: weather-forecast
+    custom_width: 100%
+    entity: weather.your_weather_entity
+```
+
+<a name="css-variables"></a>
+
+### CSS Variables
+
+> Most users won't need these. The options above cover all common use cases. These CSS variables are here for fine-tuning specific details like font sizes, shadows, and spacing, either in your theme or via `card_mod`.
+
+#### Card variables
+
+| Variable                       | Default      | Description                                                                                               |
+| :----------------------------- | :----------- | :-------------------------------------------------------------------------------------------------------- |
+| `--awc-card-border-radius`     | `12px`       | Adjusts the corner radius.                                                                                |
+| `--awc-card-border-width`      | _HA theme_   | Overrides the card's border width. Inherits from the Home Assistant theme by default.                     |
+| `--awc-card-padding`           | `16px`       | Padding space around the text.                                                                            |
+| `--awc-stack-order`            | `-1` / `1`   | Controls the stacking order (z-index) of the card. Defaults to `-1` for immersive and `1` for standalone. |
+| `--awc-custom-cards-direction` | `row`        | Flex direction of the custom cards container.                                                             |
+| `--awc-custom-cards-gap`       | `8px`        | Gap between items in the custom cards container.                                                          |
+| `--awc-custom-cards-justify`   | `flex-start` | Horizontal justification of the custom cards container.                                                   |
+| `--awc-custom-cards-align`     | `flex-start` | Vertical alignment of the custom cards container.                                                         |
+
+#### Text variables
+
+| Variable                   | Default                                    | Description                                                                                       |
+| :------------------------- | :----------------------------------------- | :------------------------------------------------------------------------------------------------ |
+| `--awc-text-day`           | `#2c2c2e`                                  | Text color during the daytime.                                                                    |
+| `--awc-text-night`         | `#FFFFFF`                                  | Text color during the nighttime.                                                                  |
+| `--awc-text-color`         | _auto_                                     | Resolved text color for the current scheme. Overrides both day and night colors at once.          |
+| `--awc-text-shadow-day`    | _soft white glow_                          | Text shadow effect for daytime.                                                                   |
+| `--awc-text-shadow-night`  | _soft dark glow_                           | Text shadow effect for nighttime.                                                                 |
+| `--awc-text-shadow-active` | _auto_                                     | Resolved text shadow for the current scheme. Overrides both day and night shadows at once.        |
+| `--awc-chip-text-shadow`   | `0 1px 2px rgba(0,0,0,0.35)`               | Text shadow applied to the chip name label.                                                       |
+| `--awc-bottom-font-size`   | `clamp(15px, 5cqmin, 26px)`                | Chip text size (dynamically responsive).                                                          |
+| `--awc-bottom-font-weight` | `500`                                      | Chip text weight.                                                                                 |
+| `--awc-bottom-gap`         | `8px`                                      | Gap between chips in the row.                                                                     |
+| `--awc-bottom-opacity`     | `0.7`                                      | Opacity of chips without a background.                                                            |
+| `--awc-chip-name-weight`   | `700`                                      | Font weight of the chip name label.                                                               |
+| `--awc-chip-name-opacity`  | `0.7`                                      | Opacity of the chip name label.                                                                   |
+| `--awc-chip-name-color`    | `inherit`                                  | Color of the chip name label.                                                                     |
+| `--awc-chip-gap`           | `6px`                                      | Gap between the icon and text inside each chip.                                                   |
+| `--awc-chips-padding`      | `0` (`5px 10px` with background)           | Inner padding of each chip.                                                                       |
+| `--awc-row-width`          | `calc(100% - padding)`                     | Width of the chips row. Overrides the `chip_area_width` option.                                   |
+| `--awc-row-height`         | `auto`                                     | Height of the chips row. Overrides the `chip_area_height` option.                                 |
+| `--awc-row-columns`        | `3`                                        | Number of columns when `chip_area_layout: grid` is active.                                        |
+| `--awc-row-fade-l`         | _auto_                                     | Left edge fade width for the scrolling chip row.                                                  |
+| `--awc-row-fade-r`         | _auto_                                     | Right edge fade width for the scrolling chip row.                                                 |
+| `--awc-bottom-bg-color`    | _auto_                                     | Background color when `chip_area_background` is enabled. Defaults to the active background style. |
+| `--awc-bottom-bg-radius`   | _card radius_                              | Border radius for the chip background.                                                            |
+| `--awc-bottom-bg-filter`   | `blur(10px)`                               | Backdrop filter for the chip background (only used by the `frosted` style).                       |
+| `--awc-bg-shadow`          | _auto_                                     | Overrides the shadow used by `frosted` and `contrast` chip backgrounds.                           |
+| `--awc-bg-border`          | `1px solid …`                              | Overrides the border used by the `frosted` background style.                                      |
+| `--awc-icon-size`          | `1.1em`                                    | Size of the chip icon.                                                                            |
+| `--awc-icon-drop-shadow`   | `drop-shadow(0px 3px 6px rgba(0,0,0,0.3))` | Drop shadow filter applied to custom image icons set via `icon_path`.                             |
+| `--awc-marquee-duration`   | `20s`                                      | Animation duration for the marquee overflow mode. Longer = slower.                                |
+| `--awc-marquee-fade`       | `12px`                                     | Edge fade width on either side of a marquee chip.                                                 |
+| `--awc-marquee-separator`  | `"•"`                                      | Character inserted between marquee repetitions.                                                   |
+| `--awc-marquee-sep-gap`    | `0.4em`                                    | Padding around the marquee separator character.                                                   |
+
+#### Stacked and vertical chip variables
+
+These variables only apply when `chip_style` is set to `stacked` or `vertical`.
+
+| Variable                      | Default   | Description                                                                                 |
+| :---------------------------- | :-------- | :------------------------------------------------------------------------------------------ |
+| `--awc-stacked-icon-bg`       | _auto_    | Background color of the icon area in stacked/vertical chips.                                |
+| `--awc-stacked-icon-radius`   | _auto_    | Border radius of the icon area.                                                             |
+| `--awc-stacked-icon-inset`    | `3px`     | Inset used to calculate the icon area's border radius relative to the chip's border radius. |
+| `--awc-stacked-name-size`     | `0.85em`  | Font size of the name label in stacked/vertical chips.                                      |
+| `--awc-stacked-name-weight`   | `500`     | Font weight of the name label in stacked/vertical chips.                                    |
+| `--awc-stacked-name-tracking` | `0.03em`  | Letter spacing of the name label in stacked/vertical chips.                                 |
+| `--awc-stacked-name-opacity`  | `0.6`     | Opacity of the name label in stacked/vertical chips.                                        |
+| `--awc-stacked-name-color`    | `inherit` | Color of the name label in stacked/vertical chips.                                          |
+| `--awc-stacked-value-weight`  | `700`     | Font weight of the value in stacked/vertical chips.                                         |
+| `--awc-stacked-column-gap`    | `10px`    | Horizontal gap between the icon and text columns in stacked chips.                          |
+| `--awc-stacked-row-gap`       | `4px`     | Vertical gap between the name and value rows in stacked/vertical chips.                     |
+| `--awc-vertical-icon-gap`     | `6px`     | Bottom margin of the icon in vertical chips.                                                |
+
+#### Card mod example
+
+This example shows how you can apply styles to the card using `card_mod`.
+
+```yaml
+type: custom:atmo-weather-card
+weather_entity: weather.your_weather_entity
+card_mod:
+  style: |
+    :host {
+      --awc-text-day: #ffffff;
+      --awc-text-night: #ffffff;
+      --awc-text-shadow-day: 0 1px 2px rgba(0, 0, 0, 0.15);
+      --awc-text-shadow-night: 0 1px 2px rgba(0, 0, 0, 0.8);
+    }
+```
+
+## Chips
+
+Chips show values on the card: any entity or attribute, forecasts, rings and bars. This page lists every chip option and then walks through common setups.
 
 <a name="chip-editor-structure"></a>
 
@@ -692,143 +839,11 @@ Setting `type` to `ring` or `bar` turns a chip into a circular or linear gauge i
 | `gauge_entity`                               | `string` | —               | Optional secondary entity that drives the gauge fill, independent of the chip's main `entity`/`attribute`.                                                                 |
 | `gauge_attribute`                            | `string` | —               | Reads a specific attribute from `gauge_entity` instead of its state.                                                                                                       |
 
-### Custom Images
-
-You can add your own images (such as a house image) to the card. This works in both standalone and immersive modes. See the [Custom House Image](#custom-house-image) tutorial for a step-by-step guide.
-
-| Option            | Type     | Default     | Description                                                                                                                                               |
-| :---------------- | :------- | :---------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `image_day`       | `string` | —           | File path for the daytime image (e.g., `/local/house-day.png`).                                                                                           |
-| `image_night`     | `string` | —           | File path for the nighttime image. Falls back to the day image if left empty.                                                                             |
-| `image_scale`     | `number` | `100`       | Image size as a percentage of the total card height.                                                                                                      |
-| `image_alignment` | `string` | `top-right` | Image placement. Options: `top-left`, `top-center`, `top-right`, `center-left`, `center`, `center-right`, `bottom-left`, `bottom-center`, `bottom-right`. |
-| `image_x`         | `string` | `0`         | Horizontal offset from the selected image alignment. Accepts pixels or CSS values such as `-20` or `10%`.                                                 |
-| `image_y`         | `string` | `0`         | Vertical offset from the selected image alignment. Accepts pixels or CSS values such as `10` or `-5%`.                                                    |
-| `status_entity`   | `string` | —           | Entity to monitor for a status-specific image (for example a door sensor).                                                                                |
-| `status_day`      | `string` | —           | Day image to show while `status_entity` is active, open, or home.                                                                                         |
-| `status_night`    | `string` | —           | Night image to show while `status_entity` is active, open, or home.                                                                                       |
-
-### Embedded Cards
-
-You can embed other Home Assistant cards directly inside this card. This is useful for adding buttons, specific sensors, weather forecasts, graphs and more.
-
-| Option                   | Type     | Default  | Description                                                                                                 |
-| :----------------------- | :------- | :------- | :---------------------------------------------------------------------------------------------------------- |
-| `custom_cards`           | `list`   | —        | A list of cards to display. You can use standard Home Assistant cards or custom ones.                       |
-| `custom_cards_position`  | `string` | _auto_   | Where the embedded cards sit: `top`, `center` or `bottom`, each optionally with `-left`, `-center` or `-right` (for example `bottom-right`). Without it the cards sit at the bottom, on the side opposite the chips. |
-| `custom_cards_css_class` | `string` | —        | Assigns a custom CSS class to the container, making it easy to style with `card_mod`.                       |
-| `custom_width`           | `string` | —        | _Used directly on the nested cards._ Forces a specific width for an individual card (e.g., `100%`, `50px`). |
-| `custom_height`          | `string` | —        | _Used directly on the nested cards._ Forces a specific height for an individual card (e.g., `150px`).       |
-
-**Basic Example:**
-
-```yaml
-custom_cards_position: bottom
-custom_cards:
-  - type: weather-forecast
-    custom_width: 100%
-    entity: weather.your_weather_entity
-```
-
-<a name="css-variables"></a>
-
-### CSS Variables
-
-> Most users won't need these. The options above cover all common use cases. These CSS variables are here for fine-tuning specific details like font sizes, shadows, and spacing, either in your theme or via `card_mod`.
-
-#### Card variables
-
-| Variable                       | Default      | Description                                                                                               |
-| :----------------------------- | :----------- | :-------------------------------------------------------------------------------------------------------- |
-| `--awc-card-border-radius`     | `12px`       | Adjusts the corner radius.                                                                                |
-| `--awc-card-border-width`      | _HA theme_   | Overrides the card's border width. Inherits from the Home Assistant theme by default.                     |
-| `--awc-card-padding`           | `16px`       | Padding space around the text.                                                                            |
-| `--awc-stack-order`            | `-1` / `1`   | Controls the stacking order (z-index) of the card. Defaults to `-1` for immersive and `1` for standalone. |
-| `--awc-custom-cards-direction` | `row`        | Flex direction of the custom cards container.                                                             |
-| `--awc-custom-cards-gap`       | `8px`        | Gap between items in the custom cards container.                                                          |
-| `--awc-custom-cards-justify`   | `flex-start` | Horizontal justification of the custom cards container.                                                   |
-| `--awc-custom-cards-align`     | `flex-start` | Vertical alignment of the custom cards container.                                                         |
-
-#### Text variables
-
-| Variable                   | Default                                    | Description                                                                                       |
-| :------------------------- | :----------------------------------------- | :------------------------------------------------------------------------------------------------ |
-| `--awc-text-day`           | `#2c2c2e`                                  | Text color during the daytime.                                                                    |
-| `--awc-text-night`         | `#FFFFFF`                                  | Text color during the nighttime.                                                                  |
-| `--awc-text-color`         | _auto_                                     | Resolved text color for the current scheme. Overrides both day and night colors at once.          |
-| `--awc-text-shadow-day`    | _soft white glow_                          | Text shadow effect for daytime.                                                                   |
-| `--awc-text-shadow-night`  | _soft dark glow_                           | Text shadow effect for nighttime.                                                                 |
-| `--awc-text-shadow-active` | _auto_                                     | Resolved text shadow for the current scheme. Overrides both day and night shadows at once.        |
-| `--awc-chip-text-shadow`   | `0 1px 2px rgba(0,0,0,0.35)`               | Text shadow applied to the chip name label.                                                       |
-| `--awc-bottom-font-size`   | `clamp(15px, 5cqmin, 26px)`                | Chip text size (dynamically responsive).                                                          |
-| `--awc-bottom-font-weight` | `500`                                      | Chip text weight.                                                                                 |
-| `--awc-bottom-gap`         | `8px`                                      | Gap between chips in the row.                                                                     |
-| `--awc-bottom-opacity`     | `0.7`                                      | Opacity of chips without a background.                                                            |
-| `--awc-chip-name-weight`   | `700`                                      | Font weight of the chip name label.                                                               |
-| `--awc-chip-name-opacity`  | `0.7`                                      | Opacity of the chip name label.                                                                   |
-| `--awc-chip-name-color`    | `inherit`                                  | Color of the chip name label.                                                                     |
-| `--awc-chip-gap`           | `6px`                                      | Gap between the icon and text inside each chip.                                                   |
-| `--awc-chips-padding`      | `0` (`5px 10px` with background)           | Inner padding of each chip.                                                                       |
-| `--awc-row-width`          | `calc(100% - padding)`                     | Width of the chips row. Overrides the `chip_area_width` option.                                   |
-| `--awc-row-height`         | `auto`                                     | Height of the chips row. Overrides the `chip_area_height` option.                                 |
-| `--awc-row-columns`        | `3`                                        | Number of columns when `chip_area_layout: grid` is active.                                        |
-| `--awc-row-fade-l`         | _auto_                                     | Left edge fade width for the scrolling chip row.                                                  |
-| `--awc-row-fade-r`         | _auto_                                     | Right edge fade width for the scrolling chip row.                                                 |
-| `--awc-bottom-bg-color`    | _auto_                                     | Background color when `chip_area_background` is enabled. Defaults to the active background style. |
-| `--awc-bottom-bg-radius`   | _card radius_                              | Border radius for the chip background.                                                            |
-| `--awc-bottom-bg-filter`   | `blur(10px)`                               | Backdrop filter for the chip background (only used by the `frosted` style).                       |
-| `--awc-bg-shadow`          | _auto_                                     | Overrides the shadow used by `frosted` and `contrast` chip backgrounds.                           |
-| `--awc-bg-border`          | `1px solid …`                              | Overrides the border used by the `frosted` background style.                                      |
-| `--awc-icon-size`          | `1.1em`                                    | Size of the chip icon.                                                                            |
-| `--awc-icon-drop-shadow`   | `drop-shadow(0px 3px 6px rgba(0,0,0,0.3))` | Drop shadow filter applied to custom image icons set via `icon_path`.                             |
-| `--awc-marquee-duration`   | `20s`                                      | Animation duration for the marquee overflow mode. Longer = slower.                                |
-| `--awc-marquee-fade`       | `12px`                                     | Edge fade width on either side of a marquee chip.                                                 |
-| `--awc-marquee-separator`  | `"•"`                                      | Character inserted between marquee repetitions.                                                   |
-| `--awc-marquee-sep-gap`    | `0.4em`                                    | Padding around the marquee separator character.                                                   |
-
-#### Stacked and vertical chip variables
-
-These variables only apply when `chip_style` is set to `stacked` or `vertical`.
-
-| Variable                      | Default   | Description                                                                                 |
-| :---------------------------- | :-------- | :------------------------------------------------------------------------------------------ |
-| `--awc-stacked-icon-bg`       | _auto_    | Background color of the icon area in stacked/vertical chips.                                |
-| `--awc-stacked-icon-radius`   | _auto_    | Border radius of the icon area.                                                             |
-| `--awc-stacked-icon-inset`    | `3px`     | Inset used to calculate the icon area's border radius relative to the chip's border radius. |
-| `--awc-stacked-name-size`     | `0.85em`  | Font size of the name label in stacked/vertical chips.                                      |
-| `--awc-stacked-name-weight`   | `500`     | Font weight of the name label in stacked/vertical chips.                                    |
-| `--awc-stacked-name-tracking` | `0.03em`  | Letter spacing of the name label in stacked/vertical chips.                                 |
-| `--awc-stacked-name-opacity`  | `0.6`     | Opacity of the name label in stacked/vertical chips.                                        |
-| `--awc-stacked-name-color`    | `inherit` | Color of the name label in stacked/vertical chips.                                          |
-| `--awc-stacked-value-weight`  | `700`     | Font weight of the value in stacked/vertical chips.                                         |
-| `--awc-stacked-column-gap`    | `10px`    | Horizontal gap between the icon and text columns in stacked chips.                          |
-| `--awc-stacked-row-gap`       | `4px`     | Vertical gap between the name and value rows in stacked/vertical chips.                     |
-| `--awc-vertical-icon-gap`     | `6px`     | Bottom margin of the icon in vertical chips.                                                |
-
-#### Card mod example
-
-This example shows how you can apply styles to the card using `card_mod`.
-
-```yaml
-type: custom:atmo-weather-card
-weather_entity: weather.your_weather_entity
-card_mod:
-  style: |
-    :host {
-      --awc-text-day: #ffffff;
-      --awc-text-night: #ffffff;
-      --awc-text-shadow-day: 0 1px 2px rgba(0, 0, 0, 0.15);
-      --awc-text-shadow-night: 0 1px 2px rgba(0, 0, 0, 0.8);
-    }
-```
-
-## Guides
-
 <a name="chips"></a>
 
 ### Chips & Forecasts
 
-Chips are basically buttons you can optionally add to the card. You can add as many as you like and show live info, like current weather conditions or data from any Home Assistant entity, but also weather forecasts. You can leave them grouped in a row and make them all look the same (useful for building a daily forecast), or you can style and position each one individually. Full option references (Row options, Per-chip options, Per-chip style overrides, Ring & Bar gauge options) live in the [Appearance](#appearance) section — the walkthroughs below only cover the "how" with examples.
+Chips are basically buttons you can optionally add to the card. You can add as many as you like and show live info, like current weather conditions or data from any Home Assistant entity, but also weather forecasts. You can leave them grouped in a row and make them all look the same (useful for building a daily forecast), or you can style and position each one individually. The option references are above; the walkthroughs below cover the "how" with examples.
 
 Start with a simple chip row:
 
@@ -952,71 +967,6 @@ chips:
 
 Full option reference (including the `bar` equivalents and `gauge_entity`/`gauge_attribute`) is under **Ring & Bar gauge options** in [Appearance](#appearance).
 
-<a name="layout-layering"></a>
-
-### Layout & Layering
-
-Use `standalone` when the card should have its own background. Use `immersive` when it should visually blend with neighboring cards or sit behind other dashboard content.
-
-For layered layouts, position the sun or moon with its alignment and offsets, then detach individual chips from the row with `position: custom`. Use `card_offset` only when cards need to overlap, and increase `card_stack_order` in small steps when the card needs to render above another card.
-
-```yaml
-type: custom:atmo-weather-card
-weather_entity: weather.your_weather_entity
-sun_entity: sun.sun
-card_style: immersive
-card_stack_order: 1
-celestial_alignment: top-right
-celestial_x: 16
-celestial_y: 12
-chips:
-  - entity: weather.your_weather_entity
-    attribute: temperature
-    position: custom
-    position_anchor: top-left
-    position_x: 16px
-    position_y: 16px
-    hide_icon: true
-    hide_label: true
-    background: false
-```
-
-`custom_cards` can be placed in the same card for graphs, buttons, or other Lovelace cards. If elements overlap, adjust one property at a time: first `card_stack_order`, then `card_offset`, then the position of individual chips or embedded cards. Full option details are in [Appearance](#appearance).
-
-<a name="weather-icons"></a>
-
-### Weather Icons
-
-You can replace the default MDI icons inside a chip with your own animated SVG files. The examples use [these](https://github.com/basmilius/weather-icons).
-
-1. Download the SVG icons and name them after the weather conditions (such as `sunny.svg` or `rainy.svg`). The names for the states are standardized; you can find the possible weather states in the official [HA documentation](https://www.home-assistant.io/integrations/weather/#condition-mapping).
-2. Put the files into a folder like `config/www/weather-icons/`.
-3. In your chip config, set `icon` to `weather` and add the folder path to `icon_path`:
-
-```yaml
-chips:
-  - entity: weather.your_weather_entity
-    icon: weather
-    icon_path: /local/weather-icons/
-```
-
-The card then resolves the icon by the current weather state. For example, `rainy` weather loads `/local/weather-icons/rainy.svg`.
-
-<a name="custom-house-image"></a>
-
-### Custom House Image
-
-This explains how to create an image for your own home and use it in the card.
-
-1. **Take a reference photo** from a corner angle to properly capture the depth of the house.
-2. **Generate a 3D model** using an AI image tool. Use a prompt similar to:
-   > _Isometric view of a modern minimalist architectural model section from the outside on solid white background. [Describe your floors/rooms]. Materials are matte white and light only. No complex textures, studio lighting, very clean, simplified shapes._
-3. **Remove the background** with an online tool or image editor and save the resulting image as a transparent PNG.
-4. **Create day and night variants** by adjusting the prompt appropriately.
-5. **Upload the files** to your `config/www/images/` directory and reference them in the card config as `/local/images/my-house-day.png`.
-
-<a name="weather-data"></a>
-
 ## Weather Data & Sky Light
 
 The card reads optional attributes of your weather entity and uses them to make each scene match the real sky. Every attribute is optional: if your weather integration does not provide one, the card looks exactly as it does without it. Nothing needs to be configured.
@@ -1051,19 +1001,6 @@ effect_ground_mist: false
 ```
 
 Shooting stars and comets have their own switches, see **Night sky** in [Performance](#performance).
-
-## Color Mode
-
-The card's appearance depends on your **`sun_entity`** (sun or moon) and your **`card_color_mode`** (light or dark).
-
-### How to set this up
-
-| Mode                     | Config                                                                        | What it does                                                                                                                                                                                                                                                                                                             |
-| :----------------------- | :---------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Follow your HA theme** | `sun_entity: sun.sun`                                                         | The card shows the sun during the day and the moon at night, syncing its colors to whatever your Home Assistant theme is doing. Android and iOS can auto-toggle dark mode based on sunrise and sunset — this is exactly what the card was designed for.                                                                  |
-| **Follow the sun**       | `sun_entity: sun.sun`<br>`theme_entity: sun.sun` | The card switches between light and dark at the real sunrise and sunset, regardless of what your Home Assistant theme is doing. Its colors match the time of day no matter what the rest of your dashboard looks like.                                                                                                   |
-| **Force light or dark**  | `card_color_mode: dark`<br>or `card_color_mode: light`            | Locks the card's colors to one value. The sky still follows `sun_entity`, so you still get the moon and stars at night — only the card's colors are forced.                                                                                                                                                              |
-| **Custom logic**         | `theme_entity: sensor.my_custom_mode`            | `theme_entity` can point at any entity — a template sensor, an `input_boolean`, or anything else. The card switches to its dark look when the state is `dark`, `night`, `evening`, `on`, `true`, or `below_horizon`. Anything else counts as light. Useful for rules like "dark after 9pm" or "dark when it's overcast". |
 
 ## Performance
 
@@ -1124,7 +1061,7 @@ An optional compass shows where the wind comes from. It is off by default. Pick 
 | Option                  | Type     | Default | Description |
 | :---------------------- | :------- | :------ | :---------- |
 | `wind_compass`          | `string` | `off`   | `arrow` a wind arrow, `rose` a small compass rose, `pill` a compass chip with a frosted background, `band` a compass band like a heading display, `vane` a wind vane. `off` hides the compass. |
-| `wind_compass_position` | `string` | `auto`  | `top-left`, `top-center`, `top-right`, `bottom-left`, `bottom-center` or `bottom-right`. `auto` uses the usual place of each style: arrow bottom left, rose and vane bottom right, chip top right, band bottom center. |
+| `wind_compass_position` | `string` | `auto`  | `top-left`, `top-center`, `top-right`, `bottom-left`, `bottom-center` or `bottom-right`. `auto` uses the usual place of each style: arrow bottom left, rose and vane bottom right, chip top right, band bottom center. When chips already sit in that corner, `auto` moves the compass to the other edge on the same side, or else to the other side. |
 
 The six places, here with the rose:
 
@@ -1141,7 +1078,7 @@ The text next to the compass is built from three switches. The compass point is 
 | `wind_compass_speed`      | `boolean` | `false` | Shows the wind speed, for example `25 km/h`. |
 | `wind_compass_background` | `boolean` | `false` | Puts a frosted box behind the compass, so it stays readable on a pale or busy sky. The chip always has one. |
 
-```yaml
+```yaml scene=windy
 type: custom:atmo-weather-card
 weather_entity: weather.home
 wind_compass: rose
@@ -1154,7 +1091,7 @@ Chips can show the compass point too: set [`bearing_format`](#per-chip-options) 
 
 <p align="center"><img src="images/chip-bearing-format.webp" alt="bearing_format degrees, cardinal and both on a wind direction chip" width="560" /></p>
 
-```yaml
+```yaml scene=windy
 chips:
   - entity: weather.home
     attribute: wind_bearing
@@ -1174,7 +1111,7 @@ Shooting stars and comets appear on clear nights only; rain, snow, thunderstorms
 | `comet_rate`            | `number`  | `1`      | How often comets appear. Range `0.25` to `3`. `1` is about one a minute on Ultra. |
 | `star_animation_speed`  | `number`  | _preset_ | Star twinkle speed. Range `0` to `2`, applied on top of `animation_speed`. `0` stops twinkling; every preset uses `0.5`, so `1.0` twinkles twice as fast. |
 
-```yaml
+```yaml scene=night
 type: custom:atmo-weather-card
 weather_entity: weather.your_weather_entity
 shooting_star_rate: 2 # twice as many shooting stars
@@ -1225,6 +1162,99 @@ animation_speed: 1.0 # All motion (0.0-3.0)
 bird_animation_speed: 1.4 # Birds only; multiplied on top of animation_speed
 star_animation_speed: 0.6 # Stars only; twinkle speed (0.0-2.0)
 ```
+
+## Guides
+
+<a name="layout-layering"></a>
+
+### Layout & Layering
+
+Use `standalone` when the card should have its own background. Use `immersive` when it should visually blend with neighboring cards or sit behind other dashboard content.
+
+For layered layouts, position the sun or moon with its alignment and offsets, then detach individual chips from the row with `position: custom`. Use `card_offset` only when cards need to overlap, and increase `card_stack_order` in small steps when the card needs to render above another card.
+
+```yaml
+type: custom:atmo-weather-card
+weather_entity: weather.your_weather_entity
+sun_entity: sun.sun
+card_style: immersive
+card_stack_order: 1
+celestial_alignment: top-right
+celestial_x: 16
+celestial_y: 12
+chips:
+  - entity: weather.your_weather_entity
+    attribute: temperature
+    position: custom
+    position_anchor: top-left
+    position_x: 16px
+    position_y: 16px
+    hide_icon: true
+    hide_label: true
+    background: false
+```
+
+Press **Show live** on an immersive example and the live card sits in a small dashboard, so you can see how it blends in.
+
+**Overlapping cards:** a negative `card_offset` pulls the card up so its sky reaches behind the card above, and `card_stack_order: -1` keeps it behind that card.
+
+```yaml
+type: custom:atmo-weather-card
+weather_entity: weather.your_weather_entity
+sun_entity: sun.sun
+card_style: immersive
+card_offset: "-36px 0px 0px 0px"
+card_stack_order: -1
+celestial_alignment: top-right
+celestial_x: 16
+celestial_y: 44
+chips:
+  - entity: weather.your_weather_entity
+    attribute: temperature
+    position: custom
+    position_anchor: top-left
+    position_x: 16px
+    position_y: 48px
+    hide_icon: true
+    hide_label: true
+    background: false
+```
+
+`custom_cards` can be placed in the same card for graphs, buttons, or other Lovelace cards. If elements overlap, adjust one property at a time: first `card_stack_order`, then `card_offset`, then the position of individual chips or embedded cards. Full option details are in [Appearance](#appearance).
+
+<a name="weather-icons"></a>
+
+### Weather Icons
+
+You can replace the default MDI icons inside a chip with your own animated SVG files. The examples use [these](https://github.com/basmilius/weather-icons).
+
+1. Download the SVG icons and name them after the weather conditions (such as `sunny.svg` or `rainy.svg`). The names for the states are standardized; you can find the possible weather states in the official [HA documentation](https://www.home-assistant.io/integrations/weather/#condition-mapping).
+2. Put the files into a folder like `config/www/weather-icons/`.
+3. In your chip config, set `icon` to `weather` and add the folder path to `icon_path`:
+
+```yaml
+chips:
+  - entity: weather.your_weather_entity
+    icon: weather
+    icon_path: /local/weather-icons/
+```
+
+The card then resolves the icon by the current weather state. For example, `rainy` weather loads `/local/weather-icons/rainy.svg`.
+
+<a name="custom-house-image"></a>
+
+### Custom House Image
+
+This explains how to create an image for your own home and use it in the card.
+
+1. **Take a reference photo** from a corner angle to properly capture the depth of the house.
+2. **Generate a 3D model** using an AI image tool. Use a prompt similar to:
+   > _Isometric view of a modern minimalist architectural model section from the outside on solid white background. [Describe your floors/rooms]. Materials are matte white and light only. No complex textures, studio lighting, very clean, simplified shapes._
+3. **Remove the background** with an online tool or image editor and save the resulting image as a transparent PNG.
+4. **Create day and night variants** by adjusting the prompt appropriately.
+5. **Upload the files** to your `config/www/images/` directory and reference them in the card config as `/local/images/my-house-day.png`.
+
+<a name="weather-data"></a>
 
 ## Troubleshooting
 

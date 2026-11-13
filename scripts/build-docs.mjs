@@ -1,21 +1,28 @@
-// Builds the documentation page docs/index.html from docs-src/documentation.md.
+// Builds the GitHub Pages site from docs-src/:
+// - docs/index.html, the landing page (docs-src/landing.html)
+// - docs/docs/<page>.html, one documentation page per level 2 heading of
+//   docs-src/documentation.md, plus docs/docs/index.html as an overview.
 // Every YAML example that configures the card gets a "Show live" button that
 // loads it into the real card on the page. The build fails on a broken link
-// or an example that is no valid YAML.
-import { readFile, readdir, writeFile } from "node:fs/promises";
+// or an example that is no valid YAML. Links between pages are rewritten, and
+// the landing page sends old links (index.html#wind) to the right page.
+import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { marked } from "marked";
 import YAML from "yaml";
 import * as mdi from "@mdi/js";
 
 const README = "https://github.com/whyisthisbroken/atmo-weather-card";
 
-// Navigation groups, by level 2 heading.
-const GROUPS = [
-  ["Getting started", ["Setup", "Examples"]],
-  ["Customization", ["Appearance"]],
-  ["Guides", ["Guides"]],
-  ["Reference", ["Weather Data & Sky Light", "Color Mode", "Performance"]],
-  ["Help", ["Troubleshooting"]],
+// One page per level 2 heading, in this order, grouped in the navigation.
+export const PAGES = [
+  { file: "setup", heading: "Setup", label: "Getting started", group: "Start", blurb: "Entities, the first card and where the options live." },
+  { file: "examples", heading: "Examples", label: "Examples", group: "Start", blurb: "Complete cards to copy, each one runs live." },
+  { file: "appearance", heading: "Appearance", label: "Appearance", group: "Customize", blurb: "Card style, colors, sun and moon, images and embedded cards." },
+  { file: "chips", heading: "Chips", label: "Chips & forecasts", group: "Customize", blurb: "Values, forecasts, rings and bars, in a row or anywhere." },
+  { file: "weather-data", heading: "Weather Data & Sky Light", label: "Weather data & sky light", group: "Sky & effects", blurb: "How cloud cover, rain, haze and mist shape the sky." },
+  { file: "effects", heading: "Performance", label: "Effects & performance", group: "Sky & effects", blurb: "Presets, wind and compass, night sky, birds and planes." },
+  { file: "guides", heading: "Guides", label: "Guides", group: "Help", blurb: "Layering, weather icons and your own house picture." },
+  { file: "troubleshooting", heading: "Troubleshooting", label: "Troubleshooting", group: "Help", blurb: "When something looks wrong after an install or update." },
 ];
 
 // Demo entities: the placeholder names of the examples run on demo data.
@@ -79,16 +86,45 @@ function liveConfig(obj, entities) {
   };
   const cfg = walk(obj);
   delete cfg.type;
+  // Other cards cannot run here; the page draws a small stand-in from their config.
   if (Array.isArray(cfg.custom_cards))
-    cfg.custom_cards = cfg.custom_cards.map((c) => ({
-      type: "placeholder",
-      label: c.type,
-      custom_width: c.custom_width,
-    }));
+    cfg.custom_cards = cfg.custom_cards.map((c) => ({ ...c, type: "placeholder", label: c.type }));
+  // card_mod: the page applies the CSS variables of the :host block to the live card.
+  const mod = obj.card_mod && typeof obj.card_mod.style === "string" && /:host\s*\{([^}]*)\}/.exec(obj.card_mod.style);
+  if (mod) cfg._host_style = mod[1].trim();
   return cfg;
 }
 
-export async function buildDocs({ version, source, template, srcDir }) {
+// The MDI icons a page may need: the ones the docs and the card use, plus the weather states.
+async function iconSet(text, srcDir, extra = []) {
+  const names = new Set([...text.matchAll(/mdi:([a-z0-9-]+)/g)].map((m) => m[1]));
+  for (const file of await readdir(srcDir))
+    for (const m of (await readFile(`${srcDir}/${file}`, "utf8")).matchAll(/mdi:([a-z0-9-]+)/g)) names.add(m[1]);
+  for (const n of [
+    "weather-sunny", "weather-night", "weather-partly-cloudy", "weather-cloudy", "weather-rainy",
+    "weather-pouring", "weather-lightning-rainy", "weather-lightning", "weather-snowy", "weather-snowy-rainy",
+    "weather-hail", "weather-fog", "weather-windy", "weather-windy-variant", "thermometer", "water-percent",
+    "help-circle-outline", ...extra,
+  ])
+    names.add(n);
+  const icons = {};
+  for (const n of [...names].sort()) {
+    const key = "mdi" + n.split("-").map((p) => p[0].toUpperCase() + p.slice(1)).join("");
+    if (mdi[key]) icons[n] = mdi[key];
+  }
+  return icons;
+}
+
+// Fills {{KEY}} placeholders; LF everywhere, so Windows and the CI build the same page.
+function fill(template, values) {
+  return template.replace(/\r\n/g, "\n").replace(/\{\{(\w+)\}\}/g, (all, key) => {
+    if (!(key in values)) throw new Error(`Unknown placeholder ${all}`);
+    return values[key];
+  });
+}
+
+// Renders the documentation into one HTML fragment per page.
+export async function renderDocs({ source }) {
   const md = source.replace(/\r\n/g, "\n").replace(/<!--[\s\S]*?-->\n*/g, "");
   const entities = new Set();
   const ids = new Map();
@@ -102,10 +138,13 @@ export async function buildDocs({ version, source, template, srcDir }) {
     const n = ids.get(id) || 0;
     ids.set(id, n + 1);
     if (n) id = `${id}-${n}`;
-    if (level <= 3 && toc) toc.push({ level, id, text: text.replace(/<[^>]+>/g, "") });
+    if (level === 3 && toc) toc.push({ level, id, text: text.replace(/<[^>]+>/g, "") });
     return `<h${level} id="${id}"><a class="anchor" href="#${id}" aria-hidden="true">#</a>${text}</h${level}>\n`;
   };
-  renderer.code = (code, lang) => {
+  // A fence can name the scene its example needs, like "yaml scene=night" (GitHub only reads the first word).
+  renderer.code = (code, info) => {
+    const [lang, ...opts] = String(info || "").split(/\s+/);
+    const scene = (opts.find((o) => o.startsWith("scene=")) || "").slice(6);
     let live = "";
     if (lang === "yaml") {
       let parsed;
@@ -117,7 +156,7 @@ export async function buildDocs({ version, source, template, srcDir }) {
       const cfg = liveConfig(parsed, entities);
       if (cfg) {
         examples++;
-        live = `<button type="button" class="try" data-example="${escapeAttr(JSON.stringify(cfg))}">Show live</button>`;
+        live = `<button type="button" class="try"${scene ? ` data-scene="${escapeAttr(scene)}"` : ""} data-example="${escapeAttr(JSON.stringify(cfg))}">Show live</button>`;
       }
     }
     return `<div class="code"><div class="code-bar"><span>${escapeHtml(lang || "text")}</span><span class="code-actions">${live}<button type="button" class="copy">Copy</button></span></div><pre><code>${escapeHtml(code)}</code></pre></div>`;
@@ -145,96 +184,161 @@ export async function buildDocs({ version, source, template, srcDir }) {
     }
     if (current) current.push(line);
   }
-  const grouped = GROUPS.flatMap(([, titles]) => titles);
   for (const title of sections.keys())
-    if (!grouped.includes(title)) throw new Error(`Section "${title}" is in no navigation group`);
+    if (!PAGES.some((p) => p.heading === title)) throw new Error(`Section "${title}" is in no navigation group`);
 
-  let content = "";
-  const nav = [];
-  for (const [group, titles] of GROUPS) {
-    const items = [];
-    for (const title of titles) {
-      if (!sections.has(title)) throw new Error(`Missing section "${title}"`);
-      toc = [];
-      content += `<section class="doc-section">${marked.parse(alerts(sections.get(title).join("\n")), { gfm: true, renderer })}</section>\n`;
-      items.push(...toc);
-    }
-    nav.push(
-      `<div class="nav-group"><div class="nav-title">${group}</div>${items
-        .map((h) => `<a class="nav-l${h.level}" href="#${h.id}">${h.text}</a>`)
-        .join("")}</div>`,
-    );
-  }
-  // Old README anchors (<a name="...">) keep working on this page.
-  // Skip the ones a heading already carries.
-  content = content.replace(/<a name="([^"]+)"><\/a>\n?/g, (all, name) =>
-    ids.has(name) ? "" : `<span id="${name}"></span>`,
-  );
-  // Column titles go onto every cell, so narrow screens can show a table row as a labeled block.
-  content = content.replace(/<table>[\s\S]*?<\/table>/g, (table) => {
-    const labels = [...table.matchAll(/<th[^>]*>([\s\S]*?)<\/th>/g)].map((m) => m[1].replace(/<[^>]+>/g, "").trim().replace(/"/g, "&quot;"));
-    return table.replace(/<tr>([\s\S]*?)<\/tr>/g, (row, cells) => {
-      let i = 0;
-      return `<tr>${cells.replace(/<td(?=[\s>])/g, () => `<td data-label="${labels[i++] ?? ""}"`)}</tr>`;
+  const pages = [];
+  for (const page of PAGES) {
+    if (!sections.has(page.heading)) throw new Error(`Missing section "${page.heading}"`);
+    toc = [];
+    let html = marked.parse(alerts(sections.get(page.heading).join("\n")), { gfm: true, renderer });
+    // Column titles go onto every cell, so narrow screens can show a table row as a labeled block.
+    html = html.replace(/<table>[\s\S]*?<\/table>/g, (table) => {
+      const labels = [...table.matchAll(/<th[^>]*>([\s\S]*?)<\/th>/g)].map((m) => m[1].replace(/<[^>]+>/g, "").trim().replace(/"/g, "&quot;"));
+      const rows = table.replace(/<tr>([\s\S]*?)<\/tr>/g, (row, cells) => {
+        let i = 0;
+        return `<tr>${cells.replace(/<td(?=[\s>])/g, () => `<td data-label="${labels[i++] ?? ""}"`)}</tr>`;
+      });
+      return `<div class="table">${rows}</div>`;
     });
-  });
-  const allIds = [...content.matchAll(/ id="([^"]+)"/g)].map((m) => m[1]);
-  const twice = allIds.filter((id, i) => allIds.indexOf(id) !== i);
-  if (twice.length) throw new Error(`Duplicate ids in the documentation: ${twice.join(", ")}`);
-
-  // Every link inside the page must find its target.
-  const pageIds = new Set([...content.matchAll(/ id="([^"]+)"/g)].map((m) => m[1]));
-  const broken = [...new Set([...content.matchAll(/href="#([^"]*)"/g)].map((m) => m[1]))].filter(
-    (id) => !pageIds.has(id),
-  );
-  if (broken.length) throw new Error(`Broken links in the documentation: #${broken.join(", #")}`);
-
-  // Icons: the ones the documentation and the card use, plus the weather states.
-  const names = new Set([...md.matchAll(/mdi:([a-z0-9-]+)/g)].map((m) => m[1]));
-  for (const file of await readdir(srcDir))
-    for (const m of (await readFile(`${srcDir}/${file}`, "utf8")).matchAll(/mdi:([a-z0-9-]+)/g)) names.add(m[1]);
-  for (const n of [
-    "weather-sunny", "weather-night", "weather-partly-cloudy", "weather-cloudy", "weather-rainy",
-    "weather-pouring", "weather-lightning-rainy", "weather-lightning", "weather-snowy", "weather-snowy-rainy",
-    "weather-hail", "weather-fog", "weather-windy", "weather-windy-variant", "thermometer", "water-percent",
-    "help-circle-outline",
-  ])
-    names.add(n);
-  const icons = {};
-  for (const n of [...names].sort()) {
-    const key = "mdi" + n.split("-").map((p) => p[0].toUpperCase() + p.slice(1)).join("");
-    if (mdi[key]) icons[n] = mdi[key];
+    pages.push({ ...page, html, toc });
   }
+  // Old README anchors (<a name="...">) keep working. Skip the ones a heading already carries.
+  // The pages sit in docs/docs/, the images in docs/images/.
+  for (const p of pages)
+    p.html = p.html
+      .replace(/<a name="([^"]+)"><\/a>\n?/g, (all, name) => (ids.has(name) ? "" : `<span id="${name}"></span>`))
+      .replace(/(<img[^>]+src=")images\//g, "$1../images/");
 
-  // Function replacers: the content contains "$" signs.
-  const values = {
+  // Which page holds which id; ids stay unique over the whole site.
+  const where = new Map();
+  for (const p of pages)
+    for (const m of p.html.matchAll(/ id="([^"]+)"/g)) {
+      if (where.has(m[1])) throw new Error(`Duplicate ids in the documentation: ${m[1]}`);
+      where.set(m[1], p.file);
+    }
+  // Links into another page get its file name; every link must find its target.
+  const broken = new Set();
+  for (const p of pages)
+    p.html = p.html.replace(/href="#([^"]*)"/g, (all, id) => {
+      if (!where.has(id)) {
+        broken.add(id);
+        return all;
+      }
+      return where.get(id) === p.file ? all : `href="${where.get(id)}.html#${id}"`;
+    });
+  if (broken.size) throw new Error(`Broken links in the documentation: #${[...broken].join(", #")}`);
+
+  return { pages, where, examples, entities, md };
+}
+
+// Search entries: every option row and every level 3 heading, with its page.
+function searchIndex(pages) {
+  const out = [];
+  const seen = new Set();
+  for (const p of pages) {
+    let section = p.label;
+    const parts = p.html.split(/(<h3 id="[^"]+">[\s\S]*?<\/h3>|<td id="opt-[^"]+")/);
+    for (const part of parts) {
+      const h = /^<h3 id="([^"]+)">(?:<a[^>]*>#<\/a>)?([\s\S]*?)<\/h3>/.exec(part);
+      if (h) {
+        section = h[2].replace(/<[^>]+>/g, "");
+        out.push({ n: section, k: "section", u: `${p.file}.html#${h[1]}`, w: p.label });
+        continue;
+      }
+      const o = /^<td id="opt-([^"]+)"/.exec(part);
+      if (o && !seen.has(o[1])) {
+        seen.add(o[1]);
+        out.push({ n: o[1], k: "option", u: `${p.file}.html#opt-${o[1]}`, w: section });
+      }
+    }
+  }
+  return out;
+}
+
+// Sidebar: all pages by group, the current one opened to its sections.
+function sideNav(pages, currentFile) {
+  const groups = [...new Set(pages.map((p) => p.group))];
+  // Phones get a short row of page links instead of the full list.
+  const short = `<div class="pages-s">${pages.map((p) => `<a href="${p.file}.html"${p.file === currentFile ? ' class="here"' : ""}>${p.label}</a>`).join("")}</div>`;
+  return short + groups
+    .map((g) => {
+      const items = pages
+        .filter((p) => p.group === g)
+        .map((p) => {
+          const here = p.file === currentFile;
+          const sub = here && p.toc.length
+            ? `<div class="nav-sub">${p.toc.map((h) => `<a href="#${h.id}">${h.text}</a>`).join("")}</div>`
+            : "";
+          return `<a class="nav-page${here ? " here" : ""}" href="${p.file}.html"${here ? ' aria-current="page"' : ""}>${p.label}</a>${sub}`;
+        })
+        .join("");
+      return `<div class="nav-group"><div class="nav-title">${g}</div>${items}</div>`;
+    })
+    .join("");
+}
+
+export async function buildDocs({ version, source, template, overview, srcDir }) {
+  const { pages, where, examples, entities, md } = await renderDocs({ source });
+  // The small dashboard behind immersive examples uses these too.
+  const icons = await iconSet(md, srcDir, ["sofa", "lightbulb-group", "door"]);
+  const common = {
     VERSION: version,
     README,
-    NAV: nav.join(""),
-    CONTENT: content,
     ICONS: JSON.stringify(icons),
     ENTITIES: JSON.stringify([...entities].sort()),
+    SEARCH: JSON.stringify(searchIndex(pages)),
   };
-  // LF everywhere, so Windows and the CI build the same page.
-  const page = template.replace(/\r\n/g, "\n").replace(/\{\{(\w+)\}\}/g, (all, key) => {
-    if (!(key in values)) throw new Error(`Unknown placeholder ${all}`);
-    return values[key];
+  const out = new Map();
+  pages.forEach((p, i) => {
+    const prev = pages[i - 1], next = pages[i + 1];
+    const pager = `<nav class="pager">${prev ? `<a class="prev" href="${prev.file}.html"><span>Previous</span>${prev.label}</a>` : "<span></span>"}${next ? `<a class="next" href="${next.file}.html"><span>Next</span>${next.label}</a>` : "<span></span>"}</nav>`;
+    out.set(`${p.file}.html`, fill(template, {
+      ...common,
+      TITLE: p.label,
+      BLURB: p.blurb,
+      NAV: sideNav(pages, p.file),
+      CONTENT: `<section class="doc-section">${p.html}</section>${pager}`,
+    }));
   });
-  return { page, examples, ids: pageIds };
+  if (overview) {
+    const cards = pages
+      .map((p) => `<a class="doc-card" href="${p.file}.html"><span class="doc-group">${p.group}</span><b>${p.label}</b><span>${p.blurb}</span></a>`)
+      .join("");
+    out.set("index.html", fill(overview, { ...common, NAV: sideNav(pages, ""), CARDS: cards }));
+  }
+  return { pages: out, where, examples };
+}
+
+// The landing page; old links into the single docs page get forwarded.
+export async function buildLanding({ version, template, where, srcDir }) {
+  const own = new Set([...template.matchAll(/ id="([^"]+)"/g)].map((m) => m[1]));
+  const redirects = Object.fromEntries([...where].filter(([id]) => !own.has(id)));
+  const icons = await iconSet(template, srcDir, ["weather-partly-rainy", "weather-sunset", "chart-donut", "tune-variant"]);
+  return fill(template, {
+    VERSION: version,
+    README,
+    ICONS: JSON.stringify(icons),
+    REDIRECTS: JSON.stringify(redirects),
+  });
 }
 
 // npm run build calls this; it can also run on its own.
 export async function writeDocs(version) {
-  const [source, template] = await Promise.all([
+  const [source, template, overview, landing] = await Promise.all([
     readFile("docs-src/documentation.md", "utf8"),
     readFile("docs-src/template.html", "utf8"),
+    readFile("docs-src/overview.html", "utf8"),
+    readFile("docs-src/landing.html", "utf8"),
   ]);
-  const { page, examples } = await buildDocs({ version, source, template, srcDir: "src" });
-  await writeFile("docs/index.html", page);
+  const { pages, where, examples } = await buildDocs({ version, source, template, overview, srcDir: "src" });
+  await mkdir("docs/docs", { recursive: true });
+  for (const [file, html] of pages) await writeFile(`docs/docs/${file}`, html);
+  await writeFile("docs/index.html", await buildLanding({ version, template: landing, where, srcDir: "src" }));
   return examples;
 }
 
 if (import.meta.url === `file://${process.argv[1].replace(/\\/g, "/").replace(/^(?=\w:)/, "/")}`) {
   const { version } = JSON.parse(await readFile("package.json", "utf8"));
-  console.log(`docs/index.html: ${await writeDocs(version)} live examples`);
+  console.log(`docs: ${await writeDocs(version)} live examples`);
 }

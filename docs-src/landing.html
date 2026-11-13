@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<!-- Landing page (docs/index.html). npm run build fills the {{...}} placeholders. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Cdefs%3E%3CradialGradient id=%27g%27 cx=%270.38%27 cy=%270.38%27%3E%3Cstop offset=%270%27 stop-color=%27%23fff1c7%27/%3E%3Cstop offset=%271%27 stop-color=%27%23f2b84b%27/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2713%27 fill=%27url(%23g)%27/%3E%3C/svg%3E">
+<title>Atmo Weather Card · The sky over your dashboard</title>
+<script>
+  // Links into the old single documentation page (index.html#wind) open the page that holds the section now.
+  (() => {
+    const to = {{REDIRECTS}};
+    const id = decodeURIComponent(location.hash.slice(1));
+    if (to[id]) location.replace(`docs/${to[id]}.html#${id}`);
+  })();
+  try { const t = localStorage.getItem("atmo-theme"); if (t && t !== "auto") document.documentElement.dataset.theme = t; } catch {}
+</script>
+<link rel="stylesheet" href="site.css">
+<style>
+  html { scroll-behavior: smooth; }
+  /* Hero */
+  .hero { position: relative; overflow: hidden; padding: 72px 0 56px; }
+  .hero::before { content: ""; position: absolute; inset: -40% -10% auto auto; width: 70vw; height: 70vw; max-width: 900px; max-height: 900px; background: radial-gradient(circle, var(--glow), transparent 62%); pointer-events: none; }
+  .hero .wrap { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 56px; align-items: center; }
+  .eyebrow { font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin: 0 0 14px; }
+  .hero h1 { font-size: clamp(38px, 5.4vw, 64px); line-height: 1.02; letter-spacing: -0.035em; margin: 0 0 18px; text-wrap: balance; }
+  .hero p.lead { font-size: 19px; color: var(--muted); max-width: 34em; margin: 0 0 28px; text-wrap: pretty; }
+  .cta { display: flex; gap: 12px; flex-wrap: wrap; }
+  .facts { display: flex; gap: 8px 20px; flex-wrap: wrap; margin-top: 26px; font-size: 13.5px; color: var(--muted); }
+  .facts span::before { content: "✓"; color: var(--accent); font-weight: 800; margin-right: 6px; }
+  .stage { display: grid; gap: 14px; }
+  .stage-card { border-radius: 18px; box-shadow: var(--shadow); }
+  .stage-card atmo-weather-card { display: block; }
+  .stage .pills { justify-content: center; }
+  .stage-hint { text-align: center; font-size: 13px; color: var(--muted); margin: 0; }
+
+  /* Sections */
+  section.band { padding: 84px 0; border-top: 1px solid var(--line); }
+  section.band.alt { background: var(--bg2); }
+  .head { max-width: 640px; margin: 0 0 40px; }
+  .kicker { font-size: 12.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin: 0 0 10px; }
+  h2 { font-size: clamp(28px, 3.4vw, 40px); line-height: 1.1; letter-spacing: -0.025em; margin: 0 0 12px; text-wrap: balance; }
+  .head p:not(.kicker), .sub { color: var(--muted); font-size: 17px; margin: 0; text-wrap: pretty; }
+
+  /* Features */
+  .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+  .feature { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 22px; display: flex; flex-direction: column; gap: 8px; transition: border-color 0.2s, transform 0.2s; }
+  .feature:hover { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); transform: translateY(-2px); }
+  .ico { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); margin-bottom: 6px; }
+  .feature h3 { font-size: 18px; margin: 0; letter-spacing: -0.01em; }
+  .feature p { margin: 0; color: var(--muted); font-size: 15px; flex: 1; }
+  .feature button { align-self: flex-start; margin-top: 8px; background: none; border: 0; padding: 0; color: var(--link); font: 600 14px var(--f-body); cursor: pointer; }
+  .feature button:hover { text-decoration: underline; }
+
+  /* Gallery */
+  .gallery { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
+  .shot { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; }
+  .shot .frame { padding: 14px 14px 0; }
+  .shot atmo-weather-card { display: block; }
+  .shot .body { padding: 14px 18px 18px; display: grid; gap: 6px; flex: 1; align-content: start; }
+  .shot h3 { margin: 0; font-size: 16.5px; }
+  .shot p { margin: 0; color: var(--muted); font-size: 14px; }
+  .shot .actions { display: flex; gap: 14px; margin-top: 6px; font-size: 14px; font-weight: 600; }
+  .shot .actions button { background: none; border: 0; padding: 0; color: var(--link); font: inherit; cursor: pointer; }
+  .shot details { border-top: 1px solid var(--line); }
+  .shot summary { cursor: pointer; padding: 10px 18px; font-size: 13.5px; color: var(--muted); font-weight: 600; list-style: none; }
+  .shot summary::-webkit-details-marker { display: none; }
+  .shot summary::before { content: "▸ "; } .shot details[open] summary::before { content: "▾ "; }
+  .shot pre { margin: 0; padding: 0 18px 16px; font: 12.5px/1.55 var(--f-mono); overflow: auto; max-height: 260px; }
+
+  /* Editor */
+  .split { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 48px; align-items: center; }
+  .checks { list-style: none; padding: 0; margin: 22px 0 0; display: grid; gap: 12px; }
+  .checks li { display: grid; grid-template-columns: 26px 1fr; gap: 8px; color: var(--muted); }
+  .checks li b { color: var(--text); }
+  .checks li::before { content: "✓"; display: grid; place-items: center; width: 20px; height: 20px; margin-top: 3px; border-radius: 6px; background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); font-weight: 800; font-size: 13px; }
+  .screen { border-radius: 14px; border: 1px solid var(--line); box-shadow: var(--shadow); overflow: hidden; background: var(--panel); }
+  .screen img { width: 100%; height: auto; }
+
+  /* Install */
+  .steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; counter-reset: step; }
+  .step { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 22px; }
+  .step::before { counter-increment: step; content: counter(step); display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-weight: 800; margin-bottom: 12px; }
+  .step h3 { margin: 0 0 6px; font-size: 17.5px; }
+  .step p { margin: 0; color: var(--muted); font-size: 15px; }
+  .step pre { margin: 12px 0 0; background: var(--code); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font: 12.5px/1.5 var(--f-mono); overflow: auto; }
+  .path { font-weight: 600; color: var(--text); }
+  .note { margin-top: 18px; color: var(--muted); font-size: 14.5px; }
+
+  /* Docs and FAQ */
+  .docs-cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+  .docs-cards a { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px; color: var(--text); display: grid; gap: 4px; }
+  .docs-cards a:hover { text-decoration: none; border-color: var(--accent); }
+  .docs-cards b { font-size: 15.5px; } .docs-cards span { color: var(--muted); font-size: 14px; }
+  .faq { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 28px; }
+  .faq details { border-bottom: 1px solid var(--line); padding: 4px 0 12px; }
+  .faq summary { cursor: pointer; font-weight: 700; font-size: 16px; padding: 10px 0 4px; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::after { content: "+"; color: var(--muted); font-weight: 400; font-size: 20px; line-height: 1; }
+  .faq details[open] summary::after { content: "−"; }
+  .faq p { margin: 6px 0 0; color: var(--muted); font-size: 15px; }
+
+  @media (max-width: 980px) {
+    .hero .wrap, .split { grid-template-columns: minmax(0, 1fr); gap: 36px; }
+    .grid3, .gallery, .steps, .docs-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 640px) {
+    .hero { padding: 36px 0 32px; }
+    section.band { padding: 56px 0; }
+    .grid3, .gallery, .steps, .faq, .docs-cards { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (prefers-reduced-motion: reduce) { .feature { transition: none; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-in narrow">
+    <a class="brand" href="#top"><span class="sun"></span>Atmo Weather Card</a>
+    <nav>
+      <a href="#features" class="hide-s">Features</a>
+      <a href="#gallery">Examples</a>
+      <a href="#install">Install</a>
+      <a href="docs/index.html">Docs</a>
+      <a href="demo.html">Demo</a>
+      <a href="{{README}}" class="hide-s">GitHub</a>
+      <span class="theme" role="group" aria-label="Color theme"><button type="button" data-t="auto">Auto</button><button type="button" data-t="light">Light</button><button type="button" data-t="dark">Dark</button></span>
+    </nav>
+  </div>
+</header>
+
+<section class="hero" id="top">
+  <div class="wrap">
+    <div>
+      <p class="eyebrow">Weather card for Home Assistant</p>
+      <h1>The sky over your dashboard.</h1>
+      <p class="lead">An animated sky that follows your weather entity: real sun and moon, clouds that drift with the wind, rain, snow, storms and a night full of stars.</p>
+      <div class="cta">
+        <a class="btn primary" href="#install">Install</a>
+        <a class="btn" href="demo.html">Open the live demo</a>
+      </div>
+      <div class="facts"><span>Free and open source</span><span>Visual editor, EN and DE</span><span>No cloud, no tracking</span></div>
+    </div>
+    <div class="stage">
+      <div class="stage-card" id="hero-slot"></div>
+      <div class="pills" id="hero-weather"></div>
+      <div class="pills" id="hero-time"></div>
+      <p class="stage-hint">This is the real card, version {{VERSION}}, running in your browser with demo data.</p>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="features">
+  <div class="wrap">
+    <div class="head">
+      <p class="kicker">Features</p>
+      <h2>Weather you can see, not just read.</h2>
+      <p>Every Home Assistant weather state has its own scene, by day and by night. Each tile below shows its feature in the card at the top.</p>
+    </div>
+    <div class="grid3" id="feature-grid"></div>
+  </div>
+</section>
+
+<section class="band alt" id="gallery">
+  <div class="wrap">
+    <div class="head">
+      <p class="kicker">Examples</p>
+      <h2>Start from a ready-made card.</h2>
+      <p>Every example runs live. Copy the YAML, paste it into a card in Home Assistant and replace the entities with your own.</p>
+    </div>
+    <div class="gallery" id="gallery-grid"></div>
+  </div>
+</section>
+
+<section class="band" id="editor">
+  <div class="wrap split">
+    <div>
+      <p class="kicker">Visual editor</p>
+      <h2>Set it up without writing YAML.</h2>
+      <p class="sub">Every option has a switch, a slider or a picker, grouped the way you think about the card, with a short help text and a link to the docs.</p>
+      <ul class="checks">
+        <li><span><b>Chips</b> for any entity, attribute or forecast, as text, ring or bar.</span></li>
+        <li><span><b>Presets</b> from Low for old tablets to Ultra for wall displays.</span></li>
+        <li><span><b>Every effect</b> can be switched off on its own.</span></li>
+        <li><span><b>English or German</b>, following your Home Assistant language.</span></li>
+      </ul>
+    </div>
+    <div class="screen">
+      <img class="on-dark" src="images/editor-dark.webp" alt="The card editor in Home Assistant, dark theme, with the Wind group open" width="2016" height="1654">
+      <img class="on-light" src="images/editor-light.webp" alt="The card editor in Home Assistant, light theme, with the Wind group open" width="2016" height="1654">
+    </div>
+  </div>
+</section>
+
+<section class="band alt" id="install">
+  <div class="wrap">
+    <div class="head">
+      <p class="kicker">Install</p>
+      <h2>Up and running in three steps.</h2>
+      <p>Requires Home Assistant 2026.11 or newer.</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <h3>Add the repository</h3>
+        <p>In Home Assistant open <span class="path">Settings › Marketplace › Add from link</span> and enter <code>whyisthisbroken/atmo-weather-card</code>. Pick <b>Dashboard</b> as the type.</p>
+      </div>
+      <div class="step">
+        <h3>Install the card</h3>
+        <p>Open <b>Atmo Weather Card</b> in the Marketplace, select <b>Install</b>, then reload your dashboard.</p>
+      </div>
+      <div class="step">
+        <h3>Add it to a dashboard</h3>
+        <p>Add a card, search for <b>Atmo Weather Card</b>, or paste this:</p>
+        <pre>type: custom:atmo-weather-card
+weather_entity: weather.home</pre>
+      </div>
+    </div>
+    <p class="note">No Marketplace? The <a href="{{README}}#method-2-manual-import">manual install</a> takes two files and one resource entry.</p>
+  </div>
+</section>
+
+<section class="band" id="documentation">
+  <div class="wrap">
+    <div class="head">
+      <p class="kicker">Documentation</p>
+      <h2>Every option, with a live preview.</h2>
+    </div>
+    <div class="docs-cards">
+      <a href="docs/appearance.html"><b>Appearance</b><span>Card style, colors, sun and moon</span></a>
+      <a href="docs/chips.html"><b>Chips &amp; forecasts</b><span>Values, rings, bars, layouts</span></a>
+      <a href="docs/effects.html#wind"><b>Wind &amp; compass</b><span>Lines, flow field, five compass styles</span></a>
+      <a href="docs/troubleshooting.html"><b>Troubleshooting</b><span>When something looks wrong</span></a>
+    </div>
+  </div>
+</section>
+
+<section class="band alt" id="faq">
+  <div class="wrap">
+    <div class="head"><p class="kicker">Questions</p><h2>Good to know.</h2></div>
+    <div class="faq">
+      <details><summary>Does it work with my weather integration?</summary><p>Yes, with any <code>weather.*</code> entity. Cloud cover, wind, visibility and dew point are used when your integration provides them, and skipped when it does not.</p></details>
+      <details><summary>Will it slow down my wall tablet?</summary><p>Pick the Low preset for older tablets. The card also pauses when it is off screen or the tab is hidden.</p></details>
+      <details><summary>Does it work with imperial units?</summary><p>Yes. Wind, temperature and rain keep the units of your entities, mph and °F included.</p></details>
+      <details><summary>Can I use my own picture of my house?</summary><p>Yes, a day and a night image sit in front of the sky. See <a href="docs/guides.html#custom-house-image">Custom house image</a>.</p></details>
+      <details><summary>Does the card send data anywhere?</summary><p>No. It loads nothing from other servers and talks only to your Home Assistant.</p></details>
+      <details><summary>Which languages does the editor speak?</summary><p>English and German, following your Home Assistant language. Everything else shows English.</p></details>
+    </div>
+  </div>
+</section>
+
+<footer class="site">
+  <div class="wrap">
+    <span>Atmo Weather Card · MIT license</span>
+    <nav><a href="docs/index.html">Documentation</a><a href="demo.html">Live demo</a><a href="{{README}}/releases">Releases</a><a href="{{README}}/discussions">Discussions</a></nav>
+  </div>
+</footer>
+
+<script type="module" src="site.js"></script>
+<script type="module">
+  const ICONS = {{ICONS}};
+  const svgOf = (d, size = "var(--mdc-icon-size,20px)") => `<svg viewBox="0 0 24 24" style="width:${size};height:${size};display:block;fill:currentColor"><path d="${d}"/></svg>`;
+  const iconFor = (name) => ICONS[String(name || "").replace(/^mdi:/, "")] || ICONS["help-circle-outline"];
+  const COND_ICON = { sunny: "weather-sunny", "clear-night": "weather-night", partlycloudy: "weather-partly-cloudy", cloudy: "weather-cloudy", rainy: "weather-rainy", pouring: "weather-pouring", "lightning-rainy": "weather-lightning-rainy", lightning: "weather-lightning", snowy: "weather-snowy", "snowy-rainy": "weather-snowy-rainy", hail: "weather-hail", fog: "weather-fog", windy: "weather-windy" };
+  customElements.define("ha-icon", class extends HTMLElement {
+    static get observedAttributes() { return ["icon"]; }
+    set icon(v) { this.setAttribute("icon", v); }
+    attributeChangedCallback() { this.innerHTML = svgOf(iconFor(this.getAttribute("icon"))); }
+    connectedCallback() { this.style.display = "inline-flex"; this.attributeChangedCallback(); }
+  });
+  customElements.define("ha-state-icon", class extends HTMLElement {
+    set stateObj(o) { this._s = o; this.render(); } get stateObj() { return this._s; }
+    set hass(h) {} set icon(v) { this._i = v; this.render(); }
+    render() { const s = this._s; const n = this._i || (s && COND_ICON[s.state]) || "help-circle-outline"; this.innerHTML = svgOf(iconFor(n)); this.style.display = "inline-flex"; }
+  });
+  customElements.define("ha-card", class extends HTMLElement { connectedCallback() { this.style.display = "block"; } });
+  await import("./atmo-weather-card.js");
+
+  // Demo Home Assistant: one hass per card, so every card keeps its own weather.
+  const UNITS = { temperature: "°C", templow: "°C", humidity: "%", wind_speed: "km/h", precipitation_probability: "%", uv_index: "" };
+  const forecast = (type) => {
+    const conds = ["sunny", "partlycloudy", "rainy", "cloudy", "sunny", "lightning-rainy", "partlycloudy"];
+    const n = type === "hourly" ? 24 : 7, step = type === "hourly" ? 3600e3 : 86400e3;
+    return Array.from({ length: n }, (_, i) => ({ datetime: new Date(Date.now() + i * step).toISOString(), condition: conds[i % conds.length], temperature: 14 + ((i * 3) % 7), templow: 6 + (i % 4), precipitation_probability: [20, 10, 70, 40, 5, 80, 30][i % 7], humidity: 60 + (i % 5) * 4, uv_index: [3, 5, 2, 4, 6, 1, 3][i % 7], wind_bearing: 250 }));
+  };
+  function hassFor(s) {
+    const night = !!s.night;
+    const cond = night && s.condition === "sunny" ? "clear-night" : s.condition;
+    return {
+      states: {
+        "weather.home": { entity_id: "weather.home", state: cond, attributes: { temperature: s.temp ?? 14, humidity: 64, uv_index: 3, wind_speed: s.wind ?? 12, wind_bearing: s.bearing ?? 250, wind_speed_unit: "km/h", temperature_unit: "°C", friendly_name: "Home" } },
+        "sun.sun": { entity_id: "sun.sun", state: night ? "below_horizon" : "above_horizon", attributes: { elevation: s.elevation ?? (night ? -14 : 32), azimuth: 200, rising: false } },
+        "sensor.moon_phase": { entity_id: "sensor.moon_phase", state: s.moon || "waxing_gibbous", attributes: {} },
+        "sensor.time": { entity_id: "sensor.time", state: new Date().toISOString(), attributes: {} },
+        "sensor.indoor_temperature": { entity_id: "sensor.indoor_temperature", state: "21.4", attributes: { unit_of_measurement: "°C", friendly_name: "Living room" } },
+        "sensor.indoor_humidity": { entity_id: "sensor.indoor_humidity", state: "48", attributes: { unit_of_measurement: "%", friendly_name: "Humidity" } },
+        "sensor.solar_power": { entity_id: "sensor.solar_power", state: "3.2", attributes: { unit_of_measurement: "kW", friendly_name: "Solar" } },
+        "sensor.battery": { entity_id: "sensor.battery", state: "76", attributes: { unit_of_measurement: "%", friendly_name: "Battery" } },
+      },
+      themes: { darkMode: night }, locale: { language: "en" }, language: "en", user: { name: "Demo" },
+      config: { latitude: 52.15, longitude: 7.32, unit_system: { temperature: "°C" } },
+      connection: { subscribeMessage: async (cb, msg) => { setTimeout(() => cb({ type: msg.forecast_type, forecast: forecast(msg.forecast_type) }), 0); return () => {}; } },
+      callWS: async () => ({}), callService: async () => ({}), callApi: async () => [], localize: (k) => k,
+      formatEntityState: (st) => (st.entity_id.startsWith("weather.") ? ({ partlycloudy: "Partly cloudy", "clear-night": "Clear night", "lightning-rainy": "Thunderstorm" })[st.state] || st.state[0].toUpperCase() + st.state.slice(1) : st.state + (st.attributes.unit_of_measurement ? " " + st.attributes.unit_of_measurement : "")),
+      formatEntityAttributeValue: (st, a) => { const v = st.attributes[a]; const u = UNITS[a]; return v == null ? "" : String(v) + (u ? (u === "%" ? " %" : " " + u) : ""); },
+    };
+  }
+  const BASE = { type: "custom:atmo-weather-card", weather_entity: "weather.home", sun_entity: "sun.sun", moon_phase_entity: "sensor.moon_phase", theme_entity: "sun.sun" };
+  function mountCard(slot, cfg, s) {
+    slot.replaceChildren();
+    const card = document.createElement("atmo-weather-card");
+    card.setConfig({ ...BASE, ...cfg });
+    slot.append(card);
+    card.hass = hassFor(s);
+    return card;
+  }
+
+  // Hero: a big card and weather buttons.
+  const TEMP = { entity: "weather.home", attribute: "temperature", position: "custom", position_anchor: "top-left", position_x: "22px", position_y: "18px", text_size: "56px", hide_icon: true, hide_label: true, background: false, fancy_unit: true, value_weight: "700" };
+  const COND = { entity: "weather.home", hide_label: true, position: "custom", position_anchor: "top-left", position_x: "24px", position_y: "92px", background: false, hide_icon: true, text_size: "16px" };
+  const HERO_CFG = { card_height: 300, perf_mode: "ultra", wind_compass: "arrow", chips: [TEMP, COND,
+    { entity: "weather.home", attribute: "humidity", icon: "mdi:water-percent" },
+    { entity: "weather.home", attribute: "wind_speed", icon: "mdi:weather-windy" },
+    { entity: "weather.home", forecast: "daily", forecast_offset: 1, attribute: "temperature", icon: "weather", sub_value_attribute: "templow", sub_value_position: "beside", forecast_precision: 0 },
+  ] };
+  // Ring chips styled like the Forecast & Ring Chip example of the docs.
+  const RING = { type: "ring", style: "vertical", align: "center", padding: "12px", height: "78px", icon_size: "16px", ring_width: 6, ring_gap: 6, ring_threshold_mode: "gradient" };
+  const SOLAR = { ...RING, entity: "sensor.solar_power", name: "Solar", icon: "mdi:solar-power", ring_min: 0, ring_max: 5, ring_thresholds: [{ value: 0, color: "rgba(242, 184, 75, 0.55)" }, { value: 5, color: "rgba(242, 184, 75, 1)" }] };
+  const BATTERY = { ...RING, entity: "sensor.battery", name: "Battery", icon: "mdi:battery-high", ring_thresholds: [{ value: 0, color: "rgba(229, 83, 75, 0.9)" }, { value: 40, color: "rgba(242, 184, 75, 0.9)" }, { value: 80, color: "rgba(63, 185, 80, 0.9)" }] };
+  const HUMID = { ...RING, entity: "sensor.indoor_humidity", name: "Humidity", icon: "mdi:water-percent", ring_thresholds: [{ value: 0, color: "rgba(140, 200, 255, 0.85)" }, { value: 100, color: "rgba(40, 110, 230, 1)" }] };
+  // The chips tile: ring chips instead of the usual row.
+  const GAUGE_CFG = { ...HERO_CFG, chip_area_gap: "8px", chips: [TEMP, COND, SOLAR, BATTERY, HUMID] };
+  const hero = { condition: "partlycloudy", night: false, wind: 18 };
+  let heroCfg = HERO_CFG;
+  const heroSlot = document.getElementById("hero-slot");
+  let heroCard = mountCard(heroSlot, heroCfg, hero);
+  const WEATHERS = [["sunny", "Sunny"], ["partlycloudy", "Partly cloudy"], ["rainy", "Rain"], ["lightning-rainy", "Storm"], ["snowy", "Snow"], ["fog", "Fog"], ["windy", "Windy"]];
+  const wBox = document.getElementById("hero-weather"), tBox = document.getElementById("hero-time");
+  const pill = (box, label, on, act) => { const b = document.createElement("button"); b.type = "button"; b.className = "pill"; b.textContent = label; b.onclick = act; b._on = on; box.append(b); return b; };
+  const sync = () => { for (const b of [...wBox.children, ...tBox.children]) b.classList.toggle("on", b._on()); };
+  const setHero = (patch, cfg) => {
+    Object.assign(hero, patch);
+    if (cfg || "night" in patch) { heroCfg = cfg || heroCfg; heroCard = mountCard(heroSlot, heroCfg, hero); } else heroCard.hass = hassFor(hero);
+    sync();
+  };
+  for (const [v, l] of WEATHERS) pill(wBox, l, () => hero.condition === v, () => setHero({ condition: v, wind: v === "windy" ? 48 : 18 }));
+  pill(tBox, "Day", () => !hero.night, () => setHero({ night: false }));
+  pill(tBox, "Night", () => hero.night, () => setHero({ night: true }));
+  sync();
+
+  // Features: each one shows itself in the hero card.
+  const FEATURES = [
+    ["weather-lightning-rainy", "Every weather, live", "Layered clouds, rain, hail, snow, fog and thunderstorms with lightning, for every Home Assistant condition.", { condition: "lightning-rainy", night: false }],
+    ["weather-sunset", "Real sun and moon", "The sun follows its real position with sunrise and sunset colors. The moon shows its live phase.", { condition: "sunny", night: false }],
+    ["weather-windy", "Wind you can see", "Wind lines and drifting clouds follow speed and direction. An optional compass shows where it comes from.", { condition: "windy", wind: 48, night: false }],
+    ["weather-night", "A night full of stars", "Stars come out one by one after the blue hour, with shooting stars and the odd comet.", { condition: "sunny", night: true }],
+    ["chart-donut", "Chips, rings and bars", "Show any sensor or forecast as text, ring or bar, in a row, a grid or anywhere on the card.", { condition: "sunny", night: false }, GAUGE_CFG],
+    ["tune-variant", "Tuned to your data", "Measured cloud cover sets the clouds, a rain sensor sets the rain, humid air adds haze and ground mist.", { condition: "rainy", night: false }],
+  ];
+  const grid = document.getElementById("feature-grid");
+  for (const [icon, title, text, scene, cfg] of FEATURES) {
+    const el = document.createElement("article");
+    el.className = "feature";
+    el.innerHTML = `<div class="ico">${svgOf(iconFor(icon), "22px")}</div><h3>${title}</h3><p>${text}</p><button type="button">Show it above ↑</button>`;
+    el.querySelector("button").onclick = () => { setHero({ wind: 18, ...scene }, cfg || HERO_CFG); document.getElementById("top").scrollIntoView({ behavior: "smooth" }); };
+    grid.append(el);
+  }
+
+  // Gallery of ready-made cards.
+  const yaml = (o, ind = "") => Object.entries(o).map(([k, v]) => Array.isArray(v)
+    ? `${ind}${k}:\n` + v.map((it) => typeof it !== "object" ? `${ind}  - ${it}` : (() => { const lines = yaml(it, ind + "    ").split("\n"); return `${ind}  - ${lines[0].trim()}\n${lines.slice(1).join("\n")}`; })()).join("\n").replace(/\n$/, "")
+    : `${ind}${k}: ${typeof v === "string" && /^[#*{}[\]&!|>%@`:]|: |^\s|\s$/.test(v) ? JSON.stringify(v) : v}`).join("\n");
+  const EXAMPLES = [
+    { title: "Simple", text: "Temperature, condition and tomorrow. A good first card.", scene: { condition: "partlycloudy" },
+      cfg: { card_height: 180, chips: [
+        { entity: "weather.home", attribute: "temperature", position: "custom", position_anchor: "top-left", position_x: "16px", position_y: "14px", text_size: "40px", hide_icon: true, hide_label: true, background: false, fancy_unit: true, value_weight: "700" },
+        { entity: "weather.home", icon: "weather" },
+        { entity: "weather.home", forecast: "daily", forecast_offset: 1, attribute: "temperature", icon: "weather", forecast_precision: 0 } ] } },
+    { title: "Forecast row", text: "Three days in a grouped row with icons above the values.", scene: { condition: "rainy" },
+      cfg: { card_height: 180, chip_style: "vertical", chip_area_grouped: true, chip_area_separator: true, chip_area_background: true, chip_area_position: "bottom-center", chips: [
+        { entity: "weather.home", forecast: "daily", forecast_offset: 1, attribute: "temperature", icon: "weather", forecast_precision: 0 },
+        { entity: "weather.home", forecast: "daily", forecast_offset: 2, attribute: "temperature", icon: "weather", forecast_precision: 0 },
+        { entity: "weather.home", forecast: "daily", forecast_offset: 3, attribute: "temperature", icon: "weather", forecast_precision: 0 } ] } },
+    { title: "Wall clock", text: "A big clock over the live sky, made for wall tablets.", scene: { condition: "sunny", night: true, moon: "full_moon" },
+      cfg: { card_height: 180, chips: [
+        { entity: "sensor.time", position: "custom", position_anchor: "center", position_x: "0px", position_y: "0px", text_size: "52px", hide_icon: true, hide_label: true, background: false, value_weight: "600" } ] } },
+    { title: "Wind compass", text: "Wind arrow with direction and speed, plus a wind direction chip.", scene: { condition: "windy", wind: 42, bearing: 120 },
+      cfg: { card_height: 180, wind_compass: "arrow", wind_compass_degrees: true, wind_compass_speed: true, chips: [
+        { entity: "weather.home", attribute: "wind_bearing", name: "From", bearing_format: "cardinal", icon: "mdi:compass-outline" } ] } },
+    { title: "Gauges", text: "Ring chips for any sensor, with colors that follow the value.", scene: { condition: "sunny" },
+      cfg: { card_height: 180, chip_area_gap: "8px", chips: [SOLAR, BATTERY, HUMID] } },
+    { title: "Indoor and outdoor", text: "Outside from the weather entity, inside from your sensors.", scene: { condition: "snowy", temp: -2 },
+      cfg: { card_height: 180, chip_style: "stacked", chips: [
+        { entity: "weather.home", attribute: "temperature", name: "Outside", icon: "weather" },
+        { entity: "sensor.indoor_temperature", name: "Inside", icon: "mdi:sofa" },
+        { entity: "sensor.indoor_humidity", name: "Humidity", icon: "mdi:water-percent" } ] } },
+  ];
+  const gallery = document.getElementById("gallery-grid");
+  for (const ex of EXAMPLES) {
+    const el = document.createElement("article");
+    el.className = "shot";
+    const code = yaml({ type: "custom:atmo-weather-card", weather_entity: "weather.home", ...ex.cfg });
+    el.innerHTML = `<div class="frame"></div><div class="body"><h3>${ex.title}</h3><p>${ex.text}</p><div class="actions"><button type="button" class="copy">Copy YAML</button><a href="docs/examples.html">More examples →</a></div></div><details><summary>Show YAML</summary><pre></pre></details>`;
+    el.querySelector("pre").textContent = code;
+    el.querySelector(".copy").onclick = (e) => navigator.clipboard?.writeText(code).then(() => { e.target.textContent = "Copied"; setTimeout(() => (e.target.textContent = "Copy YAML"), 1200); }, () => {});
+    gallery.append(el);
+    mountCard(el.querySelector(".frame"), { perf_mode: "default", ...ex.cfg }, ex.scene);
+  }
+  // Keep clocks and values fresh.
+  setInterval(() => { heroCard.hass = hassFor(hero); }, 1000);
+</script>
+</body>
+</html>
