@@ -14,7 +14,6 @@ const allDocs = Object.values(docPages).join("\n");
 // Where each id lives now; old links to index.html#id are forwarded with this map.
 const redirects = JSON.parse(landing.match(/const to = (\{.*?\});/s)[1]);
 const landingIds = new Set([...landing.matchAll(/ id="([^"]+)"/g)].map((m) => m[1]));
-const reachable = (id) => landingIds.has(id) || id in redirects;
 
 // A documentation source with every page heading, plus extra text on the first page.
 const skeleton = (first = "Text\n") =>
@@ -76,9 +75,17 @@ test("the documentation search finds options and sections", () => {
 
 test("README links into the documentation find their targets", () => {
   const readme = read("README.md");
-  const links = [...readme.matchAll(/https:\/\/whyisthisbroken\.github\.io\/atmo-weather-card\/#([a-z0-9-]+)/g)].map((m) => m[1]);
-  assert.ok(links.length >= 8);
-  for (const id of links) assert.ok(reachable(id), `#${id} is missing`);
+  // The README opens the pages directly, not the start page with an anchor.
+  assert.ok(!readme.includes(`${DOCS}#`), "README links to the start page with an anchor");
+  const links = [...readme.matchAll(/https:\/\/whyisthisbroken\.github\.io\/atmo-weather-card\/docs\/(?:([a-z-]+)\.html)?(?:#([a-z0-9_-]+))?/g)];
+  assert.ok(links.length >= 9);
+  for (const [url, file = "index", id] of links) {
+    const page = file === "index" ? read("docs/docs/index.html") : docPages[file];
+    assert.ok(page, `${url}: page is missing`);
+    if (id) assert.ok(page.includes(` id="${id}"`), `${url}: section is missing`);
+  }
+  // Every page of the documentation has a row in the README table.
+  for (const p of PAGES) assert.ok(readme.includes(`${DOCS}docs/${p.file}.html`), `${p.file} is missing in the README`);
   // Links inside the README stay inside the README.
   const own = new Set([...readme.matchAll(/<a name="([^"]+)">/g)].map((m) => m[1]));
   for (const m of readme.replace(/\r\n/g, "\n").matchAll(/^#+ (.+)$/gm))

@@ -20,7 +20,7 @@ The documentation runs every example live, and the [demo](https://whyisthisbroke
 ### Features
 
 - **Live weather scenes** for every Home Assistant condition, by day and by night — layered clouds, rain, hail, snow, fog, thunderstorms with lightning, and overcast skies
-- **Wind you can see** — direction and strength from your weather entity, drawn as wind lines or a flow field; clouds, rain and snow drift the same way, and an optional compass shows where it comes from
+- **Wind you can see** — direction and strength from your weather entity, drawn as wind lines or a flow field; clouds, rain and snow drift the same way, and an optional compass on the card or a chip with a turning arrow shows where it comes from
 - **Sun and moon** that follow the real sun position, with sunrise and sunset colors, live moon phases and a moon tilted for your latitude
 - **Night sky** with stars, shooting stars and comets, and **birds and planes** passing by; near planes fly faster than distant ones
 - **Real weather data** shapes the sky: the measured cloud cover sets the clouds, low visibility or humid air adds haze, ground mist forms near the dew point, and an optional precipitation sensor sets how hard it rains
@@ -51,14 +51,14 @@ Every option, with examples you can run live in your browser, is on the **[docum
 
 | Topic | What you find there |
 | :---- | :------------------ |
-| <a name="setup"></a>[Setup](https://whyisthisbroken.github.io/atmo-weather-card/#setup) | The entities the card uses: weather, sun, moon phase and precipitation sensor |
-| <a name="examples"></a>[Examples](https://whyisthisbroken.github.io/atmo-weather-card/#examples) | Complete layouts to copy, each one running live on the page |
-| <a name="appearance"></a><a name="chip-editor-structure"></a><a name="css-variables"></a>[Appearance](https://whyisthisbroken.github.io/atmo-weather-card/#appearance) | Card style, colors, sun and moon, chips, images, embedded cards and CSS variables |
-| <a name="guides"></a><a name="chips"></a><a name="layout-layering"></a><a name="weather-icons"></a><a name="custom-house-image"></a>[Guides](https://whyisthisbroken.github.io/atmo-weather-card/#guides) | Chips and forecasts, layout and layering, weather icons, your own house image |
-| <a name="weather-data"></a><a name="weather-data--sky-light"></a>[Weather Data & Sky Light](https://whyisthisbroken.github.io/atmo-weather-card/#weather-data) | How cloud cover, visibility, humidity and rain shape the sky, and the effect switches |
-| <a name="color-mode"></a>[Color Mode](https://whyisthisbroken.github.io/atmo-weather-card/#color-mode) | Light and dark look, following your theme or the sun |
-| <a name="performance"></a>[Performance](https://whyisthisbroken.github.io/atmo-weather-card/#performance) | Presets, frame rate, night sky, birds and planes |
-| <a name="troubleshooting"></a><a name="editor-preview-stutters-or-fps-looks-wrong-after-installupdate"></a><a name="card-shows-red-error-card-or-module-not-found"></a><a name="changes-are-not-visible-after-update"></a><a name="editor-values-differ-from-runtime-defaults"></a><a name="card-always-stays-in-front-of-other-cards"></a><a name="card-appears-behind-other-cards-or-becomes-hard-to-see"></a><a name="attribute-shows-na-after-changing-a-chips-sensor"></a><a name="forecast-chip-shows-please-check-your-weather-provider"></a><a name="weather-entity-is-unavailable-or-values-look-wrong"></a><a name="no-birds-or-planes-are-visible"></a><a name="no-night-effects-starscomets-are-visible"></a><a name="chip-value-shows-no-decimal-places-or-the-unit-disappeared"></a><a name="performance-is-weak-on-older-devices"></a>[Troubleshooting](https://whyisthisbroken.github.io/atmo-weather-card/#troubleshooting) | Installation problems, layout, missing data or effects, weak devices |
+| <a name="setup"></a>[Getting started](https://whyisthisbroken.github.io/atmo-weather-card/docs/setup.html) | The entities the card uses (weather, sun, moon phase, precipitation sensor) and where the options live in the editor |
+| <a name="examples"></a>[Examples](https://whyisthisbroken.github.io/atmo-weather-card/docs/examples.html) | Complete layouts to copy, each one running live on the page |
+| <a name="appearance"></a><a name="color-mode"></a><a name="css-variables"></a>[Appearance](https://whyisthisbroken.github.io/atmo-weather-card/docs/appearance.html) | Card style, light and dark look, sun and moon, images, embedded cards and CSS variables |
+| <a name="chips"></a><a name="chip-editor-structure"></a>[Chips & forecasts](https://whyisthisbroken.github.io/atmo-weather-card/docs/chips.html) | Values, forecasts, wind direction, ring and bar gauges, in the chip row or anywhere on the card |
+| <a name="weather-data"></a><a name="weather-data--sky-light"></a>[Weather data & sky light](https://whyisthisbroken.github.io/atmo-weather-card/docs/weather-data.html) | How cloud cover, visibility, humidity and rain shape the sky, and the effect switches |
+| <a name="performance"></a>[Effects & performance](https://whyisthisbroken.github.io/atmo-weather-card/docs/effects.html) | Presets, frame rate, wind and compass, night sky, birds and planes |
+| <a name="guides"></a><a name="layout-layering"></a><a name="weather-icons"></a><a name="custom-house-image"></a>[Guides](https://whyisthisbroken.github.io/atmo-weather-card/docs/guides.html) | Layout and layering, weather icons, your own house image |
+| <a name="troubleshooting"></a><a name="editor-preview-stutters-or-fps-looks-wrong-after-installupdate"></a><a name="card-shows-red-error-card-or-module-not-found"></a><a name="changes-are-not-visible-after-update"></a><a name="editor-values-differ-from-runtime-defaults"></a><a name="card-always-stays-in-front-of-other-cards"></a><a name="card-appears-behind-other-cards-or-becomes-hard-to-see"></a><a name="attribute-shows-na-after-changing-a-chips-sensor"></a><a name="forecast-chip-shows-please-check-your-weather-provider"></a><a name="weather-entity-is-unavailable-or-values-look-wrong"></a><a name="no-birds-or-planes-are-visible"></a><a name="no-night-effects-starscomets-are-visible"></a><a name="chip-value-shows-no-decimal-places-or-the-unit-disappeared"></a><a name="performance-is-weak-on-older-devices"></a>[Troubleshooting](https://whyisthisbroken.github.io/atmo-weather-card/docs/troubleshooting.html) | Installation problems, layout, missing data or effects, weak devices |
 
 > [!NOTE]
 > Parts of the development use AI-assisted coding to move faster than doing everything by hand would allow.
@@ -120,7 +120,7 @@ For manual installation without the Marketplace. [Download the latest files from
    - **Firefox:** `Ctrl+Shift+R`
    - **Safari:** `Cmd+Shift+R`
 
-> Note: If you run into preview/FPS/load issues after install or update, see the [Troubleshooting](https://whyisthisbroken.github.io/atmo-weather-card/#troubleshooting) section below.
+> Note: If you run into preview/FPS/load issues after install or update, see [Troubleshooting](https://whyisthisbroken.github.io/atmo-weather-card/docs/troubleshooting.html) in the documentation.
 
 </details>
 
@@ -142,7 +142,7 @@ chips:
     icon: mdi:water-percent
 ```
 
-Use the visual editor to add or rearrange chips. Browse the [examples](https://whyisthisbroken.github.io/atmo-weather-card/#examples) for complete layouts, or the [documentation](https://whyisthisbroken.github.io/atmo-weather-card/) for every option.
+Use the visual editor to add or rearrange chips. Browse the [examples](https://whyisthisbroken.github.io/atmo-weather-card/docs/examples.html) for complete layouts, or the [documentation](https://whyisthisbroken.github.io/atmo-weather-card/docs/) for every option.
 
 ## Maintenance
 
