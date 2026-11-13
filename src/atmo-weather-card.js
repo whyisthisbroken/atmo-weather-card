@@ -2535,6 +2535,18 @@ class AtmosphericWeatherCard extends HTMLElement {
         ));
       if (BEARING_ICONS.includes(chip.bearing_icon))
         bearingIcon = bearingIconSvg(chip.bearing_icon, parseFloat(raw));
+      // Home Assistant formats wind_bearing without a unit. Plain degree chips
+      // keep the bare number as before; next to the turning icon or the speed
+      // it gets its degree sign.
+      if (
+        (bearingIcon || chip.bearing_speed === true) &&
+        chip.bearing_format !== "cardinal" &&
+        chip.bearing_format !== "both" &&
+        !unit &&
+        Number.isFinite(parseFloat(raw)) &&
+        !/°\s*$/.test(String(formatted))
+      )
+        formatted = `${formatted}°`;
       // The speed comes from the same weather entity, with its own unit.
       const wEnt = hass.states[chip.entity];
       // Only next to a known direction, never after N/A.

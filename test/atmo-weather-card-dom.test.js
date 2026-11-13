@@ -940,3 +940,20 @@ test("a wind direction chip can turn its icon with the wind and show the speed",
   assert.ok(!text(chips(none)[0]).includes("km/h"), text(chips(none)[0]));
   assert.ok(!text(other).includes("km/h"));
 });
+
+test("degrees get their sign next to the turning icon or the speed, plain chips stay as before", () => {
+  const b = { entity: "weather.home", attribute: "wind_bearing" };
+  const card = mountCard({
+    chips: [
+      { ...b, bearing_speed: true },
+      { ...b, bearing_icon: "needle" },
+      { ...b, bearing_format: "both", bearing_speed: true },
+      b,
+    ],
+  });
+  const [speed, icon, both, plain] = chips(card).map(text);
+  assert.match(speed, /\b90° · 20 km\/h/);
+  assert.match(icon, /\b90°/);
+  assert.ok(!/°°/.test(both) && /90° · 20 km\/h/.test(both), both);
+  assert.ok(/\b90\b/.test(plain) && !plain.includes("°"), plain);
+});
