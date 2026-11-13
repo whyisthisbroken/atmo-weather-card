@@ -238,7 +238,7 @@ function searchIndex(pages) {
   const seen = new Set();
   for (const p of pages) {
     let section = p.label;
-    const parts = p.html.split(/(<h3 id="[^"]+">[\s\S]*?<\/h3>|<td id="opt-[^"]+")/);
+    const parts = p.html.split(/(<h3 id="[^"]+">[\s\S]*?<\/h3>|<td[^>]* id="opt-[^"]+")/);
     for (const part of parts) {
       const h = /^<h3 id="([^"]+)">(?:<a[^>]*>#<\/a>)?([\s\S]*?)<\/h3>/.exec(part);
       if (h) {
@@ -246,7 +246,7 @@ function searchIndex(pages) {
         out.push({ n: section, k: "section", u: `${p.file}.html#${h[1]}`, w: p.label });
         continue;
       }
-      const o = /^<td id="opt-([^"]+)"/.exec(part);
+      const o = /^<td[^>]* id="opt-([^"]+)"/.exec(part);
       if (o && !seen.has(o[1])) {
         seen.add(o[1]);
         out.push({ n: o[1], k: "option", u: `${p.file}.html#opt-${o[1]}`, w: section });

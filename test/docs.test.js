@@ -50,10 +50,28 @@ test("the live card of the documentation starts sunny without measured cloud cov
 test("the editor help links point at sections of the documentation", () => {
   const editor = read("src/atmo-weather-card-editor.js").replace(/\r\n/g, "\n");
   assert.ok(editor.includes(`const DOCS_URL = "${DOCS}";`));
-  const anchors = [...editor.matchAll(/this\._renderIntro\(\n\s+"[a-z_]+",\n[\s\S]*?\n\s+"([a-z0-9-]+)",?\n\s+\)/g)].map((m) => m[1]);
-  assert.ok(anchors.length >= 6);
-  // The editor links to the start page with an anchor; the start page forwards it.
-  for (const anchor of anchors) assert.ok(anchor in redirects, `#${anchor} is not forwarded`);
+  assert.ok(editor.includes('href="${DOCS_URL}docs/${anchor}"'));
+  const links = [...editor.matchAll(/this\._renderIntro\(\n\s+"[a-z_]+",\n[\s\S]*?\n\s+"([a-z-]+)\.html#([a-z0-9-]+)",?\n\s+\)/g)];
+  assert.equal(links.length, (editor.match(/this\._renderIntro\(/g) || []).length);
+  assert.ok(links.length >= 6);
+  // Each help link opens the page that holds its section.
+  for (const [, file, id] of links) {
+    assert.ok(docPages[file], `${file}.html does not exist`);
+    assert.ok(docPages[file].includes(` id="${id}"`), `#${id} is not on ${file}.html`);
+  }
+});
+
+test("the documentation search finds options and sections", () => {
+  const search = JSON.parse(docPages.chips.match(/const SEARCH = (\[.*?\]);\n/s)[1]);
+  const options = search.filter((o) => o.k === "option");
+  assert.ok(options.length >= 150, `only ${options.length} options in the search`);
+  assert.ok(search.some((o) => o.k === "section"));
+  for (const name of ["bearing_icon", "bearing_speed", "wind_compass", "behind_effects"])
+    assert.ok(options.some((o) => o.n === name), `${name} is not in the search`);
+  for (const o of search) {
+    const [file, id] = o.u.split("#");
+    assert.ok(docPages[file.replace(".html", "")].includes(` id="${id}"`), `search target ${o.u} is missing`);
+  }
 });
 
 test("README links into the documentation find their targets", () => {

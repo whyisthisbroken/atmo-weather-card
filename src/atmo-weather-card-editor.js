@@ -5604,7 +5604,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
     return html`${this._renderIntro(
         "performance",
         "“Low” saves battery and helps older tablets, “Ultra” shows everything at full quality. Every effect can be switched off on its own; anything that is off costs nothing.",
-        "performance",
+        "effects.html#performance",
       )}
       <div class="grid-picker">
         <div class="grid-picker-label">${t(LABELS.perf_mode)}</div>
@@ -5922,7 +5922,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
       ${body}
     </div>`;
   }
-  // A short help text behind an (i) button, with a link into the README.
+  // A short help text behind an (i) button, with a link into the documentation.
   _renderIntro(id, text, anchor) {
     const open = !!(this._helpOpen && this._helpOpen[id]);
     return html`<div class="help-row">
@@ -5942,7 +5942,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
             ${t(text)}
             ${anchor
               ? html` <a
-                  href="${DOCS_URL}#${anchor}"
+                  href="${DOCS_URL}docs/${anchor}"
                   target="_blank"
                   rel="noopener"
                   >${t("More in the docs")} →</a
@@ -6005,7 +6005,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
     return html`${this._renderIntro(
         "sun_moon",
         "The sun entity (sun.sun) decides between day and night and provides the elevation for twilight, blue hour and sun rays. With “Fixed” the sun or moon stays where you put it.",
-        "sun--moon",
+        "appearance.html#sun--moon",
       )}
       ${this._renderForm([
         { name: "sun_entity", selector: { entity: { domain: "sun" } } },
@@ -6066,7 +6066,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
     return html`${this._renderIntro(
         "appearance",
         "In the “Immersive” style the card has no sky or background of its own and works as a dashboard header. Full width and edge fades are only available there.",
-        "appearance",
+        "appearance.html#appearance",
       )}
       ${this._renderGroup(
         "Color mode",
@@ -6161,7 +6161,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
     return html`${this._renderIntro(
         "image",
         "Put your images in /config/www/ and enter them as /local/house-day.png. Transparent PNGs look best. Without a night image the day image is used.",
-        "custom-images",
+        "appearance.html#custom-images",
       )}
       <div class="image-thumbs">
         ${thumb("image_day")} ${thumb("image_night")}
@@ -6213,7 +6213,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
     return html`${this._renderIntro(
         "cards",
         "Add any Home Assistant card, for example an entities or history card. The cards are shown on top of the sky. Grids and stacks work too.",
-        "embedded-cards",
+        "appearance.html#embedded-cards",
       )}
       ${this._renderPositionGrid(
         "custom_cards_position",
@@ -6246,7 +6246,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
     return html`${this._renderIntro(
         "chips",
         "A chip shows one value, for example the temperature, the wind or tomorrow's forecast. All chips share one area whose position and layout you set below. Single chips can be placed freely.",
-        "chips-in-the-editor",
+        "chips.html#chips-in-the-editor",
       )}
       ${this._renderChipsEditor()}`;
   }

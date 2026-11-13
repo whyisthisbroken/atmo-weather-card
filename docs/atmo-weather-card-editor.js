@@ -2812,7 +2812,7 @@ var ne=globalThis,le=ne.ShadowRoot&&(ne.ShadyCSS===void 0||ne.ShadyCSS.nativeSha
               </button>`)}
         </div>
         ${oe?s`<div class="composite-helper">${o(oe)}</div>`:""}
-      </div>`},m=n("perf_effects")<1,f=n("perf_fauna"),$=f>=1&&t.fauna_birds!==!1,C=f>=2&&t.fauna_planes!==!1,w=this._formData;return s`${this._renderIntro("performance","\u201CLow\u201D saves battery and helps older tablets, \u201CUltra\u201D shows everything at full quality. Every effect can be switched off on its own; anything that is off costs nothing.","performance")}
+      </div>`},m=n("perf_effects")<1,f=n("perf_fauna"),$=f>=1&&t.fauna_birds!==!1,C=f>=2&&t.fauna_planes!==!1,w=this._formData;return s`${this._renderIntro("performance","\u201CLow\u201D saves battery and helps older tablets, \u201CUltra\u201D shows everything at full quality. Every effect can be switched off on its own; anything that is off costs nothing.","effects.html#performance")}
       <div class="grid-picker">
         <div class="grid-picker-label">${o(v.perf_mode)}</div>
         <div class="segmented">
@@ -2943,7 +2943,7 @@ var ne=globalThis,le=ne.ShadowRoot&&(ne.ShadyCSS===void 0||ne.ShadyCSS.nativeSha
       ${r?s`<div class="help-box">
             ${o(t)}
             ${a?s` <a
-                  href="${Qt}#${a}"
+                  href="${Qt}docs/${a}"
                   target="_blank"
                   rel="noopener"
                   >${o("More in the docs")} →</a
@@ -2962,7 +2962,7 @@ var ne=globalThis,le=ne.ShadowRoot&&(ne.ShadyCSS===void 0||ne.ShadyCSS.nativeSha
         </div>
       </div>
       ${i}
-    </ha-expansion-panel>`}_precipitationSensors(){let e=this.hass&&this.hass.states||{},t=this._config&&this._config.precipitation_entity||"",a=this._precipCache;if(a&&a.states===e&&a.current===t)return a.list;let r=Object.keys(e).filter(i=>i.startsWith("sensor.")&&Xt(e[i]&&e[i].attributes&&e[i].attributes.unit_of_measurement));return t&&!r.includes(t)&&r.push(t),this._precipCache={states:e,current:t,list:r},r}_setColorMode(e){this._valueChanged({stopPropagation(){},detail:{value:{...this._formData,_color_mode:e}}})}_renderSunMoonPanel(){let e=this._formData.celestial_position||"fixed";return s`${this._renderIntro("sun_moon","The sun entity (sun.sun) decides between day and night and provides the elevation for twilight, blue hour and sun rays. With \u201CFixed\u201D the sun or moon stays where you put it.","sun--moon")}
+    </ha-expansion-panel>`}_precipitationSensors(){let e=this.hass&&this.hass.states||{},t=this._config&&this._config.precipitation_entity||"",a=this._precipCache;if(a&&a.states===e&&a.current===t)return a.list;let r=Object.keys(e).filter(i=>i.startsWith("sensor.")&&Xt(e[i]&&e[i].attributes&&e[i].attributes.unit_of_measurement));return t&&!r.includes(t)&&r.push(t),this._precipCache={states:e,current:t,list:r},r}_setColorMode(e){this._valueChanged({stopPropagation(){},detail:{value:{...this._formData,_color_mode:e}}})}_renderSunMoonPanel(){let e=this._formData.celestial_position||"fixed";return s`${this._renderIntro("sun_moon","The sun entity (sun.sun) decides between day and night and provides the elevation for twilight, blue hour and sun rays. With \u201CFixed\u201D the sun or moon stays where you put it.","appearance.html#sun--moon")}
       ${this._renderForm([{name:"sun_entity",selector:{entity:{domain:"sun"}}},{name:"moon_phase_entity",selector:{entity:{domain:"sensor"}}}])}
       ${this._renderGroup("Position & size",s`<div class="settings-group">
             <div class="segmented" role="radiogroup">
@@ -2985,7 +2985,7 @@ var ne=globalThis,le=ne.ShadowRoot&&(ne.ShadyCSS===void 0||ne.ShadyCSS.nativeSha
                 ${this._renderPositionGrid("celestial_alignment",re.celestial_alignment)}
                 ${this._renderCelestialOffsetPicker()}
               </div>`:""}
-          ${this._renderSlider("celestial_size",o(v.celestial_size),20,200,1)}`)}`}_renderAppearancePanel(){let e=this._formData,t=(e.card_style||"standalone")!=="standalone";return s`${this._renderIntro("appearance","In the \u201CImmersive\u201D style the card has no sky or background of its own and works as a dashboard header. Full width and edge fades are only available there.","appearance")}
+          ${this._renderSlider("celestial_size",o(v.celestial_size),20,200,1)}`)}`}_renderAppearancePanel(){let e=this._formData,t=(e.card_style||"standalone")!=="standalone";return s`${this._renderIntro("appearance","In the \u201CImmersive\u201D style the card has no sky or background of its own and works as a dashboard header. Full width and edge fades are only available there.","appearance.html#appearance")}
       ${this._renderGroup("Color mode",s`<div class="segmented" role="radiogroup">
             ${P.color_mode.map(a=>s`<button
                   type="button"
@@ -3012,7 +3012,7 @@ var ne=globalThis,le=ne.ShadowRoot&&(ne.ShadyCSS===void 0||ne.ShadyCSS.nativeSha
           ${e[g]?"":o("No image")}
         </div>
         ${this._renderClearableText(g)}
-      </div>`,[a,r]=(e.image_alignment||"top-right").split("-"),i=a==="top"?"top":a==="bottom"?"bottom":"middle",n=(r||a)==="left"?"left":(r||a)==="right"?"right":"center",p=parseFloat(e.image_scale),d=Math.max(0,Math.min(200,Number.isFinite(p)?p:100)),_=e.image_day||e.image_night;return s`${this._renderIntro("image","Put your images in /config/www/ and enter them as /local/house-day.png. Transparent PNGs look best. Without a night image the day image is used.","custom-images")}
+      </div>`,[a,r]=(e.image_alignment||"top-right").split("-"),i=a==="top"?"top":a==="bottom"?"bottom":"middle",n=(r||a)==="left"?"left":(r||a)==="right"?"right":"center",p=parseFloat(e.image_scale),d=Math.max(0,Math.min(200,Number.isFinite(p)?p:100)),_=e.image_day||e.image_night;return s`${this._renderIntro("image","Put your images in /config/www/ and enter them as /local/house-day.png. Transparent PNGs look best. Without a night image the day image is used.","appearance.html#custom-images")}
       <div class="image-thumbs">
         ${t("image_day")} ${t("image_night")}
       </div>
@@ -3033,7 +3033,7 @@ var ne=globalThis,le=ne.ShadowRoot&&(ne.ShadyCSS===void 0||ne.ShadyCSS.nativeSha
           ${this._renderForm(this._imageStatusSchema())}
           <div class="composite-helper">
             ${o("For example a picture with the garage door open while the door is open.")}
-          </div>`)}`}_renderCardsPanel(){return s`${this._renderIntro("cards","Add any Home Assistant card, for example an entities or history card. The cards are shown on top of the sky. Grids and stacks work too.","embedded-cards")}
+          </div>`)}`}_renderCardsPanel(){return s`${this._renderIntro("cards","Add any Home Assistant card, for example an entities or history card. The cards are shown on top of the sky. Grids and stacks work too.","appearance.html#embedded-cards")}
       ${this._renderPositionGrid("custom_cards_position",re.custom_cards_position)}
       ${this._renderCustomCardsEditor()}
       ${this._renderDisclosure("Advanced options",this._renderClearableText("custom_cards_css_class"))}`}_renderChipsPanel(){return this._formData.card_hide_text===!0?s`<div class="info inline-action">
@@ -3048,7 +3048,7 @@ var ne=globalThis,le=ne.ShadowRoot&&(ne.ShadyCSS===void 0||ne.ShadyCSS.nativeSha
         >
           ${o("Show again")}
         </button>
-      </div>`:s`${this._renderIntro("chips","A chip shows one value, for example the temperature, the wind or tomorrow's forecast. All chips share one area whose position and layout you set below. Single chips can be placed freely.","chips-in-the-editor")}
+      </div>`:s`${this._renderIntro("chips","A chip shows one value, for example the temperature, the wind or tomorrow's forecast. All chips share one area whose position and layout you set below. Single chips can be placed freely.","chips.html#chips-in-the-editor")}
       ${this._renderChipsEditor()}`}render(){return!this.hass||!this._config?s``:(Zt(this.hass),s`${this._renderForm([{name:"weather_entity",selector:{entity:{domain:"weather"}}},{name:"precipitation_entity",selector:{entity:{domain:"sensor",include_entities:this._precipitationSensors()}}}])}
       ${this._panel("sun_moon","mdi:theme-light-dark","Sun & Moon","Day and night, moon phase, position and size",this._renderSunMoonPanel())}
       ${this._panel("appearance","mdi:palette-outline","Appearance","Color mode, card style, edges and filters",this._renderAppearancePanel())}
