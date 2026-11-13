@@ -10,7 +10,7 @@ These entities connect the card to Home Assistant. Only `weather_entity` is requ
 
 | Option               | Type     | Default | Description                                                                                                                                                                                                                             |
 | :------------------- | :------- | :------ | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`weather_entity`** | `string` | —       | **Required.** Your weather integration entity (e.g., `weather.your_weather_entity`). See [Troubleshooting: Weather entity is unavailable or values look wrong](#weather-entity-is-unavailable-or-values-look-wrong).                    |
+| **`weather_entity`** | `string` | —       | **Required.** Your weather integration entity (e.g., `weather.your_weather_entity`). The weather state, the forecasts and every reading come from it, unless you set [your own sensors](#your-own-sensors) for single readings. See [Troubleshooting: Weather entity is unavailable or values look wrong](#weather-entity-is-unavailable-or-values-look-wrong).                    |
 | `sun_entity`         | `string` | —       | _Recommended._ Usually `sun.sun`. Switches between day and night and drives the golden hour, sunset colors, the blue hour, sun rays and the moving sun. Without it the card always shows day. How it also sets the card colors is explained in [Color Mode](#color-mode). |
 | `moon_phase_entity`  | `string` | —       | _Recommended._ Displays the correct moon phase (e.g., `sensor.moon_phase`).                                                                                                                                                             |
 | `precipitation_entity` | `string` | —     | _Optional._ A sensor with the current rain intensity in mm/h (or in/h). The editor lists only sensors with one of these units. Rain and snow then follow the measured amount, from drizzle to downpour. Without it the density follows the weather state. See [Weather Data & Sky Light](#weather-data). |
@@ -996,16 +996,26 @@ Cloud cover and precipitation are rounded into steps, so small sensor changes do
 
 A weather station on your house measures the wind, the temperature and the humidity where you live, often every minute, while a weather service models them for a grid of several kilometres. Every reading the card uses can come from a sensor of your own instead of the weather entity. In the editor they sit at the top under **Your own sensors (optional)**; each picker lists only sensors that fit, by unit or device class.
 
-| Option                  | Type     | Default | Replaces                         | Description |
-| :---------------------- | :------- | :------ | :------------------------------- | :---------- |
-| `wind_speed_entity`     | `string` | —       | `wind_speed`                     | Wind speed in km/h, mph, m/s, kn, ft/s or Beaufort. Moves the sky and drives the wind lines, the compass and the speed in wind direction chips. |
-| `wind_bearing_entity`   | `string` | —       | `wind_bearing`                   | Where the wind comes from, in degrees or as a compass point like `NW`, as some stations report it. Turns the sky, the compass and turning chip icons. |
-| `temperature_entity`    | `string` | —       | `temperature`                    | Temperature in °C or °F, for ground mist. |
-| `humidity_entity`       | `string` | —       | `humidity`                       | Relative humidity in %, for haze and ground mist. |
-| `dew_point_entity`      | `string` | —       | `dew_point`                      | Dew point in °C or °F. Without it, but with your own temperature or humidity, the card works the dew point out from both. |
-| `cloud_coverage_entity` | `string` | —       | `cloud_coverage`                 | Cloud cover in %. Sets the amount of clouds. |
-| `visibility_entity`     | `string` | —       | `visibility`                     | Visibility in km, mi, m, ft or yd, for haze. |
-| `precipitation_entity`  | `string` | —       | —                                | Rain rate in mm/h or in/h, see the table above. |
+All of these are optional. The `weather_entity` is the one entity the card needs, and without your own sensors every reading comes from it, exactly as before. A sensor of your own only replaces the one reading you give it, and only while it delivers a valid value:
+
+| Case | Value from |
+| :--- | :--- |
+| No sensor of your own set (the default) | the weather entity |
+| Sensor set and delivering a number | your sensor, for this reading only |
+| Sensor `unavailable`, `unknown`, not a number or deleted | the weather entity, automatically |
+| The weather itself: sunny, rain, storm, fog … | always the weather entity |
+| Forecasts in forecast chips | always the weather entity |
+
+| Option | Replaces | Description |
+| :--- | :--- | :--- |
+| `wind_speed_entity` | `wind_speed` | Wind speed in km/h, mph, m/s, kn, ft/s or Beaufort. Moves the sky and drives the wind lines, the compass and the speed in wind direction chips. |
+| `wind_bearing_entity` | `wind_bearing` | Where the wind comes from, in degrees or as a compass point like `NW`, as some stations report it. Turns the sky, the compass and turning chip icons. |
+| `temperature_entity` | `temperature` | Temperature in °C or °F, for ground mist. |
+| `humidity_entity` | `humidity` | Relative humidity in %, for haze and ground mist. |
+| `dew_point_entity` | `dew_point` | Dew point in °C or °F. Without it, but with your own temperature or humidity, the card works the dew point out from both. |
+| `cloud_coverage_entity` | `cloud_coverage` | Cloud cover in %. Sets the amount of clouds. |
+| `visibility_entity` | `visibility` | Visibility in km, mi, m, ft or yd, for haze. |
+| `precipitation_entity` |  | Rain rate in mm/h or in/h, see the table above. |
 
 ```yaml
 type: custom:atmo-weather-card

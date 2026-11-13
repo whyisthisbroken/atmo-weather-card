@@ -192,70 +192,81 @@
 <p>Cloud cover and precipitation are rounded into steps, so small sensor changes do not rebuild the scene every few minutes. Haze, ground mist and sun rays need <code>perf_effects</code> 1 or higher. The golden and the blue hour work in every mode, but they tint the sky only in the <code>standalone</code> card style, because the <code>immersive</code> style has no sky of its own; the golden light on the clouds shows in both styles.</p>
 <h3 id="your-own-sensors"><a class="anchor" href="#your-own-sensors" aria-hidden="true">#</a>Your own sensors</h3>
 <p>A weather station on your house measures the wind, the temperature and the humidity where you live, often every minute, while a weather service models them for a grid of several kilometres. Every reading the card uses can come from a sensor of your own instead of the weather entity. In the editor they sit at the top under <strong>Your own sensors (optional)</strong>; each picker lists only sensors that fit, by unit or device class.</p>
+<p>All of these are optional. The <code>weather_entity</code> is the one entity the card needs, and without your own sensors every reading comes from it, exactly as before. A sensor of your own only replaces the one reading you give it, and only while it delivers a valid value:</p>
+<div class="table"><table>
+<thead>
+<tr>
+<th style="text-align:left">Case</th>
+<th style="text-align:left">Value from</th>
+</tr>
+</thead>
+<tbody><tr>
+<td data-label="Case" style="text-align:left">No sensor of your own set (the default)</td>
+<td data-label="Value from" style="text-align:left">the weather entity</td>
+</tr>
+<tr>
+<td data-label="Case" style="text-align:left">Sensor set and delivering a number</td>
+<td data-label="Value from" style="text-align:left">your sensor, for this reading only</td>
+</tr>
+<tr>
+<td data-label="Case" style="text-align:left">Sensor <code>unavailable</code>, <code>unknown</code>, not a number or deleted</td>
+<td data-label="Value from" style="text-align:left">the weather entity, automatically</td>
+</tr>
+<tr>
+<td data-label="Case" style="text-align:left">The weather itself: sunny, rain, storm, fog …</td>
+<td data-label="Value from" style="text-align:left">always the weather entity</td>
+</tr>
+<tr>
+<td data-label="Case" style="text-align:left">Forecasts in forecast chips</td>
+<td data-label="Value from" style="text-align:left">always the weather entity</td>
+</tr>
+</tbody></table></div>
 <div class="table"><table>
 <thead>
 <tr>
 <th style="text-align:left">Option</th>
-<th style="text-align:left">Type</th>
-<th style="text-align:left">Default</th>
 <th style="text-align:left">Replaces</th>
 <th style="text-align:left">Description</th>
 </tr>
 </thead>
 <tbody><tr>
 <td data-label="Option" id="opt-wind_speed_entity" style="text-align:left"><code>wind_speed_entity</code></td>
-<td data-label="Type" style="text-align:left"><code>string</code></td>
-<td data-label="Default" style="text-align:left">—</td>
 <td data-label="Replaces" id="opt-wind_speed" style="text-align:left"><code>wind_speed</code></td>
 <td data-label="Description" style="text-align:left">Wind speed in km/h, mph, m/s, kn, ft/s or Beaufort. Moves the sky and drives the wind lines, the compass and the speed in wind direction chips.</td>
 </tr>
 <tr>
 <td data-label="Option" id="opt-wind_bearing_entity" style="text-align:left"><code>wind_bearing_entity</code></td>
-<td data-label="Type" style="text-align:left"><code>string</code></td>
-<td data-label="Default" style="text-align:left">—</td>
 <td data-label="Replaces" id="opt-wind_bearing" style="text-align:left"><code>wind_bearing</code></td>
 <td data-label="Description" style="text-align:left">Where the wind comes from, in degrees or as a compass point like <code>NW</code>, as some stations report it. Turns the sky, the compass and turning chip icons.</td>
 </tr>
 <tr>
 <td data-label="Option" id="opt-temperature_entity" style="text-align:left"><code>temperature_entity</code></td>
-<td data-label="Type" style="text-align:left"><code>string</code></td>
-<td data-label="Default" style="text-align:left">—</td>
 <td data-label="Replaces" id="opt-temperature" style="text-align:left"><code>temperature</code></td>
 <td data-label="Description" style="text-align:left">Temperature in °C or °F, for ground mist.</td>
 </tr>
 <tr>
 <td data-label="Option" id="opt-humidity_entity" style="text-align:left"><code>humidity_entity</code></td>
-<td data-label="Type" style="text-align:left"><code>string</code></td>
-<td data-label="Default" style="text-align:left">—</td>
 <td data-label="Replaces" style="text-align:left"><code>humidity</code></td>
 <td data-label="Description" style="text-align:left">Relative humidity in %, for haze and ground mist.</td>
 </tr>
 <tr>
 <td data-label="Option" id="opt-dew_point_entity" style="text-align:left"><code>dew_point_entity</code></td>
-<td data-label="Type" style="text-align:left"><code>string</code></td>
-<td data-label="Default" style="text-align:left">—</td>
 <td data-label="Replaces" style="text-align:left"><code>dew_point</code></td>
 <td data-label="Description" style="text-align:left">Dew point in °C or °F. Without it, but with your own temperature or humidity, the card works the dew point out from both.</td>
 </tr>
 <tr>
 <td data-label="Option" id="opt-cloud_coverage_entity" style="text-align:left"><code>cloud_coverage_entity</code></td>
-<td data-label="Type" style="text-align:left"><code>string</code></td>
-<td data-label="Default" style="text-align:left">—</td>
 <td data-label="Replaces" style="text-align:left"><code>cloud_coverage</code></td>
 <td data-label="Description" style="text-align:left">Cloud cover in %. Sets the amount of clouds.</td>
 </tr>
 <tr>
 <td data-label="Option" id="opt-visibility_entity" style="text-align:left"><code>visibility_entity</code></td>
-<td data-label="Type" style="text-align:left"><code>string</code></td>
-<td data-label="Default" style="text-align:left">—</td>
 <td data-label="Replaces" style="text-align:left"><code>visibility</code></td>
 <td data-label="Description" style="text-align:left">Visibility in km, mi, m, ft or yd, for haze.</td>
 </tr>
 <tr>
 <td data-label="Option" style="text-align:left"><code>precipitation_entity</code></td>
-<td data-label="Type" style="text-align:left"><code>string</code></td>
-<td data-label="Default" style="text-align:left">—</td>
-<td data-label="Replaces" style="text-align:left">—</td>
+<td data-label="Replaces" style="text-align:left"></td>
 <td data-label="Description" style="text-align:left">Rain rate in mm/h or in/h, see the table above.</td>
 </tr>
 </tbody></table></div>
