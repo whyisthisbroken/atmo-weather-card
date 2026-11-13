@@ -910,3 +910,33 @@ test("wind direction chips use German compass points", () => {
   const card = mountCard({ chips: [{ entity: "weather.home", attribute: "wind_bearing", bearing_format: "cardinal" }] }, hass);
   assert.match(text(chips(card)[0]), /\bO\b/);
 });
+
+test("a wind direction chip can turn its icon with the wind and show the speed", () => {
+  const bearing = { entity: "weather.home", attribute: "wind_bearing", bearing_format: "cardinal" };
+  const card = mountCard({
+    chips: [
+      { ...bearing, bearing_icon: "arrow", bearing_speed: true },
+      { ...bearing, bearing_icon: "needle" },
+      { ...bearing, bearing_icon: "filled", icon: "mdi:weather-windy" },
+      // Chips without a wind direction ignore both options.
+      { entity: "weather.home", attribute: "humidity", bearing_icon: "arrow", bearing_speed: true },
+    ],
+  });
+  const [arrow, needle, filled, other] = chips(card);
+  // Wind from the east (90°): the arrow points west where it blows, the needle east where it comes from.
+  assert.match(arrow.querySelector("svg.bearing-icon").getAttribute("style"), /rotate\(270deg\)/);
+  assert.match(needle.querySelector("svg.bearing-icon").getAttribute("style"), /rotate\(90deg\)/);
+  // The turning icon wins over a configured icon.
+  assert.ok(filled.querySelector("svg.bearing-icon") && !filled.querySelector("ha-icon"));
+  assert.match(text(arrow), /E · 20 km\/h/);
+  assert.ok(!text(needle).includes("km/h"));
+  assert.equal(other.querySelector("svg.bearing-icon"), null);
+  // Without a bearing there is no turning icon and no speed after N/A.
+  const hass = makeHass();
+  delete hass.states["weather.home"].attributes.wind_bearing;
+  document.body.replaceChildren();
+  const none = mountCard({ chips: [{ ...bearing, bearing_icon: "arrow", bearing_speed: true }] }, hass);
+  assert.equal(chips(none)[0].querySelector("svg.bearing-icon"), null);
+  assert.ok(!text(chips(none)[0]).includes("km/h"), text(chips(none)[0]));
+  assert.ok(!text(other).includes("km/h"));
+});

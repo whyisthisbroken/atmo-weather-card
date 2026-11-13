@@ -183,3 +183,18 @@ test("bearing_format is kept only on wind direction chips", () => {
   // A sensor that is not loaded yet keeps its setting.
   assert.equal(chip({ entity: "sensor.later", bearing_format: "both" }), "both");
 });
+
+test("wind icon and speed stay only on wind direction chips", () => {
+  const ed = createEditor();
+  ed.hass = { states: { "weather.home": { attributes: {} }, "sensor.dir": { attributes: { device_class: "wind_direction" } } } };
+  const keep = ed._cleanChip({ entity: "weather.home", attribute: "wind_bearing", bearing_icon: "needle", bearing_speed: true });
+  assert.equal(keep.bearing_icon, "needle");
+  assert.equal(keep.bearing_speed, true);
+  // A sensor has no wind speed next to it; other attributes lose both.
+  const sensor = ed._cleanChip({ entity: "sensor.dir", bearing_icon: "arrow", bearing_speed: true });
+  assert.equal(sensor.bearing_icon, "arrow");
+  assert.equal(sensor.bearing_speed, undefined);
+  const other = ed._cleanChip({ entity: "weather.home", attribute: "humidity", bearing_icon: "arrow", bearing_speed: true });
+  assert.equal(other.bearing_icon, undefined);
+  assert.equal(other.bearing_speed, undefined);
+});

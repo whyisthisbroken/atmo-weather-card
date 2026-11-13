@@ -697,8 +697,9 @@ Chip
 │                        attribute ("Show"), forecast_precision
 ├─ Text      ▸ Label: hide_label, name, name_sensor, name_attribute,
 │                     label_size, label_weight, label_overflow
-│              Value: hide_value, fancy_unit, bearing_format, unit_format,
-│                     value_precision, text_size, value_weight, overflow
+│              Value: hide_value, fancy_unit, bearing_format, bearing_icon,
+│                     bearing_speed, unit_format, value_precision,
+│                     text_size, value_weight, overflow
 │              Sub value: hide_sub_value, sub_value_entity, sub_value_attribute,
 │                         sub_value_format, sub_value_size, sub_value_weight,
 │                         sub_value_position, sub_value_overflow
@@ -769,6 +770,8 @@ Each entry inside the `chips` list accepts the following keys.
 | `value_precision`       | `number`  | —           | Forces the chip's main value to always show exactly this many decimal places (0–2), padding with zeros if needed (e.g. `22` becomes `22.0` at precision `1`). Leave unset to use Home Assistant's own display precision for the entity/attribute ("Auto"). Does not apply to forecast chips — use `forecast_precision` for those.                                                              |
 | `unit_format`           | `string`  | —           | Replaces the unit shown after the value. Placed directly after the value with no space, e.g. `°` turns `12 °C` into `12°`.                                                                                                                                                                                                                                                                     |
 | `bearing_format`        | `string`  | `degrees`   | Shows a wind direction as degrees (`degrees`, the number as Home Assistant delivers it, e.g. `250`; add `unit_format: °` for the sign), as a compass point (`cardinal`, e.g. `WSW`) or as both (`both`, e.g. `WSW 250°`). Works on the `wind_bearing` attribute of a weather entity, live or forecast, and on sensors with the `wind_direction` device class. Compass points are in German or English. See [Wind compass](#wind-compass) for an image.                                                                     |
+| `bearing_icon`          | `string`  | —           | Turns the chip icon into a pointer that follows the wind: `arrow` or `filled` point where the wind blows, like the wind lines; `needle` is a compass needle whose red tip points where the wind comes from. Works on the same chips as `bearing_format` and replaces `icon`.                                                                                                                                                                                                                                               |
+| `bearing_speed`         | `boolean` | `false`     | Adds the wind speed of the weather entity after the direction, for example `NW · 6.5 mph`, in the unit of the entity. Only on chips that read `wind_bearing` of a weather entity, live or forecast.                                                                                                                                                                                                                                                                                                                        |
 | `name`                  | `string`  | —           | Optional label shown before the value (e.g., `Wind`). For forecast chips, this overrides the auto-generated day/time name.                                                                                                                                                                                                                                                                     |
 | `icon`                  | `string`  | _auto_      | An `mdi:` icon (e.g., `mdi:water-percent`), the keyword `weather` to automatically show the icon matching the current weather state (or the forecasted condition when using `forecast`), or empty to inherit the sensor's own icon.                                                                                                                                                            |
 | `icon_path`             | `string`  | —           | Folder for custom SVG icons (e.g., `/local/weather-icons/`). When set, the value of `icon` resolves to an image file instead of an MDI icon. For example, `icon: weather` combined with `icon_path: /local/weather-icons/` loads `/local/weather-icons/rainy.svg` for rainy weather. You can find the animated SVG icons from the examples [here](https://github.com/basmilius/weather-icons). |
@@ -1089,6 +1092,8 @@ wind_compass_speed: true
 
 Chips can show the compass point too: set [`bearing_format`](#per-chip-options) on a chip that shows the wind direction, for example `cardinal` for `WSW` or `both` for `WSW 250°`. In the editor it is in the chip under **Text ▸ Value ▸ Wind direction as**.
 
+A chip can also be a small compass of its own, in the chip row like any other chip: [`bearing_icon`](#opt-bearing_icon) turns its icon with the wind and [`bearing_speed`](#opt-bearing_speed) adds the speed. In the editor both sit next to **Wind direction as**.
+
 <p align="center"><img src="images/chip-bearing-format.webp" alt="bearing_format degrees, cardinal and both on a wind direction chip" width="560" /></p>
 
 ```yaml scene=windy
@@ -1096,7 +1101,9 @@ chips:
   - entity: weather.home
     attribute: wind_bearing
     name: Wind
-    bearing_format: both
+    bearing_format: cardinal
+    bearing_icon: arrow
+    bearing_speed: true
 ```
 
 ### Night sky

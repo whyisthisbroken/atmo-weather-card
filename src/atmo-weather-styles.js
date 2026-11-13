@@ -239,6 +239,8 @@ export function buildStyles() {
           .chip .chip-icon ha-icon,
           .chip .chip-icon ha-state-icon { --mdc-icon-size: var(--awc-icon-size, 1.1em); opacity: 0.9; }
           .chip .chip-icon img.custom-bottom-icon { display: block; height: var(--awc-icon-size, 1.1em); width: var(--awc-icon-size, 1.1em); object-fit: contain; }
+          .chip .chip-icon svg.bearing-icon { display: block; width: var(--awc-icon-size, 1.1em); height: var(--awc-icon-size, 1.1em); opacity: 0.9; }
+          .chip.format-stacked .chip-icon svg.bearing-icon, .chip.format-vertical .chip-icon svg.bearing-icon { width: var(--awc-icon-size, 1.3em); height: var(--awc-icon-size, 1.3em); opacity: 1; }
           .chip .chip-name { font-size: var(--awc-chip-name-font-size, inherit); font-weight: var(--awc-chip-name-weight, 500); opacity: var(--awc-chip-name-opacity, 0.7); color: var(--awc-chip-name-color, inherit); flex: 0 0 auto; margin-right: var(--awc-chip-text-gap, 0.35em); }
           .chip .chip-val { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; display: inline-block; font-weight: var(--awc-chip-value-weight, 700); }
           .chip.no-name:not(.format-stacked):not(.format-vertical) .chip-val { font-weight: var(--awc-chip-value-weight, 700); }

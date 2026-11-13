@@ -2,6 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  BEARING_ICONS,
+  bearingIconSvg,
   compassLabel,
   compassMarkup,
   compassPoint,
@@ -105,4 +107,13 @@ test("bearing values in every format", () => {
   // Values that are no number, like N/A or a text bearing, stay as they are.
   assert.deepEqual(formatBearingValue("N/A", "cardinal", "en", "N/A", ""), { formatted: "N/A", unit: "" });
   assert.deepEqual(formatBearingValue(null, "both", "en", "—", ""), { formatted: "—", unit: "" });
+});
+
+test("bearing icons point where the wind blows, the needle where it comes from", () => {
+  assert.match(bearingIconSvg("arrow", 315), /rotate\(135deg\)/);
+  assert.match(bearingIconSvg("filled", 0), /rotate\(180deg\)/);
+  assert.match(bearingIconSvg("needle", 315), /rotate\(315deg\)/);
+  assert.equal(bearingIconSvg("spinner", 10), "");
+  assert.equal(bearingIconSvg("arrow", NaN), "");
+  assert.deepEqual([...BEARING_ICONS], ["arrow", "filled", "needle"]);
 });

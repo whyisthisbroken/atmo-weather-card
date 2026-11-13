@@ -85,6 +85,8 @@ import {
   COMPASS_MIN_SCALE,
   compassMarkup,
   compassPoint,
+  BEARING_ICONS,
+  bearingIconSvg,
   formatBearingValue,
   isBearingChip,
   resolveCompassPosition,
@@ -2514,17 +2516,39 @@ class AtmosphericWeatherCard extends HTMLElement {
         }
       }
     }
-    if (chip.bearing_format && isBearingChip(chip, hass)) {
+    // Wind direction chips: compass point, a turning icon and the wind speed.
+    let bearingIcon = "";
+    if (
+      (chip.bearing_format || chip.bearing_icon || chip.bearing_speed) &&
+      isBearingChip(chip, hass)
+    ) {
+      const lang = editorLanguage(hass);
       const raw = isForecast
         ? fcEntry && fcEntry.wind_bearing
         : mainRawNumeric;
-      ({ formatted, unit } = formatBearingValue(
-        raw,
-        chip.bearing_format,
-        editorLanguage(hass),
-        formatted,
-        unit,
-      ));
+      if (chip.bearing_format)
+        ({ formatted, unit } = formatBearingValue(
+          raw,
+          chip.bearing_format,
+          lang,
+          formatted,
+          unit,
+        ));
+      if (BEARING_ICONS.includes(chip.bearing_icon))
+        bearingIcon = bearingIconSvg(chip.bearing_icon, parseFloat(raw));
+      // The speed comes from the same weather entity, with its own unit.
+      const wEnt = hass.states[chip.entity];
+      // Only next to a known direction, never after N/A.
+      const speed = chip.bearing_speed === true && chip.attribute === "wind_bearing" && Number.isFinite(parseFloat(raw))
+        ? parseFloat(isForecast ? fcEntry && fcEntry.wind_speed : wEnt && wEnt.attributes.wind_speed)
+        : NaN;
+      if (Number.isFinite(speed)) {
+        const speedUnit = (wEnt && wEnt.attributes.wind_speed_unit) || "km/h";
+        const value = new Intl.NumberFormat(lang, { maximumFractionDigits: 1 }).format(speed);
+        const u = unit ? (/^[°%]/.test(unit) ? unit : ` ${unit}`) : "";
+        formatted = `${formatted}${u} · ${value} ${speedUnit}`;
+        unit = "";
+      }
     }
     const configIcon = chip.icon,
       configPath = chip.icon_path;
@@ -2549,6 +2573,11 @@ class AtmosphericWeatherCard extends HTMLElement {
             ? WEATHER_ICONS[resolvedBase] || WEATHER_ICONS["default"]
             : configIcon;
       }
+    }
+    // A turning wind icon replaces the chip icon.
+    if (bearingIcon) {
+      iconStrategy = "bearing";
+      iconValue = bearingIcon;
     }
     const resolvedUnitFormat =
       chip.unit_format !== undefined && chip.unit_format !== null
@@ -2697,7 +2726,10 @@ class AtmosphericWeatherCard extends HTMLElement {
     const safeIconValue = escapeHtmlAttr(iconValue);
     if (showIcon) {
       let inner;
-      if (iconStrategy === "native") {
+      if (iconStrategy === "bearing") {
+        // Built in the compass module from fixed markup and a rounded angle.
+        inner = iconValue;
+      } else if (iconStrategy === "native") {
         inner = "<ha-state-icon></ha-state-icon>";
       } else if (iconStrategy === "image") {
         inner = `<img src="${safeIconValue}" class="custom-bottom-icon" />`;

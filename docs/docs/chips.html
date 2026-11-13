@@ -163,8 +163,9 @@
 │                        attribute ("Show"), forecast_precision
 ├─ Text      ▸ Label: hide_label, name, name_sensor, name_attribute,
 │                     label_size, label_weight, label_overflow
-│              Value: hide_value, fancy_unit, bearing_format, unit_format,
-│                     value_precision, text_size, value_weight, overflow
+│              Value: hide_value, fancy_unit, bearing_format, bearing_icon,
+│                     bearing_speed, unit_format, value_precision,
+│                     text_size, value_weight, overflow
 │              Sub value: hide_sub_value, sub_value_entity, sub_value_attribute,
 │                         sub_value_format, sub_value_size, sub_value_weight,
 │                         sub_value_position, sub_value_overflow
@@ -423,6 +424,18 @@
 <td data-label="Type" style="text-align:left"><code>string</code></td>
 <td data-label="Default" id="opt-degrees" style="text-align:left"><code>degrees</code></td>
 <td data-label="Description" style="text-align:left">Shows a wind direction as degrees (<code>degrees</code>, the number as Home Assistant delivers it, e.g. <code>250</code>; add <code>unit_format: °</code> for the sign), as a compass point (<code>cardinal</code>, e.g. <code>WSW</code>) or as both (<code>both</code>, e.g. <code>WSW 250°</code>). Works on the <code>wind_bearing</code> attribute of a weather entity, live or forecast, and on sensors with the <code>wind_direction</code> device class. Compass points are in German or English. See <a href="effects.html#wind-compass">Wind compass</a> for an image.</td>
+</tr>
+<tr>
+<td data-label="Option" id="opt-bearing_icon" style="text-align:left"><code>bearing_icon</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" style="text-align:left">—</td>
+<td data-label="Description" style="text-align:left">Turns the chip icon into a pointer that follows the wind: <code>arrow</code> or <code>filled</code> point where the wind blows, like the wind lines; <code>needle</code> is a compass needle whose red tip points where the wind comes from. Works on the same chips as <code>bearing_format</code> and replaces <code>icon</code>.</td>
+</tr>
+<tr>
+<td data-label="Option" id="opt-bearing_speed" style="text-align:left"><code>bearing_speed</code></td>
+<td data-label="Type" style="text-align:left"><code>boolean</code></td>
+<td data-label="Default" style="text-align:left"><code>false</code></td>
+<td data-label="Description" style="text-align:left">Adds the wind speed of the weather entity after the direction, for example <code>NW · 6.5 mph</code>, in the unit of the entity. Only on chips that read <code>wind_bearing</code> of a weather entity, live or forecast.</td>
 </tr>
 <tr>
 <td data-label="Option" id="opt-name" style="text-align:left"><code>name</code></td>

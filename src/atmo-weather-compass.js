@@ -81,6 +81,26 @@ export function isBearingChip(chip, hass) {
   return !!(st && st.attributes && st.attributes.device_class === "wind_direction");
 }
 
+// Icons a wind direction chip can turn with the wind. The arrows point where
+// the wind blows, like the wind lines; the needle's red tip points where it
+// comes from, like the compass rose. All are drawn pointing up (north).
+export const BEARING_ICONS = Object.freeze(["arrow", "filled", "needle"]);
+const BEARING_GLYPHS = {
+  arrow:
+    '<path d="M12 20V4M12 4l-6 6M12 4l6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>',
+  filled: '<path d="M12 2.5l6.5 17-6.5-3.6-6.5 3.6z" fill="currentColor"/>',
+  needle:
+    '<path d="M12 2l3.6 10H8.4z" fill="#e5534b"/><path d="M12 22l3.6-10H8.4z" fill="currentColor" opacity="0.7"/><circle cx="12" cy="12" r="1.7" fill="currentColor"/>',
+};
+
+export function bearingIconSvg(style, bearing) {
+  const glyph = BEARING_GLYPHS[style];
+  const deg = Number(bearing);
+  if (!glyph || !Number.isFinite(deg)) return "";
+  const turn = style === "needle" ? deg : deg + 180;
+  return `<svg class="bearing-icon" viewBox="0 0 24 24" aria-hidden="true" style="transform: rotate(${Math.round(turn % 360)}deg)">${glyph}</svg>`;
+}
+
 // Value and unit of a wind direction chip in the chosen format. "cardinal"
 // shows only the compass point, "both" puts it before the degree value.
 export function formatBearingValue(raw, format, lang, formatted, unit) {

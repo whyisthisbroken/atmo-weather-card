@@ -382,9 +382,9 @@ weather_entity: weather.home</pre>
     { title: "Wall clock", text: "A big clock over the live sky, made for wall tablets.", scene: { condition: "sunny", night: true, moon: "full_moon" },
       cfg: { card_height: 180, chips: [
         { entity: "sensor.time", position: "custom", position_anchor: "center", position_x: "0px", position_y: "0px", text_size: "52px", hide_icon: true, hide_label: true, background: false, value_weight: "600" } ] } },
-    { title: "Wind compass", text: "Wind arrow with direction and speed, plus a wind direction chip.", scene: { condition: "windy", wind: 42, bearing: 120 },
+    { title: "Wind compass", text: "Wind arrow with direction and speed, plus a chip whose needle turns with the wind.", scene: { condition: "windy", wind: 42, bearing: 120 },
       cfg: { card_height: 180, wind_compass: "arrow", wind_compass_degrees: true, wind_compass_speed: true, chips: [
-        { entity: "weather.home", attribute: "wind_bearing", name: "From", bearing_format: "cardinal", icon: "mdi:compass-outline" } ] } },
+        { entity: "weather.home", attribute: "wind_bearing", name: "Wind", bearing_format: "cardinal", bearing_icon: "needle", bearing_speed: true } ] } },
     { title: "Gauges", text: "Ring chips for any sensor, with colors that follow the value.", scene: { condition: "sunny" },
       cfg: { card_height: 180, chip_area_gap: "8px", chips: [SOLAR, BATTERY, HUMID] } },
     { title: "Indoor and outdoor", text: "Outside from the weather entity, inside from your sensors.", scene: { condition: "snowy", temp: -2 },

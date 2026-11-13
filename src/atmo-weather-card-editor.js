@@ -201,6 +201,7 @@ const CHIP_LABELS = Object.freeze({
   tap_action: "Tap Action",
   unit_format: "Custom unit",
   bearing_format: "Wind direction as",
+  bearing_icon: "Wind direction icon",
   text_size: "Value text size",
   label_size: "Label text size",
   inner_gap: "Icon/text gap",
@@ -409,6 +410,7 @@ const CHIP_BOOLEAN_FIELDS = Object.freeze([
   "fancy_unit",
   "chip_round",
   "behind_effects",
+  "bearing_speed",
 ]);
 const CHIP_CSS_SIZE_FIELDS = Object.freeze(["width", "height"]);
 const OPT = Object.freeze({
@@ -461,6 +463,12 @@ const OPT = Object.freeze({
     { value: "degrees", label: "Degrees (250)" },
     { value: "cardinal", label: "Compass point (WSW)" },
     { value: "both", label: "Compass point and degrees (WSW 250°)" },
+  ],
+  bearing_icon: [
+    { value: "icon", label: "Chip icon" },
+    { value: "arrow", label: "Arrow, where the wind blows" },
+    { value: "filled", label: "Filled arrow, where the wind blows" },
+    { value: "needle", label: "Compass needle, where the wind comes from" },
   ],
   chip_overflow: [
     { value: "ellipsis", label: "Ellipsis (…)" },
@@ -3318,6 +3326,12 @@ class AtmosphericWeatherCardEditor extends LitElement {
       (bearingKnown && !isBearingChip(out, this.hass))
     )
       delete out.bearing_format;
+    if (bearingKnown && !isBearingChip(out, this.hass)) {
+      delete out.bearing_icon;
+      delete out.bearing_speed;
+    }
+    // The speed comes from the weather entity next to wind_bearing.
+    if (out.attribute !== "wind_bearing") delete out.bearing_speed;
     if (!out.sub_value_entity && !out.sub_value_attribute) {
       delete out.sub_value_format;
       delete out.sub_value_position;
@@ -3983,7 +3997,10 @@ class AtmosphericWeatherCardEditor extends LitElement {
         ? html`${isBearingChip(chip, this.hass)
               ? html`<ha-form
                   .hass=${this.hass}
-                  .data=${{ bearing_format: chip.bearing_format || "degrees" }}
+                  .data=${{
+                    bearing_format: chip.bearing_format || "degrees",
+                    bearing_icon: chip.bearing_icon || "icon",
+                  }}
                   .schema=${[
                     {
                       name: "bearing_format",
@@ -3994,17 +4011,44 @@ class AtmosphericWeatherCardEditor extends LitElement {
                         },
                       },
                     },
+                    {
+                      name: "bearing_icon",
+                      selector: {
+                        select: {
+                          mode: "dropdown",
+                          options: tOpts(OPT.bearing_icon),
+                        },
+                      },
+                    },
                   ]}
                   .computeLabel=${this._chipLabel}
                   @value-changed=${(e) => {
                     e.stopPropagation();
-                    const v =
-                      e.detail &&
-                      e.detail.value &&
-                      e.detail.value.bearing_format;
-                    update({ ...chip, bearing_format: v || "degrees" });
+                    const v = (e.detail && e.detail.value) || {};
+                    const n = {
+                      ...chip,
+                      bearing_format: v.bearing_format || "degrees",
+                    };
+                    if (v.bearing_icon && v.bearing_icon !== "icon")
+                      n.bearing_icon = v.bearing_icon;
+                    else delete n.bearing_icon;
+                    update(n);
                   }}
-                ></ha-form>`
+                ></ha-form>
+                ${chip.attribute === "wind_bearing"
+                  ? html`<div class="toggle-group">
+                      <label class="toggle-row">
+                        <span>${t("Show wind speed")}</span>
+                        <ha-switch
+                          data-chip-idx=${idx}
+                          data-key="bearing_speed"
+                          data-mode=${TOGGLE_MODE.TRUE_DELETE}
+                          .checked=${chip.bearing_speed === true}
+                          @change=${this._onChipToggleChange}
+                        ></ha-switch>
+                      </label>
+                    </div>`
+                  : ""}`
               : ""}
             ${chipForm([{ name: "unit_format", selector: { text: {} } }])}
             ${!isFc && entityId

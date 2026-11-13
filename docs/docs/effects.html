@@ -357,13 +357,16 @@ wind_compass: rose
 wind_compass_position: bottom-right
 wind_compass_degrees: true
 wind_compass_speed: true</code></pre></div><p>Chips can show the compass point too: set <a href="chips.html#per-chip-options"><code>bearing_format</code></a> on a chip that shows the wind direction, for example <code>cardinal</code> for <code>WSW</code> or <code>both</code> for <code>WSW 250°</code>. In the editor it is in the chip under <strong>Text ▸ Value ▸ Wind direction as</strong>.</p>
+<p>A chip can also be a small compass of its own, in the chip row like any other chip: <a href="chips.html#opt-bearing_icon"><code>bearing_icon</code></a> turns its icon with the wind and <a href="chips.html#opt-bearing_speed"><code>bearing_speed</code></a> adds the speed. In the editor both sit next to <strong>Wind direction as</strong>.</p>
 <p align="center"><img src="../images/chip-bearing-format.webp" alt="bearing_format degrees, cardinal and both on a wind direction chip" width="560" /></p>
 
-<div class="code"><div class="code-bar"><span>yaml</span><span class="code-actions"><button type="button" class="try" data-scene="windy" data-example="{&quot;chips&quot;:[{&quot;entity&quot;:&quot;weather.demo&quot;,&quot;attribute&quot;:&quot;wind_bearing&quot;,&quot;name&quot;:&quot;Wind&quot;,&quot;bearing_format&quot;:&quot;both&quot;}]}">Show live</button><button type="button" class="copy">Copy</button></span></div><pre><code>chips:
+<div class="code"><div class="code-bar"><span>yaml</span><span class="code-actions"><button type="button" class="try" data-scene="windy" data-example="{&quot;chips&quot;:[{&quot;entity&quot;:&quot;weather.demo&quot;,&quot;attribute&quot;:&quot;wind_bearing&quot;,&quot;name&quot;:&quot;Wind&quot;,&quot;bearing_format&quot;:&quot;cardinal&quot;,&quot;bearing_icon&quot;:&quot;arrow&quot;,&quot;bearing_speed&quot;:true}]}">Show live</button><button type="button" class="copy">Copy</button></span></div><pre><code>chips:
   - entity: weather.home
     attribute: wind_bearing
     name: Wind
-    bearing_format: both</code></pre></div><h3 id="night-sky"><a class="anchor" href="#night-sky" aria-hidden="true">#</a>Night sky</h3>
+    bearing_format: cardinal
+    bearing_icon: arrow
+    bearing_speed: true</code></pre></div><h3 id="night-sky"><a class="anchor" href="#night-sky" aria-hidden="true">#</a>Night sky</h3>
 <p>Shooting stars and comets appear on clear nights only; rain, snow, thunderstorms and fog hide them. They need <code>perf_effects</code> <code>1</code> or higher.</p>
 <div class="table"><table>
 <thead>
