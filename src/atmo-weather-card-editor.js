@@ -5599,9 +5599,9 @@ class AtmosphericWeatherCardEditor extends LitElement {
         2: "Maximum detail",
       },
       perf_effects: {
-        0: "No weather effects",
-        1: "Rain, snow, lightning, stars",
-        2: "Extra shooting stars and comets",
+        0: "The weather only, without extra effects",
+        1: "Haze, ground mist, sun rays, fog banks, shooting stars and comets",
+        2: "Plus more comets, clouds lit by the sun and more wind lines",
       },
       perf_dpr: {
         0.5: "Low resolution",

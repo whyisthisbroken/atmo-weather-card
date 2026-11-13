@@ -437,11 +437,14 @@ class AtmosphericWeatherCard extends HTMLElement {
         this._elements.customCardsWrapper.classList.add(...userClasses);
     }
     const customCards = this._config.custom_cards;
+    // Home Assistant provides loadCardHelpers; without it (another frontend)
+    // the embedded cards stay empty instead of breaking the whole card.
     if (
       Array.isArray(customCards) &&
       customCards.length > 0 &&
       this._elements &&
-      this._elements.customCardsWrapper
+      this._elements.customCardsWrapper &&
+      typeof window.loadCardHelpers === "function"
     ) {
       this._elements.customCardsWrapper.classList.add("has-cards");
       const expectedConfig = this._config;
@@ -465,7 +468,7 @@ class AtmosphericWeatherCard extends HTMLElement {
           wrapper.appendChild(el);
           if (this._hass) el.hass = this._hass;
         }
-      });
+      }, () => {});
     }
     this._lastSnapshot =
       this._prevRowOverflow =

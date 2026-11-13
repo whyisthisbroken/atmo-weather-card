@@ -1028,3 +1028,15 @@ test("effect_golden_hour off also turns off the warm glow of a low sun", () => {
   assert.ok(wash({}) > 0);
   assert.equal(wash({ effect_golden_hour: false }), 0);
 });
+
+test("embedded cards without Home Assistant's card helpers leave the card running", () => {
+  const saved = window.loadCardHelpers;
+  delete window.loadCardHelpers;
+  try {
+    const card = mountCard({ custom_cards: [{ type: "entities", entities: [] }] });
+    assert.ok(card._renderState || card._elements, "the card still renders");
+    assert.equal(card._customCardElements.length, 0);
+  } finally {
+    if (saved) window.loadCardHelpers = saved;
+  }
+});
