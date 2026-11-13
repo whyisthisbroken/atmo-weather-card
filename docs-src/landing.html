@@ -326,7 +326,7 @@ weather_entity: weather.home</pre>
     { entity: "weather.home", forecast: "daily", forecast_offset: 1, attribute: "temperature", icon: "weather", sub_value_attribute: "templow", sub_value_position: "beside", forecast_precision: 0 },
   ] };
   // Ring chips styled like the Forecast & Ring Chip example of the docs.
-  const RING = { type: "ring", style: "vertical", align: "center", padding: "12px", height: "78px", icon_size: "16px", ring_width: 6, ring_gap: 6, ring_threshold_mode: "gradient" };
+  const RING = { type: "ring", style: "vertical", align: "center", padding: "12px", height: "78px", icon_size: "16px", text_size: "12px", label_size: "9px", text_gap: "2px", ring_width: 6, ring_gap: 6, ring_threshold_mode: "gradient", background: true };
   const SOLAR = { ...RING, entity: "sensor.solar_power", name: "Solar", icon: "mdi:solar-power", ring_min: 0, ring_max: 5, ring_thresholds: [{ value: 0, color: "rgba(242, 184, 75, 0.55)" }, { value: 5, color: "rgba(242, 184, 75, 1)" }] };
   const BATTERY = { ...RING, entity: "sensor.battery", name: "Battery", icon: "mdi:battery-high", ring_thresholds: [{ value: 0, color: "rgba(229, 83, 75, 0.9)" }, { value: 40, color: "rgba(242, 184, 75, 0.9)" }, { value: 80, color: "rgba(63, 185, 80, 0.9)" }] };
   const HUMID = { ...RING, entity: "sensor.indoor_humidity", name: "Humidity", icon: "mdi:water-percent", ring_thresholds: [{ value: 0, color: "rgba(140, 200, 255, 0.85)" }, { value: 100, color: "rgba(40, 110, 230, 1)" }] };
