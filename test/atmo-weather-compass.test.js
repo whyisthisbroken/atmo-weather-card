@@ -44,6 +44,13 @@ test("each style has its own corner unless a position is set", () => {
   assert.equal(resolveCompassPosition("vane", "auto"), "bottom-right");
   assert.equal(resolveCompassPosition("rose", "top-left"), "top-left");
   assert.equal(resolveCompassPosition("rose", "middle"), "bottom-right");
+  // Auto moves away from chips, a chosen position stays.
+  assert.equal(resolveCompassPosition("arrow", "auto", ["bottom-left"]), "top-left");
+  assert.equal(resolveCompassPosition("arrow", "auto", ["bottom-left", "top-left"]), "bottom-right");
+  assert.equal(resolveCompassPosition("band", "auto", ["bottom-center"]), "top-center");
+  assert.equal(resolveCompassPosition("arrow", "bottom-left", ["bottom-left"]), "bottom-left");
+  const all = ["top-left", "top-right", "bottom-left", "bottom-right"];
+  assert.equal(resolveCompassPosition("arrow", "auto", all), "bottom-left");
 });
 
 test("the label shows only the parts that are switched on", () => {

@@ -401,7 +401,7 @@ const ROWS = [
   ["Frosted background", "Milchglas-Hintergrund"],
   ["A frosted box behind the compass, readable on any sky.", "Ein Milchglas-Feld hinter dem Kompass, auf jedem Himmel lesbar."],
   ["Shows where the wind comes from, read from wind_bearing of the weather entity. The arrow points where it blows to.", "Zeigt, woher der Wind kommt, gelesen aus wind_bearing der Wetter-Entität. Der Pfeil zeigt, wohin er weht."],
-  ["Automatic puts each style in its usual corner.", "Automatisch setzt jeden Stil in seine übliche Ecke."],
+  ["Automatic puts each style in its usual corner and moves it away from chips.", "Automatisch setzt jeden Stil in seine übliche Ecke und weicht Chips aus."],
   ["Wind arrow", "Windpfeil"],
   ["Compass rose", "Kompassrose"],
   ["Compass chip", "Kompass-Chip"],

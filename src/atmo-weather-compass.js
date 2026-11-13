@@ -46,10 +46,19 @@ export function compassPoint(deg, lang = "en") {
   return pointsFor(lang)[Math.round(d / 22.5) % 16];
 }
 
-export function resolveCompassPosition(style, position) {
-  return COMPASS_POSITIONS.includes(position) && position !== "auto"
-    ? position
-    : AUTO_POSITION[style] || "bottom-right";
+// A chosen position is kept. "auto" uses the usual corner of the style, but
+// moves away from places taken by chips: first to the other edge on the same
+// side, then to the other side.
+export function resolveCompassPosition(style, position, taken = []) {
+  if (COMPASS_POSITIONS.includes(position) && position !== "auto")
+    return position;
+  const home = AUTO_POSITION[style] || "bottom-right";
+  if (!taken.includes(home)) return home;
+  const [row, col] = home.split("-");
+  const flipRow = row === "top" ? "bottom" : "top";
+  const flipCol = col === "left" ? "right" : col === "right" ? "left" : col;
+  const options = [`${flipRow}-${col}`, `${row}-${flipCol}`, `${flipRow}-${flipCol}`];
+  return options.find((p) => !taken.includes(p)) || home;
 }
 
 // Turns a new bearing into an angle that continues from the previous one, so a

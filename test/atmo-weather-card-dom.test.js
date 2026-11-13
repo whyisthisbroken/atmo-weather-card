@@ -842,6 +842,26 @@ test("the compass gets a frosted background on request, the chip keeps its own",
   assert.equal(compassEl(pill).querySelector(".cmp-bg"), null);
 });
 
+test("an automatic compass moves away from the chips", () => {
+  const pos = (cfg) => {
+    const card = mountCard({ wind_compass: "arrow", ...cfg }, makeHass({ weather: "windy" }));
+    runFrames(2);
+    const cls = compassEl(card).firstElementChild.className;
+    document.body.replaceChildren();
+    return cls.match(/cmp-pos-([a-z-]+)/)[1];
+  };
+  // No chips: the arrow sits in its corner, bottom left.
+  assert.equal(pos({}), "bottom-left");
+  // The chip row sits bottom left by default, so the arrow goes up.
+  assert.equal(pos({ chips: [SENSOR] }), "top-left");
+  // A free chip top left as well: the arrow goes to the other side.
+  assert.equal(pos({ chips: [SENSOR, { ...SENSOR, position: "custom", position_anchor: "top-left" }] }), "bottom-right");
+  // A full width chip row takes the whole bottom edge.
+  assert.equal(pos({ wind_compass: "band", chip_area_full_width: true, chips: [SENSOR] }), "top-center");
+  // A chosen place is kept.
+  assert.equal(pos({ wind_compass_position: "bottom-left", chips: [SENSOR] }), "bottom-left");
+});
+
 test("the wind arrow keeps its full size on a low card", () => {
   const card = mountCard({ wind_compass: "arrow" }, makeHass({ weather: "windy" }));
   runFrames(2);

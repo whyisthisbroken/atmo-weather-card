@@ -551,6 +551,7 @@ class AtmosphericWeatherCard extends HTMLElement {
           config.wind_compass_position ??
             CONFIG_DEFAULTS.wind_compass_position,
         ),
+        this._chipCorners(config),
       ),
       show: {
         cardinal: config.wind_compass_cardinal !== false,
@@ -988,6 +989,30 @@ class AtmosphericWeatherCard extends HTMLElement {
       return arr.map((s) => (s && typeof s === "object" ? s : {}));
     }
     return [{}];
+  }
+  // Corners taken by chips: the chip area and freely placed chips. A full
+  // width chip area takes its whole edge.
+  _chipCorners(config) {
+    const chips = (Array.isArray(config.chips) ? config.chips : []).filter(
+      (c) => c && typeof c === "object" && c.entity,
+    );
+    const taken = [];
+    if (
+      config.chip_area_hide !== true &&
+      chips.some((c) => String(c.position || "").toLowerCase() !== "custom")
+    ) {
+      const area = String(config.chip_area_position || "bottom-left");
+      taken.push(area);
+      if (config.chip_area_full_width === true) {
+        const row = area.split("-")[0];
+        if (row === "top" || row === "bottom")
+          taken.push(`${row}-left`, `${row}-center`, `${row}-right`);
+      }
+    }
+    for (const c of chips)
+      if (String(c.position || "").toLowerCase() === "custom")
+        taken.push(String(c.position_anchor || "top-left"));
+    return taken;
   }
   _resolveChipPosition() {
     return (this._config && this._config.chip_area_position) || "bottom-left";

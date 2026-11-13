@@ -177,7 +177,7 @@ const HELPERS = Object.freeze({
     "Shows wind direction and strength in windy weather, and in rain, hail or snow from 40 km/h.",
   wind_compass:
     "Shows where the wind comes from, read from wind_bearing of the weather entity. The arrow points where it blows to.",
-  wind_compass_position: "Automatic puts each style in its usual corner.",
+  wind_compass_position: "Automatic puts each style in its usual corner and moves it away from chips.",
   wind_compass_background: "A frosted box behind the compass, readable on any sky.",
 });
 const CHIP_LABELS = Object.freeze({
@@ -617,7 +617,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
         --awc-e-f-body: 14px;
         --awc-e-f-header: 15px;
         --awc-e-t: 150ms ease;
-        --awc-e-field-fill: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.06);
+        --awc-e-field-fill: color-mix(in srgb, var(--primary-text-color, #212121) 6%, transparent);
         display: block;
       }
       /* ── Spacing ── */
@@ -674,14 +674,14 @@ class AtmosphericWeatherCardEditor extends LitElement {
       details.disclosure .card-row {
         background:
           linear-gradient(
-            rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.05),
-            rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.05)
+            color-mix(in srgb, var(--primary-text-color, #212121) 5%, transparent),
+            color-mix(in srgb, var(--primary-text-color, #212121) 5%, transparent)
           ),
           var(--secondary-background-color);
       }
       .composite,
       .grid-picker {
-        background: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.09);
+        background: color-mix(in srgb, var(--primary-text-color, #212121) 9%, transparent);
         border-radius: var(--awc-e-r-box);
       }
       .composite:last-child,
@@ -797,13 +797,13 @@ class AtmosphericWeatherCardEditor extends LitElement {
       }
       .grid-cell {
         border: 0;
-        background: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.16);
+        background: color-mix(in srgb, var(--primary-text-color, #212121) 16%, transparent);
         border-radius: var(--awc-e-r-inline);
         cursor: pointer;
         padding: 0;
         transition: background var(--awc-e-t);
         &:hover:not(.disabled):not(.active) {
-          background: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.28);
+          background: color-mix(in srgb, var(--primary-text-color, #212121) 28%, transparent);
         }
         &.active {
           background: var(--primary-color);
@@ -817,7 +817,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
           cursor: not-allowed;
           background: repeating-linear-gradient(
             45deg,
-            rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.16) 0 6px,
+            color-mix(in srgb, var(--primary-text-color, #212121) 16%, transparent) 0 6px,
             var(--divider-color) 6px 7px
           );
         }
@@ -870,7 +870,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
         min-width: 120px;
         padding: var(--awc-e-s2) var(--awc-e-s3);
         border: 1px solid transparent;
-        background: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.07);
+        background: color-mix(in srgb, var(--primary-text-color, #212121) 7%, transparent);
         color: var(--primary-text-color);
         border-radius: var(--awc-e-r-ctrl);
         font-size: var(--awc-e-f-body);
@@ -907,7 +907,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
         display: flex;
         flex-wrap: wrap;
         width: 100%;
-        background: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.07);
+        background: color-mix(in srgb, var(--primary-text-color, #212121) 7%, transparent);
         border-radius: var(--awc-e-r-ctrl);
         padding: 0;
         gap: 1px;
@@ -927,7 +927,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
           text-align: center;
           border-radius: var(--awc-e-r-ctrl);
           &:hover:not(.active) {
-            background: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.07);
+            background: color-mix(in srgb, var(--primary-text-color, #212121) 7%, transparent);
           }
           &.active {
             background: var(--primary-color);
@@ -1008,7 +1008,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
           user-select: none;
           transition: background var(--awc-e-t);
           &:hover {
-            background: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.05);
+            background: color-mix(in srgb, var(--primary-text-color, #212121) 5%, transparent);
           }
           & > .chevron {
             --mdc-icon-size: 20px;
@@ -1046,7 +1046,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
               background var(--awc-e-t),
               color var(--awc-e-t);
             &:hover:not(:disabled) {
-              background: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.07);
+              background: color-mix(in srgb, var(--primary-text-color, #212121) 7%, transparent);
               color: var(--primary-text-color);
             }
             &:disabled {
@@ -1060,7 +1060,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
         }
         & .card-row-body {
           padding: var(--awc-e-s3) var(--awc-e-s4) var(--awc-e-s4);
-          background: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.03);
+          background: color-mix(in srgb, var(--primary-text-color, #212121) 3%, transparent);
         }
       }
       /* ── Add buttons ── */
@@ -1120,7 +1120,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
         & input {
           padding: var(--awc-e-s2) var(--awc-e-s3);
           border: 1px solid transparent;
-          background: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.07);
+          background: color-mix(in srgb, var(--primary-text-color, #212121) 7%, transparent);
           color: var(--primary-text-color);
           border-radius: var(--awc-e-r-ctrl);
           font-size: var(--awc-e-f-body);
@@ -1145,7 +1145,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
       }
       /* ── Toggle groups ── */
       .toggle-group {
-        background: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.06);
+        background: color-mix(in srgb, var(--primary-text-color, #212121) 6%, transparent);
         border-radius: var(--awc-e-r-box);
         overflow: hidden;
         margin: var(--awc-e-s2) 0;
@@ -1160,7 +1160,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
         box-sizing: border-box;
         & + .toggle-row {
           border-top: 1px solid
-            rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.06);
+            color-mix(in srgb, var(--primary-text-color, #212121) 6%, transparent);
         }
         & > span {
           font-size: var(--awc-e-f-body);
@@ -1170,15 +1170,14 @@ class AtmosphericWeatherCardEditor extends LitElement {
           flex-shrink: 0;
           margin: 0;
           padding: 0;
-          --ha-switch-background-color: rgba(
-            var(--rgb-primary-text-color, 0, 0, 0),
-            0.12
+          --ha-switch-background-color: color-mix(in srgb, var(--primary-text-color, #212121) 12%, transparent);
+          --ha-switch-thumb-background-color: color-mix(in srgb, var(--primary-text-color, #212121) 60%, transparent);
+          /* A visible edge when off, also on themes with dark panels. */
+          --ha-switch-border-color: color-mix(
+            in srgb,
+            var(--primary-text-color, #212121) 45%,
+            transparent
           );
-          --ha-switch-thumb-background-color: rgba(
-            var(--rgb-primary-text-color, 0, 0, 0),
-            0.35
-          );
-          --ha-switch-border-color: transparent;
           --ha-switch-thumb-border-color: transparent;
           --ha-switch-checked-border-color: transparent;
           --ha-switch-checked-thumb-border-color: transparent;
@@ -1187,21 +1186,15 @@ class AtmosphericWeatherCardEditor extends LitElement {
             --text-primary-color,
             #fff
           );
-          --switch-unchecked-track-color: rgba(
-            var(--rgb-primary-text-color, 0, 0, 0),
-            0.12
-          );
-          --switch-unchecked-button-color: rgba(
-            var(--rgb-primary-text-color, 0, 0, 0),
-            0.35
-          );
+          --switch-unchecked-track-color: color-mix(in srgb, var(--primary-text-color, #212121) 12%, transparent);
+          --switch-unchecked-button-color: color-mix(in srgb, var(--primary-text-color, #212121) 60%, transparent);
           --switch-checked-track-color: var(--primary-color);
           --switch-checked-button-color: var(--text-primary-color, #fff);
         }
       }
       /* ── Section boxes ── */
       .section-box {
-        background: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.09);
+        background: color-mix(in srgb, var(--primary-text-color, #212121) 9%, transparent);
         border-radius: var(--awc-e-r-box);
         overflow: hidden;
         margin: var(--awc-e-s3) 0 var(--awc-e-s4) 0;
@@ -1250,11 +1243,11 @@ class AtmosphericWeatherCardEditor extends LitElement {
             color: var(--text-primary-color, white);
           }
           &:not(.active) {
-            background: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.09);
+            background: color-mix(in srgb, var(--primary-text-color, #212121) 9%, transparent);
             color: var(--primary-text-color);
           }
           &:hover:not(.active) {
-            background: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.16);
+            background: color-mix(in srgb, var(--primary-text-color, #212121) 16%, transparent);
           }
         }
       }
@@ -1289,11 +1282,11 @@ class AtmosphericWeatherCardEditor extends LitElement {
         border-radius: var(--awc-e-r-ctrl);
         font-size: var(--awc-e-f-meta);
         cursor: pointer;
-        background: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.09);
+        background: color-mix(in srgb, var(--primary-text-color, #212121) 9%, transparent);
         color: var(--primary-text-color);
         transition: background var(--awc-e-t);
         &:hover {
-          background: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.16);
+          background: color-mix(in srgb, var(--primary-text-color, #212121) 16%, transparent);
         }
       }
       /* ── Chip type picker ── */
@@ -1308,7 +1301,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
         align-items: center;
         gap: var(--awc-e-s2);
         padding: var(--awc-e-s2) var(--awc-e-s3);
-        border: 1.5px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.12);
+        border: 1.5px solid color-mix(in srgb, var(--primary-text-color, #212121) 12%, transparent);
         border-radius: var(--awc-e-r-box);
         background: transparent;
         color: var(--primary-text-color);
@@ -1357,7 +1350,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
         width: 18px;
         height: 18px;
         border-radius: 4px;
-        background: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.1);
+        background: color-mix(in srgb, var(--primary-text-color, #212121) 10%, transparent);
         color: var(--secondary-text-color);
         flex-shrink: 0;
         & ha-icon {
@@ -1412,7 +1405,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
           box-sizing: border-box;
           height: 36px;
           padding: 0 10px;
-          border: 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.18);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color, #212121) 18%, transparent);
           background: var(--awc-e-field-fill);
           color: var(--primary-text-color);
           border-radius: var(--awc-e-r-ctrl);
@@ -1457,7 +1450,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
         gap: var(--awc-e-s1);
       }
       .field-group {
-        background: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.05);
+        background: color-mix(in srgb, var(--primary-text-color, #212121) 5%, transparent);
         border-radius: var(--awc-e-r-box);
         padding: var(--awc-e-s3);
         margin-top: var(--awc-e-s2);
@@ -1476,7 +1469,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
       }
       /* ── Chip accordions ── */
       .chip-accordion {
-        border: 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.09);
+        border: 1px solid color-mix(in srgb, var(--primary-text-color, #212121) 9%, transparent);
         border-radius: var(--awc-e-r-box);
         overflow: hidden;
         margin-top: var(--awc-e-s2);
@@ -1491,7 +1484,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
         gap: var(--awc-e-s2);
         padding: var(--awc-e-s2) var(--awc-e-s3);
         cursor: pointer;
-        background: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.03);
+        background: color-mix(in srgb, var(--primary-text-color, #212121) 3%, transparent);
         user-select: none;
         -webkit-user-select: none;
         & .chip-accordion-title {
@@ -1515,12 +1508,12 @@ class AtmosphericWeatherCardEditor extends LitElement {
           transform: rotate(90deg);
         }
         &:hover {
-          background: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.06);
+          background: color-mix(in srgb, var(--primary-text-color, #212121) 6%, transparent);
         }
       }
       .chip-accordion-body {
         padding: var(--awc-e-s3);
-        border-top: 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.09);
+        border-top: 1px solid color-mix(in srgb, var(--primary-text-color, #212121) 9%, transparent);
       }
       .chip-accordion-body > .settings-group:first-child {
         margin-top: 0;
@@ -1540,7 +1533,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
         color: var(--secondary-text-color);
         line-height: 1.5;
         & code {
-          background: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.08);
+          background: color-mix(in srgb, var(--primary-text-color, #212121) 8%, transparent);
           padding: 0 4px;
           border-radius: 3px;
         }
@@ -1550,16 +1543,16 @@ class AtmosphericWeatherCardEditor extends LitElement {
         border: 1px solid rgba(var(--rgb-warning-color, 255, 152, 0), 0.25);
       }
       .chip-nudge.info {
-        background: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.04);
-        border: 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.09);
+        background: color-mix(in srgb, var(--primary-text-color, #212121) 4%, transparent);
+        border: 1px solid color-mix(in srgb, var(--primary-text-color, #212121) 9%, transparent);
       }
       /* ── Chip color picker ── */
       .chip-color-box {
         margin-top: var(--awc-e-s2);
         padding: var(--awc-e-s2) var(--awc-e-s3);
-        border: 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.1);
+        border: 1px solid color-mix(in srgb, var(--primary-text-color, #212121) 10%, transparent);
         border-radius: var(--awc-e-r-ctrl);
-        background: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.03);
+        background: color-mix(in srgb, var(--primary-text-color, #212121) 3%, transparent);
       }
       .chip-color-row {
         display: flex;
@@ -1574,7 +1567,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
       .chip-color-swatch {
         width: 36px;
         height: 28px;
-        border: 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.18);
+        border: 1px solid color-mix(in srgb, var(--primary-text-color, #212121) 18%, transparent);
         border-radius: var(--awc-e-r-inline);
         padding: 1px 2px;
         background: none;
@@ -1587,7 +1580,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
         border: 0;
         border-radius: 50%;
         padding: 0;
-        background: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.08);
+        background: color-mix(in srgb, var(--primary-text-color, #212121) 8%, transparent);
         color: var(--secondary-text-color);
         cursor: pointer;
         display: flex;
@@ -1630,7 +1623,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
         flex-direction: column;
         gap: var(--awc-e-s1);
         padding: var(--awc-e-s3);
-        background: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.05);
+        background: color-mix(in srgb, var(--primary-text-color, #212121) 5%, transparent);
         border-radius: var(--awc-e-r-box);
       }
       .awc-slider-head {
@@ -1676,7 +1669,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
           to right,
           var(--primary-color) 0%,
           var(--primary-color) var(--awc-slider-pct, 50%),
-          rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.18)
+          color-mix(in srgb, var(--primary-text-color, #212121) 18%, transparent)
             var(--awc-slider-pct, 50%)
         );
         border-radius: 2px;
@@ -1734,7 +1727,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
           box-sizing: border-box;
           height: 36px;
           padding: 0 10px;
-          border: 1px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.18);
+          border: 1px solid color-mix(in srgb, var(--primary-text-color, #212121) 18%, transparent);
           background: var(--awc-e-field-fill);
           color: var(--primary-text-color);
           border-radius: var(--awc-e-r-ctrl);
@@ -1787,7 +1780,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
       .anchor-cell {
         width: 30px;
         height: 30px;
-        border: 1.5px solid rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.15);
+        border: 1.5px solid color-mix(in srgb, var(--primary-text-color, #212121) 15%, transparent);
         border-radius: var(--awc-e-r-ctrl);
         background: transparent;
         cursor: pointer;
@@ -1873,7 +1866,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
         padding: var(--awc-e-s2) 0;
         & + .ring-threshold-row {
           border-top: 1px solid
-            rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.06);
+            color-mix(in srgb, var(--primary-text-color, #212121) 6%, transparent);
           padding-top: var(--awc-e-s2);
         }
       }
@@ -1888,7 +1881,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
         height: 30px;
         padding: 0 8px;
         border: 1px solid transparent;
-        background: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.07);
+        background: color-mix(in srgb, var(--primary-text-color, #212121) 7%, transparent);
         color: var(--primary-text-color);
         border-radius: var(--awc-e-r-ctrl);
         font-size: var(--awc-e-f-body);
@@ -2070,7 +2063,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
         font-size: var(--awc-e-f-meta);
         color: var(--secondary-text-color);
         background: center / contain no-repeat
-          rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.04);
+          color-mix(in srgb, var(--primary-text-color, #212121) 4%, transparent);
         margin-bottom: var(--awc-e-s1);
         &.has {
           border-style: solid;
