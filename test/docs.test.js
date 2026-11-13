@@ -54,10 +54,15 @@ test("the editor help links point at sections of the documentation", () => {
   assert.equal(links.length, (editor.match(/this\._renderIntro\(/g) || []).length);
   assert.ok(links.length >= 6);
   // Each help link opens the page that holds its section.
-  for (const [, file, id] of links) {
+  // Fixed links like the SVG icons tip go the same way.
+  const fixed = [...editor.matchAll(/href="\$\{DOCS_URL\}docs\/([a-z-]+)\.html#([a-z0-9-]+)"/g)];
+  assert.ok(fixed.length >= 1);
+  for (const [, file, id] of [...links, ...fixed]) {
     assert.ok(docPages[file], `${file}.html does not exist`);
     assert.ok(docPages[file].includes(` id="${id}"`), `#${id} is not on ${file}.html`);
   }
+  // No link leads to another repository.
+  assert.deepEqual([...editor.matchAll(/https:\/\/github\.com\/[^"'`\s]+/g)].map((m) => m[0]), []);
 });
 
 test("the documentation search finds options and sections", () => {

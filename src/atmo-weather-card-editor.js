@@ -5496,7 +5496,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
         <span
           >${t("SVG icons:")}
           <a
-            href="https://github.com/shpongledsummer/atmo-weather-card#weather-icons"
+            href="${DOCS_URL}docs/guides.html#weather-icons"
             target="_blank"
             rel="noopener"
             >${t("How to add them")}</a
