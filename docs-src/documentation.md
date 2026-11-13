@@ -1053,6 +1053,45 @@ Pick a `perf_mode` preset first. A preset sets every option below whose default 
 
 Every preset also uses `animation_speed: 1`, `bird_animation_speed: 0.3`, `star_animation_speed: 0.5` and `fauna_birds_at_night: true`.
 
+### What each mode shows
+
+The columns follow `perf_effects` (`0` in `low`, `1` in `default`, `2` in `ultra`), birds and planes follow `perf_fauna`. If you set one of them yourself, the column of that value applies. Every frame rate shows the same things at the same speed; a higher one only moves more smoothly.
+
+| Feature | low | default | ultra |
+| :------ | :-: | :-----: | :---: |
+| Weather scene, fog haze | yes | yes | yes |
+| Cloud detail | 0.5 | 1.5 | 2.0 |
+| Soft cloud edges, stronger depth | no | yes | yes |
+| Clouds lit from the sun angle, changing shapes | no | no | yes |
+| Sun corona | no | yes | yes |
+| Soft clouds around sun and moon | no | yes | yes |
+| Wind lines and flow | ½ | 1× | 1.5× |
+| Faint wind streaks | no | yes | yes |
+| Fog banks | no | yes | yes |
+| Haze, ground mist, sun rays | no | yes | yes |
+| Golden hour, blue hour | yes | yes | yes |
+| Cloud amount from data | yes | yes | yes |
+| Stars | yes | yes | brighter |
+| Milky Way | no | yes | yes |
+| Shooting stars | no | yes | longer tails |
+| Comets | no | 1× | 1.8× |
+| Birds and planes | no | yes | more, bigger flocks |
+| Compass, chips, images, cards | yes | yes | yes |
+
+- **Cloud detail** is `perf_cloud_quality`: how many puffs each cloud gets. In `low` the puffs are simple and round, and near and far clouds move less apart; from `default` on they get soft frayed edges and a stronger sense of depth.
+- **Sun corona**: `low` draws the sun disc and its glow, without the moving corona around it.
+- **Wind lines and flow** (`wind_style`) are always drawn; the number of lines follows the column.
+- **Fog banks**: in `low` fog shows as an even haze, without the drifting banks.
+- **Birds and planes** follow `perf_fauna`: `0` none, `1` birds only, `2` birds and planes. `ultra` sends them more often and with bigger flocks (`fauna_bird_density`, `fauna_plane_density`, `fauna_bird_flock_size`).
+
+Some things depend on more than the mode:
+
+- **Light or dark look at night.** The stars glow only in the dark look (see [Color Mode](#color-mode)). With the light look at night, the `standalone` card shows no stars and the `immersive` card shows golden stars. Shooting stars and comets need the dark look.
+- **Weather.** Shooting stars and comets appear on clear and partly cloudy nights, not in rain, snow, storms, under a closed cloud deck or in fog. The Milky Way needs a clear night. Sun rays need `partlycloudy` or `cloudy` weather and a sun above the horizon. The golden hour is full in clear, partly cloudy and windy weather, weaker under clouds and in fog, and does not show in rain or snow.
+- **Card style.** The `immersive` style has no sky of its own, so the blue hour and the golden hour do not tint the sky there; the golden light on the clouds still shows. Edge fades (`card_mask_vertical`, `card_mask_horizontal`) and `card_full_width` only work in the `immersive` style.
+- **Sun entity.** Without `sun_entity` the card always shows day: no night sky, no golden or blue hour, no moving sun.
+- **Switches.** Every effect with a switch (`effect_*`, `fauna_birds`, `fauna_planes`, `wind_style: off`) stays off when you turn it off, in every mode. A switch cannot turn on what the mode leaves out: with `perf_effects: 0`, `effect_sun_rays: true` still draws no sun rays.
+
 > [!TIP]
 > The card stutters? Lower one value at a time, in this order: `perf_dpr`, `perf_fps`, `perf_effects`, `perf_fauna`. On high-DPI screens `perf_dpr` helps the most. See also [Performance is weak on older devices](#performance-is-weak-on-older-devices).
 
@@ -1072,7 +1111,7 @@ The options below follow the groups of the editor panel **Performance & effects*
 | `perf_mode`                | `string`  | `default` | Performance preset: `low`, `default` or `ultra`. See the table above. |
 | `perf_fps`                 | `number`  | _preset_  | Animation frame rate: `24`, `30`, `45` or `60`. `30` saves battery, `60` is smoother. Shooting stars, comets, birds and planes appear equally often at every frame rate. See [Troubleshooting: Editor preview stutters or FPS looks wrong after install/update](#editor-preview-stutters-or-fps-looks-wrong-after-installupdate). |
 | `perf_cloud_quality`       | `number`  | _preset_  | Cloud detail. Controls how many puffs each cloud shape gets. `0.5` = low, `1` = medium, `1.5` = high, `2` = ultra. |
-| `perf_effects`             | `number`  | _preset_  | Weather effects. `0` turns off shooting stars, comets, fog banks, sun rays, haze and ground mist; the fog haze, the wind display (with fewer lines), the golden hour, the blue hour and the cloud amount from data stay. `1` is the normal amount. `2` brings more shooting stars and comets (comets about 1.8× as often) and turns on the two cloud options below. See [Troubleshooting: No night effects (stars/comets) are visible](#no-night-effects-starscomets-are-visible). |
+| `perf_effects`             | `number`  | _preset_  | Weather effects. `0` turns off shooting stars, comets, the Milky Way, fog banks, sun rays, haze, ground mist and the soft clouds around the sun and moon, and draws simpler clouds and fewer wind lines; the weather scene, the fog haze, the golden hour, the blue hour and the cloud amount from data stay. `1` is the normal amount. `2` makes comets about 1.8 times as frequent, gives shooting stars longer tails and stars brighter halos, draws 1.5 times as many wind lines and turns on the two cloud options below. See [What each mode shows](#what-each-mode-shows). See [Troubleshooting: No night effects (stars/comets) are visible](#no-night-effects-starscomets-are-visible). |
 | `perf_dpr`                 | `number`  | _preset_  | Canvas sharpness (device pixel ratio). `0.5` = low, `1` = medium, `1.5` = high, `2` = full retina. Lower values reduce GPU load on high-DPI screens. |
 | `cloud_sun_angle_lighting` | `boolean` | _auto_    | YAML only. Lights clouds from the current sun angle. On by default when `perf_effects` is `2`. |
 | `cloud_breathing_shapes`   | `boolean` | _auto_    | YAML only. Slowly reshapes clouds over time. On by default when `perf_effects` is `2`. |
@@ -1443,10 +1482,11 @@ Check the values under **Developer Tools** › **States** on your weather entity
 #### No night effects (stars/comets) are visible
 
 1. Verify that day and night are detected correctly: `sun_entity` is set, and `card_color_mode` is not `day`.
-2. Shooting stars and comets only appear on clear nights. Rain, snow, thunderstorms and fog hide them.
-3. Ensure `perf_effects` is `1` or `2`; `perf_mode: low` uses `0`.
-4. Check the switches `effect_shooting_stars` and `effect_comets`, and raise `shooting_star_rate` or `comet_rate` if they are too rare.
-5. Wait briefly after a weather change, the night sky builds up again.
+2. Glowing stars, shooting stars and comets need the dark look at night. With `card_color_mode: light`, or a light theme the card follows, the `standalone` card shows no stars and the `immersive` card golden stars, see [What each mode shows](#what-each-mode-shows).
+3. Shooting stars and comets appear on clear and partly cloudy nights. Rain, snow, thunderstorms, a closed cloud deck and fog hide them.
+4. Ensure `perf_effects` is `1` or `2`; `perf_mode: low` uses `0`.
+5. Check the switches `effect_shooting_stars` and `effect_comets`, and raise `shooting_star_rate` or `comet_rate` if they are too rare.
+6. Wait briefly after a weather change, the night sky builds up again.
 
 ### Display & Performance
 
