@@ -550,8 +550,8 @@ Chip
 │                        attribute ("Show"), forecast_precision
 ├─ Text      ▸ Label: hide_label, name, name_sensor, name_attribute,
 │                     label_size, label_weight, label_overflow
-│              Value: hide_value, fancy_unit, unit_format, value_precision,
-│                     text_size, value_weight, overflow
+│              Value: hide_value, fancy_unit, bearing_format, unit_format,
+│                     value_precision, text_size, value_weight, overflow
 │              Sub value: hide_sub_value, sub_value_entity, sub_value_attribute,
 │                         sub_value_format, sub_value_size, sub_value_weight,
 │                         sub_value_position, sub_value_overflow
@@ -621,6 +621,7 @@ Each entry inside the `chips` list accepts the following keys.
 | `forecast_precision`    | `number`  | —           | Maximum number of decimal places for forecast values (0–2). Only limits the number shown; trailing zero decimals are trimmed (e.g. a whole number stays without a decimal point even at precision `1` or `2`).                                                                                                                                                                                 |
 | `value_precision`       | `number`  | —           | Forces the chip's main value to always show exactly this many decimal places (0–2), padding with zeros if needed (e.g. `22` becomes `22.0` at precision `1`). Leave unset to use Home Assistant's own display precision for the entity/attribute ("Auto"). Does not apply to forecast chips — use `forecast_precision` for those.                                                              |
 | `unit_format`           | `string`  | —           | Replaces the unit shown after the value. Placed directly after the value with no space, e.g. `°` turns `12 °C` into `12°`.                                                                                                                                                                                                                                                                     |
+| `bearing_format`        | `string`  | `degrees`   | Shows a wind direction as degrees (`degrees`, the number as Home Assistant delivers it, e.g. `250`; add `unit_format: °` for the sign), as a compass point (`cardinal`, e.g. `WSW`) or as both (`both`, e.g. `WSW 250°`). Works on the `wind_bearing` attribute of a weather entity, live or forecast, and on sensors with the `wind_direction` device class. Compass points are in German or English. See [Wind compass](#wind-compass) for an image.                                                                     |
 | `name`                  | `string`  | —           | Optional label shown before the value (e.g., `Wind`). For forecast chips, this overrides the auto-generated day/time name.                                                                                                                                                                                                                                                                     |
 | `icon`                  | `string`  | _auto_      | An `mdi:` icon (e.g., `mdi:water-percent`), the keyword `weather` to automatically show the icon matching the current weather state (or the forecasted condition when using `forecast`), or empty to inherit the sensor's own icon.                                                                                                                                                            |
 | `icon_path`             | `string`  | —           | Folder for custom SVG icons (e.g., `/local/weather-icons/`). When set, the value of `icon` resolves to an image file instead of an MDI icon. For example, `icon: weather` combined with `icon_path: /local/weather-icons/` loads `/local/weather-icons/rainy.svg` for rainy weather. You can find the animated SVG icons from the examples [here](https://github.com/basmilius/weather-icons). |
@@ -1125,6 +1126,10 @@ An optional compass shows where the wind comes from. It is off by default. Pick 
 | `wind_compass`          | `string` | `off`   | `arrow` a wind arrow, `rose` a small compass rose, `pill` a compass chip with a frosted background, `band` a compass band like a heading display, `vane` a wind vane. `off` hides the compass. |
 | `wind_compass_position` | `string` | `auto`  | `top-left`, `top-center`, `top-right`, `bottom-left`, `bottom-center` or `bottom-right`. `auto` uses the usual place of each style: arrow bottom left, rose and vane bottom right, chip top right, band bottom center. |
 
+The six places, here with the rose:
+
+<p align="center"><img src="images/wind-compass-position.webp" alt="wind_compass_position top-left, top-center, top-right, bottom-left, bottom-center and bottom-right" width="560" /></p>
+
 The text next to the compass is built from three switches. The compass point is in German or English, following your Home Assistant language (`O`, `SO`, `OSO` in German, `E`, `SE`, `ESE` in English); other languages show English. The wind speed keeps the unit of the weather entity, so it shows mph with the imperial unit system, or the unit you picked for the entity.
 
 <p align="center"><img src="images/wind-compass-label.webp" alt="wind_compass label with compass point, degrees and wind speed, and the frosted background" width="560" /></p>
@@ -1143,6 +1148,18 @@ wind_compass: rose
 wind_compass_position: bottom-right
 wind_compass_degrees: true
 wind_compass_speed: true
+```
+
+Chips can show the compass point too: set [`bearing_format`](#per-chip-options) on a chip that shows the wind direction, for example `cardinal` for `WSW` or `both` for `WSW 250°`. In the editor it is in the chip under **Text ▸ Value ▸ Wind direction as**.
+
+<p align="center"><img src="images/chip-bearing-format.webp" alt="bearing_format degrees, cardinal and both on a wind direction chip" width="560" /></p>
+
+```yaml
+chips:
+  - entity: weather.home
+    attribute: wind_bearing
+    name: Wind
+    bearing_format: both
 ```
 
 ### Night sky

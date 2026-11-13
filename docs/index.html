@@ -819,8 +819,8 @@ grid_options:
 │                        attribute ("Show"), forecast_precision
 ├─ Text      ▸ Label: hide_label, name, name_sensor, name_attribute,
 │                     label_size, label_weight, label_overflow
-│              Value: hide_value, fancy_unit, unit_format, value_precision,
-│                     text_size, value_weight, overflow
+│              Value: hide_value, fancy_unit, bearing_format, unit_format,
+│                     value_precision, text_size, value_weight, overflow
 │              Sub value: hide_sub_value, sub_value_entity, sub_value_attribute,
 │                         sub_value_format, sub_value_size, sub_value_weight,
 │                         sub_value_position, sub_value_overflow
@@ -1073,6 +1073,12 @@ grid_options:
 <td data-label="Type" style="text-align:left"><code>string</code></td>
 <td data-label="Default" style="text-align:left">—</td>
 <td data-label="Description" style="text-align:left">Replaces the unit shown after the value. Placed directly after the value with no space, e.g. <code>°</code> turns <code>12 °C</code> into <code>12°</code>.</td>
+</tr>
+<tr>
+<td data-label="Option" id="opt-bearing_format" style="text-align:left"><code>bearing_format</code></td>
+<td data-label="Type" style="text-align:left"><code>string</code></td>
+<td data-label="Default" id="opt-degrees" style="text-align:left"><code>degrees</code></td>
+<td data-label="Description" style="text-align:left">Shows a wind direction as degrees (<code>degrees</code>, the number as Home Assistant delivers it, e.g. <code>250</code>; add <code>unit_format: °</code> for the sign), as a compass point (<code>cardinal</code>, e.g. <code>WSW</code>) or as both (<code>both</code>, e.g. <code>WSW 250°</code>). Works on the <code>wind_bearing</code> attribute of a weather entity, live or forecast, and on sensors with the <code>wind_direction</code> device class. Compass points are in German or English. See <a href="#wind-compass">Wind compass</a> for an image.</td>
 </tr>
 <tr>
 <td data-label="Option" id="opt-name" style="text-align:left"><code>name</code></td>
@@ -2261,6 +2267,9 @@ perf_fps: 30 # Ultra quality at 30 fps; the editor shows "Custom"</code></pre></
 <td data-label="Description" style="text-align:left"><code>top-left</code>, <code>top-center</code>, <code>top-right</code>, <code>bottom-left</code>, <code>bottom-center</code> or <code>bottom-right</code>. <code>auto</code> uses the usual place of each style: arrow bottom left, rose and vane bottom right, chip top right, band bottom center.</td>
 </tr>
 </tbody></table>
+<p>The six places, here with the rose:</p>
+<p align="center"><img src="images/wind-compass-position.webp" alt="wind_compass_position top-left, top-center, top-right, bottom-left, bottom-center and bottom-right" width="560" /></p>
+
 <p>The text next to the compass is built from three switches. The compass point is in German or English, following your Home Assistant language (<code>O</code>, <code>SO</code>, <code>OSO</code> in German, <code>E</code>, <code>SE</code>, <code>ESE</code> in English); other languages show English. The wind speed keeps the unit of the weather entity, so it shows mph with the imperial unit system, or the unit you picked for the entity.</p>
 <p align="center"><img src="images/wind-compass-label.webp" alt="wind_compass label with compass point, degrees and wind speed, and the frosted background" width="560" /></p>
 
@@ -2303,7 +2312,14 @@ weather_entity: weather.home
 wind_compass: rose
 wind_compass_position: bottom-right
 wind_compass_degrees: true
-wind_compass_speed: true</code></pre></div><h3 id="night-sky"><a class="anchor" href="#night-sky" aria-hidden="true">#</a>Night sky</h3>
+wind_compass_speed: true</code></pre></div><p>Chips can show the compass point too: set <a href="#per-chip-options"><code>bearing_format</code></a> on a chip that shows the wind direction, for example <code>cardinal</code> for <code>WSW</code> or <code>both</code> for <code>WSW 250°</code>. In the editor it is in the chip under <strong>Text ▸ Value ▸ Wind direction as</strong>.</p>
+<p align="center"><img src="images/chip-bearing-format.webp" alt="bearing_format degrees, cardinal and both on a wind direction chip" width="560" /></p>
+
+<div class="code"><div class="code-bar"><span>yaml</span><span class="code-actions"><button type="button" class="try" data-example="{&quot;chips&quot;:[{&quot;entity&quot;:&quot;weather.demo&quot;,&quot;attribute&quot;:&quot;wind_bearing&quot;,&quot;name&quot;:&quot;Wind&quot;,&quot;bearing_format&quot;:&quot;both&quot;}]}">Show live</button><button type="button" class="copy">Copy</button></span></div><pre><code>chips:
+  - entity: weather.home
+    attribute: wind_bearing
+    name: Wind
+    bearing_format: both</code></pre></div><h3 id="night-sky"><a class="anchor" href="#night-sky" aria-hidden="true">#</a>Night sky</h3>
 <p>Shooting stars and comets appear on clear nights only; rain, snow, thunderstorms and fog hide them. They need <code>perf_effects</code> <code>1</code> or higher.</p>
 <table>
 <thead>

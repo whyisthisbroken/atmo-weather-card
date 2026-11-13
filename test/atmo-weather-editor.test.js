@@ -171,3 +171,15 @@ test("compass settings are dropped while the compass is off", () => {
   const pill = createEditor()._cleanConfig({ ...keys, wind_compass: "pill" });
   assert.equal(pill.wind_compass_background, undefined);
 });
+
+test("bearing_format is kept only on wind direction chips", () => {
+  const ed = createEditor();
+  ed.hass = { states: { "weather.home": { attributes: {} }, "sensor.t": { attributes: {} } } };
+  const chip = (c) => ed._cleanChip(c).bearing_format;
+  assert.equal(chip({ entity: "weather.home", attribute: "wind_bearing", bearing_format: "cardinal" }), "cardinal");
+  assert.equal(chip({ entity: "weather.home", attribute: "wind_bearing", bearing_format: "degrees" }), undefined);
+  assert.equal(chip({ entity: "weather.home", attribute: "humidity", bearing_format: "both" }), undefined);
+  assert.equal(chip({ entity: "sensor.t", bearing_format: "both" }), undefined);
+  // A sensor that is not loaded yet keeps its setting.
+  assert.equal(chip({ entity: "sensor.later", bearing_format: "both" }), "both");
+});

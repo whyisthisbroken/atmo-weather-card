@@ -842,3 +842,39 @@ test("the wind arrow keeps its full size on a low card", () => {
   rose._updateCompassScale();
   assert.equal(compassEl(rose).style.getPropertyValue("--_cmp-scale"), "0.700");
 });
+
+test("wind direction chips show degrees, the compass point or both", () => {
+  const hass = makeHass();
+  hass.states["sensor.wind_dir"] = {
+    entity_id: "sensor.wind_dir",
+    state: "250",
+    attributes: { device_class: "wind_direction", unit_of_measurement: "°" },
+  };
+  hass.formatEntityState = (s) => `${s.state}${s.attributes.unit_of_measurement || ""}`;
+  const bearing = { entity: "weather.home", attribute: "wind_bearing" };
+  const card = mountCard({
+    chips: [
+      bearing,
+      { ...bearing, bearing_format: "cardinal" },
+      { ...bearing, bearing_format: "both" },
+      { entity: "sensor.wind_dir", bearing_format: "both" },
+      // Other chips ignore the option.
+      { entity: "weather.home", attribute: "humidity", bearing_format: "cardinal" },
+    ],
+  }, hass);
+  const values = chips(card).map(text);
+  assert.match(values[0], /90/);
+  assert.ok(!/\bE\b/.test(values[0]), values[0]);
+  assert.match(values[1], /\bE\b/);
+  assert.ok(!values[1].includes("90"), values[1]);
+  assert.match(values[2], /E 90/);
+  assert.match(values[3], /WSW 250°/);
+  assert.ok(!/[A-Z]{1,3}\b/.test(values[4].replace(/Hum\w*/i, "")), values[4]);
+});
+
+test("wind direction chips use German compass points", () => {
+  const hass = makeHass();
+  hass.locale = { language: "de" };
+  const card = mountCard({ chips: [{ entity: "weather.home", attribute: "wind_bearing", bearing_format: "cardinal" }] }, hass);
+  assert.match(text(chips(card)[0]), /\bO\b/);
+});

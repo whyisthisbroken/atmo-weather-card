@@ -5,6 +5,8 @@ import {
   compassLabel,
   compassMarkup,
   compassPoint,
+  formatBearingValue,
+  isBearingChip,
   resolveCompassPosition,
   styleRotation,
   unwrapAngle,
@@ -72,4 +74,28 @@ test("every style builds its own markup with a label slot", () => {
   }
   assert.match(compassMarkup("vane", "bottom-right", "de"), />O</);
   assert.match(compassMarkup("band", "bottom-center", "de"), />WSW</);
+});
+
+test("bearing chips are the wind_bearing attribute or wind_direction sensors", () => {
+  const hass = { states: { "sensor.dir": { attributes: { device_class: "wind_direction" } }, "sensor.t": { attributes: {} } } };
+  assert.equal(isBearingChip({ entity: "weather.home", attribute: "wind_bearing" }, hass), true);
+  assert.equal(isBearingChip({ entity: "weather.home", attribute: "wind_bearing", forecast: "daily" }, hass), true);
+  assert.equal(isBearingChip({ entity: "weather.home", attribute: "humidity" }, hass), false);
+  assert.equal(isBearingChip({ entity: "weather.home", forecast: "daily" }, hass), false);
+  assert.equal(isBearingChip({ entity: "sensor.dir" }, hass), true);
+  assert.equal(isBearingChip({ entity: "sensor.t" }, hass), false);
+  assert.equal(isBearingChip({ entity: "sensor.missing" }, hass), false);
+  assert.equal(isBearingChip({}, hass), false);
+});
+
+test("bearing values in every format", () => {
+  assert.deepEqual(formatBearingValue(250, "degrees", "en", "250", "°"), { formatted: "250", unit: "°" });
+  assert.deepEqual(formatBearingValue(250, "cardinal", "en", "250", "°"), { formatted: "WSW", unit: "" });
+  assert.deepEqual(formatBearingValue("120", "both", "de", "120", "°"), { formatted: "OSO 120", unit: "°" });
+  // Without a unit the degree sign is added; a value formatted with it keeps it.
+  assert.deepEqual(formatBearingValue(120, "both", "en", "120", ""), { formatted: "ESE 120°", unit: "" });
+  assert.deepEqual(formatBearingValue(250, "both", "en", "250°", ""), { formatted: "WSW 250°", unit: "" });
+  // Values that are no number, like N/A or a text bearing, stay as they are.
+  assert.deepEqual(formatBearingValue("N/A", "cardinal", "en", "N/A", ""), { formatted: "N/A", unit: "" });
+  assert.deepEqual(formatBearingValue(null, "both", "en", "—", ""), { formatted: "—", unit: "" });
 });

@@ -10,6 +10,7 @@ import {
   perfPreset,
 } from "./atmo-weather-config.js";
 import { editorLanguage, makeTranslator } from "./atmo-weather-i18n.js";
+import { isBearingChip } from "./atmo-weather-compass.js";
 // Editor texts follow the Home Assistant language, see useLanguage().
 let t = makeTranslator("en");
 let tLang = "en";
@@ -199,6 +200,7 @@ const CHIP_LABELS = Object.freeze({
   icon_path: "Icon folder",
   tap_action: "Tap Action",
   unit_format: "Custom unit",
+  bearing_format: "Wind direction as",
   text_size: "Value text size",
   label_size: "Label text size",
   inner_gap: "Icon/text gap",
@@ -454,6 +456,11 @@ const OPT = Object.freeze({
     { value: "vivid", label: "Vivid" },
     { value: "muted", label: "Muted" },
     { value: "warm", label: "Warm" },
+  ],
+  bearing_format: [
+    { value: "degrees", label: "Degrees (250)" },
+    { value: "cardinal", label: "Compass point (WSW)" },
+    { value: "both", label: "Compass point and degrees (WSW 250°)" },
   ],
   chip_overflow: [
     { value: "ellipsis", label: "Ellipsis (…)" },
@@ -3307,6 +3314,17 @@ class AtmosphericWeatherCardEditor extends LitElement {
       delete out.forecast_precision;
     }
     if (out.forecast_offset === 0) delete out.forecast_offset;
+    // Degrees is the default. Drop the format when the chip no longer shows a
+    // wind direction, but keep it while a sensor's state is not loaded yet.
+    const bearingKnown =
+      !!out.attribute ||
+      !out.entity ||
+      !!(this.hass && this.hass.states && this.hass.states[out.entity]);
+    if (
+      out.bearing_format === "degrees" ||
+      (bearingKnown && !isBearingChip(out, this.hass))
+    )
+      delete out.bearing_format;
     if (!out.sub_value_entity && !out.sub_value_attribute) {
       delete out.sub_value_format;
       delete out.sub_value_position;
@@ -3969,7 +3987,33 @@ class AtmosphericWeatherCardEditor extends LitElement {
           : ""}
       </div>
       ${chip.hide_value !== true
-        ? html`${chipForm([{ name: "unit_format", selector: { text: {} } }])}
+        ? html`${isBearingChip(chip, this.hass)
+              ? html`<ha-form
+                  .hass=${this.hass}
+                  .data=${{ bearing_format: chip.bearing_format || "degrees" }}
+                  .schema=${[
+                    {
+                      name: "bearing_format",
+                      selector: {
+                        select: {
+                          mode: "dropdown",
+                          options: tOpts(OPT.bearing_format),
+                        },
+                      },
+                    },
+                  ]}
+                  .computeLabel=${this._chipLabel}
+                  @value-changed=${(e) => {
+                    e.stopPropagation();
+                    const v =
+                      e.detail &&
+                      e.detail.value &&
+                      e.detail.value.bearing_format;
+                    update({ ...chip, bearing_format: v || "degrees" });
+                  }}
+                ></ha-form>`
+              : ""}
+            ${chipForm([{ name: "unit_format", selector: { text: {} } }])}
             ${!isFc && entityId
               ? html`${(() => {
                   const hasManualPrecision =
@@ -5655,7 +5699,12 @@ class AtmosphericWeatherCardEditor extends LitElement {
                   ? this._renderSwitch("wind_compass_background", false)
                   : ""}
               </div>`
-            : ""}`,
+            : ""}
+          <div class="composite-helper">
+            ${t(
+              "Wind direction chips can show the compass point too: open the chip under Chips, then Text ▸ Value ▸ Wind direction as.",
+            )}
+          </div>`,
       )}
       ${this._renderGroup(
         "Night sky",

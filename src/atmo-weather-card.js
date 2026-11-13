@@ -85,6 +85,8 @@ import {
   COMPASS_MIN_SCALE,
   compassMarkup,
   compassPoint,
+  formatBearingValue,
+  isBearingChip,
   resolveCompassPosition,
   unwrapAngle,
 } from "./atmo-weather-compass.js";
@@ -2486,6 +2488,18 @@ class AtmosphericWeatherCard extends HTMLElement {
           iconStrategy = "native";
         }
       }
+    }
+    if (chip.bearing_format && isBearingChip(chip, hass)) {
+      const raw = isForecast
+        ? fcEntry && fcEntry.wind_bearing
+        : mainRawNumeric;
+      ({ formatted, unit } = formatBearingValue(
+        raw,
+        chip.bearing_format,
+        editorLanguage(hass),
+        formatted,
+        unit,
+      ));
     }
     const configIcon = chip.icon,
       configPath = chip.icon_path;

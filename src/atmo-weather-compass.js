@@ -60,6 +60,35 @@ export function unwrapAngle(prev, target) {
   return prev + delta;
 }
 
+// Chips that show a wind direction: the wind_bearing attribute (live or
+// forecast) or a sensor with the wind_direction device class.
+export const BEARING_FORMATS = Object.freeze(["degrees", "cardinal", "both"]);
+
+export function isBearingChip(chip, hass) {
+  if (!chip || !chip.entity) return false;
+  if (chip.attribute) return chip.attribute === "wind_bearing";
+  if (chip.forecast) return false;
+  const st = hass && hass.states && hass.states[chip.entity];
+  return !!(st && st.attributes && st.attributes.device_class === "wind_direction");
+}
+
+// Value and unit of a wind direction chip in the chosen format. "cardinal"
+// shows only the compass point, "both" puts it before the degree value.
+export function formatBearingValue(raw, format, lang, formatted, unit) {
+  const deg = typeof raw === "number" ? raw : parseFloat(raw);
+  if (!Number.isFinite(deg) || (format !== "cardinal" && format !== "both"))
+    return { formatted, unit };
+  const point = compassPoint(deg, lang);
+  if (format === "cardinal") return { formatted: point, unit: "" };
+  // Home Assistant formats the wind_bearing attribute without a unit; next to
+  // the compass point the number needs its degree sign.
+  // The chip puts a space before its unit, so the sign goes onto the number.
+  const hasDegree = /°\s*$/.test(String(formatted)) || /°/.test(unit || "");
+  return hasDegree
+    ? { formatted: `${point} ${formatted}`, unit }
+    : { formatted: `${point} ${formatted}°`, unit };
+}
+
 // Text under or inside the compass, from the parts switched on.
 export function compassLabel({ bearing, lang, speed, speedUnit, show }) {
   const parts = [];
