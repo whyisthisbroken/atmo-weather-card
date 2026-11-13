@@ -233,6 +233,8 @@
     if (m(/temp/)) return { state: "21.4", attributes: { unit_of_measurement: "°C", friendly_name: "Temperature" } };
     if (m(/wind/)) return { state: "14", attributes: { unit_of_measurement: "km/h", friendly_name: "Wind" } };
     if (m(/rain|precip/)) return { state: "0.8", attributes: { unit_of_measurement: "mm/h", friendly_name: "Rain" } };
+    if (m(/solar/)) return { state: "3.2", attributes: { unit_of_measurement: "kW", friendly_name: "Solar" } };
+    if (m(/grid/)) return { state: "18", attributes: { unit_of_measurement: "%", friendly_name: "Grid" } };
     if (m(/battery/)) return { state: "76", attributes: { unit_of_measurement: "%", friendly_name: "Battery" } };
     return { state: "42", attributes: { friendly_name: id.split(".")[1].replace(/_/g, " ") } };
   };

@@ -23,6 +23,8 @@ The card is meant to be pretty flexible. You can customize these examples howeve
 
 Replace the entity IDs and the `icon_path` folder with your own. `grid_options` at the end is the standard Home Assistant option for the size of a card in the sections view.
 
+The three large cards come first. After them, smaller cards each show one idea, grouped by topic: [forecasts](#forecast-layouts), [clocks and the night sky](#clocks--night), [your own sensors](#sensors--energy) and [card shapes](#card-shapes). Every example has a **Show live** button that runs it with demo data.
+
 ### Forecast Slider
 <img width="480" alt="Forecast slider example" src="https://github.com/user-attachments/assets/7ce1551c-d815-4eae-8556-a81825ea5606" />
 
@@ -434,6 +436,613 @@ chips:
     sub_value_position: beside
 grid_options:
   rows: auto
+```
+
+### Forecast layouts
+
+Forecasts as a strip or as tiles.
+
+#### Next hours
+
+The next five hours in one grouped strip along the bottom. Five `hourly` forecast chips in a grid of five columns. `chip_area_width: 100%` spreads them over the full width.
+
+<img width="480" alt="Next hours example" src="images/example-hourly.webp" />
+
+```yaml scene=rainy
+type: custom:atmo-weather-card
+weather_entity: weather.home
+sun_entity: sun.sun
+card_height: 200
+chip_style: vertical
+chip_area_position: bottom-center
+chip_area_background: true
+chip_area_grouped: true
+chip_area_separator: true
+chip_area_layout: grid
+chip_area_columns: 5
+chip_area_width: 100%
+chips:
+  - entity: weather.home
+    attribute: temperature
+    position: custom
+    position_anchor: top-left
+    position_x: 18px
+    position_y: 14px
+    text_size: 40px
+    hide_icon: true
+    hide_label: true
+    background: false
+    fancy_unit: true
+    value_weight: "700"
+  - entity: weather.home
+    forecast: hourly
+    forecast_offset: 1
+    attribute: temperature
+    icon: weather
+    forecast_precision: 0
+    unit_format: °
+  - entity: weather.home
+    forecast: hourly
+    forecast_offset: 2
+    attribute: temperature
+    icon: weather
+    forecast_precision: 0
+    unit_format: °
+  - entity: weather.home
+    forecast: hourly
+    forecast_offset: 3
+    attribute: temperature
+    icon: weather
+    forecast_precision: 0
+    unit_format: °
+  - entity: weather.home
+    forecast: hourly
+    forecast_offset: 4
+    attribute: temperature
+    icon: weather
+    forecast_precision: 0
+    unit_format: °
+  - entity: weather.home
+    forecast: hourly
+    forecast_offset: 5
+    attribute: temperature
+    icon: weather
+    forecast_precision: 0
+    unit_format: °
+```
+
+#### Week ahead
+
+Five days with high and low, each day on its own frosted tile. Five `daily` forecast chips, each with the low below the high (`sub_value_attribute: templow`).
+
+<img width="480" alt="Week ahead example" src="images/example-week.webp" />
+
+```yaml scene=sunny
+type: custom:atmo-weather-card
+weather_entity: weather.home
+sun_entity: sun.sun
+card_height: 210
+chip_style: vertical
+chip_area_position: bottom-center
+chip_area_background: true
+chip_area_layout: grid
+chip_area_columns: 5
+chip_area_width: 100%
+chip_area_gap: 6px
+chips:
+  - entity: weather.home
+    attribute: temperature
+    position: custom
+    position_anchor: top-left
+    position_x: 18px
+    position_y: 14px
+    text_size: 40px
+    hide_icon: true
+    hide_label: true
+    background: false
+    fancy_unit: true
+    value_weight: "700"
+  - entity: weather.home
+    forecast: daily
+    forecast_offset: 1
+    attribute: temperature
+    icon: weather
+    forecast_precision: 0
+    unit_format: °
+    sub_value_attribute: templow
+  - entity: weather.home
+    forecast: daily
+    forecast_offset: 2
+    attribute: temperature
+    icon: weather
+    forecast_precision: 0
+    unit_format: °
+    sub_value_attribute: templow
+  - entity: weather.home
+    forecast: daily
+    forecast_offset: 3
+    attribute: temperature
+    icon: weather
+    forecast_precision: 0
+    unit_format: °
+    sub_value_attribute: templow
+  - entity: weather.home
+    forecast: daily
+    forecast_offset: 4
+    attribute: temperature
+    icon: weather
+    forecast_precision: 0
+    unit_format: °
+    sub_value_attribute: templow
+  - entity: weather.home
+    forecast: daily
+    forecast_offset: 5
+    attribute: temperature
+    icon: weather
+    forecast_precision: 0
+    unit_format: °
+    sub_value_attribute: templow
+```
+
+### Clocks & night
+
+For wall tablets and the bedside table.
+
+#### Bedside clock
+
+A big clock under the night sky, with the weather in small type below. Point the first chip at a time sensor, for example `sensor.time` from the [Time & Date](https://www.home-assistant.io/integrations/time_date/) integration. The weather chip below shows the condition.
+
+<img width="480" alt="Bedside clock example" src="images/example-clock.webp" />
+
+```yaml scene=sunny,night
+type: custom:atmo-weather-card
+weather_entity: weather.home
+sun_entity: sun.sun
+card_height: 200
+chips:
+  - entity: sensor.time
+    position: custom
+    position_anchor: top-left
+    position_x: 20px
+    position_y: 12px
+    text_size: 56px
+    hide_icon: true
+    hide_label: true
+    background: false
+    value_weight: "300"
+  - entity: weather.home
+    position: custom
+    position_anchor: top-left
+    position_x: 20px
+    position_y: 86px
+    hide_icon: true
+    hide_label: true
+    background: false
+    text_size: 15px
+```
+
+#### Starry night
+
+Only the sky: stars, more shooting stars and comets, the time small in a corner. `perf_mode: ultra` with `shooting_star_rate` and `comet_rate` at `3`. Shooting stars and comets need the dark look at night, see [Color Mode](#color-mode).
+
+<img width="480" alt="Starry night example" src="images/example-stars.webp" />
+
+```yaml scene=sunny,night
+type: custom:atmo-weather-card
+weather_entity: weather.home
+sun_entity: sun.sun
+card_height: 220
+perf_mode: ultra
+shooting_star_rate: 3
+comet_rate: 3
+chips:
+  - entity: sensor.time
+    position: custom
+    position_anchor: bottom-right
+    position_x: 16px
+    position_y: 12px
+    hide_icon: true
+    hide_label: true
+    background: false
+    text_size: 15px
+```
+
+### Sensors & energy
+
+Your own sensors next to the weather.
+
+#### Energy at a glance
+
+Ring gauges for solar, battery and grid, colored by their value. Ring chips for any numeric sensor. Replace the three sensors with your own and set `ring_max` to the largest value you expect.
+
+<img width="480" alt="Energy at a glance example" src="images/example-energy.webp" />
+
+```yaml scene=sunny
+type: custom:atmo-weather-card
+weather_entity: weather.home
+sun_entity: sun.sun
+card_height: 200
+chip_area_gap: 8px
+chips:
+  - entity: weather.home
+    attribute: temperature
+    position: custom
+    position_anchor: top-left
+    position_x: 18px
+    position_y: 14px
+    text_size: 44px
+    hide_icon: true
+    hide_label: true
+    background: false
+    fancy_unit: true
+    value_weight: "700"
+  - type: ring
+    style: vertical
+    align: center
+    padding: 10px
+    height: 74px
+    icon_size: 16px
+    ring_width: 6
+    ring_gap: 6
+    ring_threshold_mode: gradient
+    entity: sensor.solar_power
+    name: Solar
+    icon: mdi:solar-power
+    ring_min: 0
+    ring_max: 5
+    ring_thresholds:
+      - value: 0
+        color: rgba(242,184,75,0.55)
+      - value: 5
+        color: rgba(242,184,75,1)
+  - type: ring
+    style: vertical
+    align: center
+    padding: 10px
+    height: 74px
+    icon_size: 16px
+    ring_width: 6
+    ring_gap: 6
+    ring_threshold_mode: gradient
+    entity: sensor.home_battery
+    name: Battery
+    icon: mdi:battery-high
+    ring_thresholds:
+      - value: 0
+        color: rgba(229,83,75,0.9)
+      - value: 40
+        color: rgba(242,184,75,0.9)
+      - value: 80
+        color: rgba(63,185,80,0.9)
+  - type: ring
+    style: vertical
+    align: center
+    padding: 10px
+    height: 74px
+    icon_size: 16px
+    ring_width: 6
+    ring_gap: 6
+    ring_threshold_mode: gradient
+    entity: sensor.grid_power
+    name: Grid
+    icon: mdi:transmission-tower
+    ring_max: 100
+    ring_thresholds:
+      - value: 0
+        color: rgba(140,200,255,0.85)
+      - value: 100
+        color: rgba(40,110,230,1)
+```
+
+#### Room climate
+
+Bar gauges for each room, stacked on the right. `type: bar` turns a chip into a bar gauge. `bar_min` and `bar_max` set the range, the thresholds color the bar.
+
+<img width="480" alt="Room climate example" src="images/example-bars.webp" />
+
+```yaml scene=cloudy
+type: custom:atmo-weather-card
+weather_entity: weather.home
+sun_entity: sun.sun
+card_height: 250
+chip_style: stacked
+chip_area_position: top-right
+chip_area_width: 190px
+chip_area_background: true
+chip_area_gap: 6px
+chips:
+  - entity: sensor.living_room_temperature
+    name: Living room
+    icon: mdi:sofa
+    type: bar
+    bar_min: 15
+    bar_max: 28
+    bar_threshold_mode: gradient
+    bar_thresholds:
+      - value: 15
+        color: "#5aa9ff"
+      - value: 21
+        color: "#3fb950"
+      - value: 28
+        color: "#f0883e"
+  - entity: sensor.bedroom_humidity
+    name: Bedroom
+    icon: mdi:bed
+    type: bar
+    bar_threshold_mode: gradient
+    bar_thresholds:
+      - value: 0
+        color: "#f2b84b"
+      - value: 50
+        color: "#3fb950"
+      - value: 100
+        color: "#2f81f7"
+  - entity: sensor.office_cpu_temperature
+    name: Office PC
+    icon: mdi:desktop-tower
+    type: bar
+    bar_max: 90
+    bar_threshold_mode: solid
+    bar_thresholds:
+      - value: 0
+        color: "#3fb950"
+      - value: 70
+        color: "#e5534b"
+```
+
+#### Inside and outside
+
+Outside from the weather entity, inside from your sensors. Stacked chips: the first reads the weather entity, the others are your room sensors.
+
+<img width="480" alt="Inside and outside example" src="images/example-indoor.webp" />
+
+```yaml scene=snowy
+type: custom:atmo-weather-card
+weather_entity: weather.home
+sun_entity: sun.sun
+card_height: 180
+chip_style: stacked
+chip_area_background: true
+chips:
+  - entity: weather.home
+    attribute: temperature
+    name: Outside
+    icon: weather
+  - entity: sensor.indoor_temperature
+    name: Inside
+    icon: mdi:sofa
+  - entity: sensor.indoor_humidity
+    name: Humidity
+    icon: mdi:water-percent
+```
+
+#### Rain gauge
+
+Rain follows your rain sensor; chips show the rate now and the chance today. With `precipitation_entity` the amount of rain follows your rain sensor in mm/h or in/h. The second chip shows today's chance of rain from the forecast.
+
+<img width="480" alt="Rain gauge example" src="images/example-rain.webp" />
+
+```yaml scene=rainy
+type: custom:atmo-weather-card
+weather_entity: weather.home
+sun_entity: sun.sun
+card_height: 190
+precipitation_entity: sensor.rain_rate
+chip_area_background: true
+chips:
+  - entity: weather.home
+    attribute: temperature
+    position: custom
+    position_anchor: top-left
+    position_x: 18px
+    position_y: 14px
+    text_size: 44px
+    hide_icon: true
+    hide_label: true
+    background: false
+    fancy_unit: true
+    value_weight: "700"
+  - entity: sensor.rain_rate
+    name: Rain now
+    icon: mdi:weather-pouring
+  - entity: weather.home
+    forecast: daily
+    forecast_offset: 0
+    attribute: precipitation_probability
+    name: Chance today
+    icon: mdi:umbrella-outline
+```
+
+#### Wind station
+
+Compass rose with degrees and speed, and a chip whose needle turns with the wind. `wind_compass: rose` shows where the wind comes from. The chip reads `wind_bearing` as a compass point, turns its needle with the wind and adds the speed.
+
+<img width="480" alt="Wind station example" src="images/example-wind.webp" />
+
+```yaml scene=windy
+type: custom:atmo-weather-card
+weather_entity: weather.home
+sun_entity: sun.sun
+card_height: 190
+wind_compass: rose
+wind_compass_degrees: true
+wind_compass_speed: true
+chips:
+  - entity: weather.home
+    attribute: temperature
+    position: custom
+    position_anchor: top-left
+    position_x: 18px
+    position_y: 14px
+    text_size: 44px
+    hide_icon: true
+    hide_label: true
+    background: false
+    fancy_unit: true
+    value_weight: "700"
+  - entity: weather.home
+    attribute: wind_bearing
+    name: Wind from
+    bearing_format: cardinal
+    bearing_icon: needle
+    bearing_speed: true
+  - entity: weather.home
+    attribute: wind_speed
+    name: Speed
+    icon: mdi:weather-windy
+```
+
+### Card shapes
+
+From a slim strip to a square tile.
+
+#### Just the temperature
+
+A big temperature and the condition over the live sky. Nothing else. Two free-placed chips and nothing else, so the sky gets the whole card.
+
+<img width="480" alt="Just the temperature example" src="images/example-big-temp.webp" />
+
+```yaml scene=partlycloudy
+type: custom:atmo-weather-card
+weather_entity: weather.home
+sun_entity: sun.sun
+card_height: 170
+chips:
+  - entity: weather.home
+    attribute: temperature
+    position: custom
+    position_anchor: top-left
+    position_x: 18px
+    position_y: 14px
+    text_size: 64px
+    hide_icon: true
+    hide_label: true
+    background: false
+    fancy_unit: true
+    value_weight: "700"
+  - entity: weather.home
+    position: custom
+    position_anchor: top-left
+    position_x: 20px
+    position_y: 98px
+    hide_icon: true
+    hide_label: true
+    background: false
+    text_size: 15px
+```
+
+#### Compact strip
+
+A slim card for the top of a dashboard: the sky and one line of values. A low card with one row of chips. It fits above other cards at the top of a dashboard.
+
+<img width="480" alt="Compact strip example" src="images/example-compact.webp" />
+
+```yaml scene=partlycloudy
+type: custom:atmo-weather-card
+weather_entity: weather.home
+sun_entity: sun.sun
+card_height: 90
+chip_area_position: top-left
+chips:
+  - entity: weather.home
+    attribute: temperature
+    icon: weather
+    text_size: 20px
+    value_weight: "700"
+  - entity: weather.home
+    attribute: humidity
+    icon: mdi:water-percent
+  - entity: weather.home
+    attribute: wind_speed
+    icon: mdi:weather-windy
+```
+
+#### Square tile
+
+A square card for the sections view, next to your other tiles. `card_square: true` keeps the card square in any column width.
+
+<img width="300" alt="Square tile example" src="images/example-square.webp" />
+
+```yaml scene=fog
+type: custom:atmo-weather-card
+weather_entity: weather.home
+sun_entity: sun.sun
+card_square: true
+chips:
+  - entity: weather.home
+    attribute: temperature
+    position: custom
+    position_anchor: top-left
+    position_x: 18px
+    position_y: 14px
+    text_size: 44px
+    hide_icon: true
+    hide_label: true
+    background: false
+    fancy_unit: true
+    value_weight: "700"
+  - entity: weather.home
+    position: custom
+    position_anchor: top-left
+    position_x: 20px
+    position_y: 70px
+    hide_icon: true
+    hide_label: true
+    background: false
+    text_size: 15px
+  - entity: weather.home
+    forecast: daily
+    forecast_offset: 1
+    attribute: temperature
+    icon: weather
+    forecast_precision: 0
+    sub_value_attribute: templow
+    sub_value_position: beside
+```
+
+#### Dashboard header
+
+Immersive: no background, the sky melts into the dashboard. `card_style: immersive` drops the background, so the sky fades into the dashboard around it. Use **Show live** to see it between other cards.
+
+<img width="480" alt="Dashboard header example" src="images/example-header.webp" />
+
+```yaml scene=partlycloudy
+type: custom:atmo-weather-card
+weather_entity: weather.home
+sun_entity: sun.sun
+card_style: immersive
+card_height: 150
+chips:
+  - entity: weather.home
+    attribute: temperature
+    position: custom
+    position_anchor: top-left
+    position_x: 16px
+    position_y: 8px
+    text_size: 48px
+    hide_icon: true
+    hide_label: true
+    background: false
+    fancy_unit: true
+    value_weight: "700"
+  - entity: weather.home
+    position: custom
+    position_anchor: top-left
+    position_x: 20px
+    position_y: 68px
+    hide_icon: true
+    hide_label: true
+    background: false
+    text_size: 15px
+  - entity: weather.home
+    attribute: humidity
+    icon: mdi:water-percent
+  - entity: weather.home
+    forecast: daily
+    forecast_offset: 1
+    attribute: temperature
+    icon: weather
+    forecast_precision: 0
 ```
 
 ## Appearance
