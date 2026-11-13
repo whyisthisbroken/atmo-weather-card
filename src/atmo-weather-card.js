@@ -624,6 +624,7 @@ class AtmosphericWeatherCard extends HTMLElement {
     // Single effects, each can be switched off.
     this._fx = {
       blueHour: readFlag(config.effect_blue_hour, true),
+      goldenHour: readFlag(config.effect_golden_hour, true),
       sunRays: readFlag(config.effect_sun_rays, true),
       haze: readFlag(config.effect_haze, true),
       mist: readFlag(config.effect_ground_mist, true),
@@ -5439,6 +5440,22 @@ class AtmosphericWeatherCard extends HTMLElement {
       }
       ctx.fillStyle = this._sunDiscGrad;
       fillCircle(ctx, 0, 0, sunBaseR * 3.0);
+      // A low sun turns gold, and orange just before it sets.
+      const gl = this._golden;
+      if (gl && gl.g > 0.01) {
+        const s = gl.s,
+          a = Math.min(0.85, 0.4 * gl.g + 0.4 * s);
+        const rgb = [255, Math.round(196 - 76 * s), Math.round(96 - 46 * s)];
+        const warm = ctx.createRadialGradient(0, 0, 0, 0, 0, sunBaseR * 1.15);
+        warm.addColorStop(0, `rgba(${rgb}, ${a * 0.7})`);
+        warm.addColorStop(0.75, `rgba(${rgb}, ${a})`);
+        warm.addColorStop(1, `rgba(${rgb}, 0)`);
+        ctx.save();
+        ctx.globalCompositeOperation = "source-over";
+        ctx.fillStyle = warm;
+        fillCircle(ctx, 0, 0, sunBaseR * 1.15);
+        ctx.restore();
+      }
     } else {
       // ---- DIFFUSE MODE (sun-behind-clouds backlight) ----
       const csGlowScale = sunBaseR / 26,

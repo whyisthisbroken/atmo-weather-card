@@ -112,12 +112,13 @@
         <div class="buttons" id="conditions"></div>
         <div class="label">Time of day</div>
         <div class="buttons" id="sun-presets">
-          <button data-v="35">Day</button>
-          <button data-v="15">Low sun</button>
-          <button data-v="6">Golden hour</button>
-          <button data-v="-2">Blue hour</button>
-          <button data-v="-5">Dusk</button>
-          <button data-v="-14">Night</button>
+          <button data-v="390">Sunrise</button>
+          <button data-v="780">Noon</button>
+          <button data-v="1095">Low sun</button>
+          <button data-v="1140">Golden hour</button>
+          <button data-v="1170">Sunset</button>
+          <button data-v="1195">Blue hour</button>
+          <button data-v="1380">Night</button>
         </div>
         <div id="sun-slider"></div>
       </section>
@@ -252,17 +253,32 @@
     dew_point: { name: 'Dew point', unit: '°C', min: -20, max: 30, step: 0.5, v: 11.5, hint: 'Close to the temperature, ground mist forms at night and in the morning.' },
   };
   const START = {
-    condition: 'partlycloudy', elevation: 35, height: 200, perf: 'ultra',
+    condition: 'partlycloudy', minutes: 780, height: 200, perf: 'ultra',
     windStyle: 'lines', windSpeed: 25, windFrom: 270,
     compass: 'off', compassPos: 'auto', windChip: 'off', windChipIcon: 'arrow', windChipSpeed: true, compassCardinal: true, compassDegrees: false, compassSpeed: false, compassBackground: false,
-    fx: { effect_blue_hour: true, effect_sun_rays: true, effect_haze: true, effect_ground_mist: true, effect_cloud_coverage: true, effect_shooting_stars: true, effect_comets: true },
+    fx: { effect_blue_hour: true, effect_golden_hour: true, effect_sun_rays: true, effect_haze: true, effect_ground_mist: true, effect_cloud_coverage: true, effect_shooting_stars: true, effect_comets: true },
     shootingStarRate: 1, cometRate: 1,
     birds: true, planes: true, birdDensity: 1.3, planeDensity: 1, planeSpeed: 1,
     on: { cloud_coverage: false, precipitation: false, visibility: false, humidity: true, temperature: true, dew_point: false },
     values: Object.fromEntries(Object.entries(DATA).map(([k, d]) => [k, d.v])),
   };
   let state = structuredClone(START);
-  const isNight = () => state.elevation < -0.833;
+  // A standard day for the time slider: sunrise 06:30, noon 13:00, sunset 19:30,
+  // the sun 55° high at noon and 35° below the horizon at midnight. Real values
+  // depend on place and season; the card only reads the elevation and the next
+  // sunrise and sunset, so a fixed day shows every stage.
+  const DAY = { rise: 390, set: 1170, peak: 55, depth: 35 };
+  const elevationAt = (m) => {
+    if (m >= DAY.rise && m <= DAY.set) return DAY.peak * Math.sin(Math.PI * (m - DAY.rise) / (DAY.set - DAY.rise));
+    const night = 1440 - (DAY.set - DAY.rise);
+    const since = (m - DAY.set + 1440) % 1440;
+    return -DAY.depth * Math.sin(Math.PI * since / night);
+  };
+  const elevation = () => Math.round(elevationAt(state.minutes) * 10) / 10;
+  const clock = (m) => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+  // The demo clock: today at the slider time.
+  const virtualNow = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime() + state.minutes * 60e3; };
+  const isNight = () => elevation() < -0.833;
   const fmt = (v, unit) => `${Number(v).toLocaleString('en-US', { maximumFractionDigits: 1 })}${unit ? ' ' + unit : ''}`;
 
   function buildConfig() {
@@ -271,7 +287,7 @@
       moon_phase_entity: 'sensor.moon_phase', theme_entity: 'sun.sun',
       ...(state.on.precipitation ? { precipitation_entity: 'sensor.rain_rate' } : {}),
       card_height: state.height, card_padding: '16px',
-      celestial_size: 60, celestial_alignment: 'right', celestial_x: 45, celestial_y: 'center',
+      celestial_size: 60, celestial_position: 'dynamic_both', celestial_alignment: 'right', celestial_x: 45,
       perf_mode: state.perf, wind_style: state.windStyle,
       wind_compass: state.compass, wind_compass_position: state.compassPos, wind_compass_cardinal: state.compassCardinal,
       wind_compass_degrees: state.compassDegrees, wind_compass_speed: state.compassSpeed,
@@ -293,6 +309,15 @@
     };
   }
 
+  // The card places sun and moon on their arcs from the next sunrise and
+  // sunset. The card compares them with the real clock, so they are shifted by
+  // the difference between the slider time and now.
+  function sunTimes() {
+    const now = Date.now(), m = state.minutes;
+    const at = (min) => now + (min - m) * 60e3;
+    const next = (min) => (min > m ? at(min) : at(min + 1440));
+    return { next_rising: new Date(next(DAY.rise)).toISOString(), next_setting: new Date(next(DAY.set)).toISOString(), rising: m < 780 };
+  }
   function buildHass() {
     const night = isNight();
     const attrs = {
@@ -304,10 +329,10 @@
     return {
       states: {
         'weather.demo': { entity_id: 'weather.demo', state: state.condition, attributes: attrs },
-        'sun.sun': { entity_id: 'sun.sun', state: night ? 'below_horizon' : 'above_horizon', attributes: { elevation: state.elevation } },
+        'sun.sun': { entity_id: 'sun.sun', state: night ? 'below_horizon' : 'above_horizon', attributes: { elevation: elevation(), ...sunTimes() } },
         'sensor.moon_phase': { entity_id: 'sensor.moon_phase', state: 'waxing_gibbous', attributes: {} },
         'sensor.rain_rate': { entity_id: 'sensor.rain_rate', state: String(state.values.precipitation), attributes: { unit_of_measurement: 'mm/h' } },
-        'sensor.time': { entity_id: 'sensor.time', state: new Date().toISOString(), attributes: {} },
+        'sensor.time': { entity_id: 'sensor.time', state: new Date(virtualNow()).toISOString(), attributes: {} },
       },
       themes: { darkMode: night }, locale: { language: 'en' },
       config: { latitude: 52.15, longitude: 7.32, unit_system: { temperature: '°C' } },
@@ -386,6 +411,7 @@
   }
   const FX = [
     ['effect_blue_hour', 'Blue hour', 'Deep blue sky after sunset and before sunrise.'],
+    ['effect_golden_hour', 'Golden hour', 'Warm light on the sky and clouds when the sun is low, orange to violet at sunset.'],
     ['effect_sun_rays', 'Sun rays', 'Beams through broken clouds in partly cloudy and cloudy weather.'],
     ['effect_haze', 'Haze', 'A veil with poor visibility or humid air.'],
     ['effect_ground_mist', 'Ground mist', 'Mist near the dew point, at night and in the morning.'],
@@ -415,8 +441,10 @@
   refreshers.push(configSlider(faunaBox, { name: 'Plane frequency', unit: '×', min: 0.5, max: 2, step: 0.1 }, 'planeDensity'));
   refreshers.push(configSlider(faunaBox, { name: 'Plane speed', unit: '×', min: 0.25, max: 3, step: 0.05 }, 'planeSpeed'));
 
-  refreshers.push(slider(document.getElementById('sun-slider'), { name: 'Sun elevation', unit: '°', min: -14, max: 60, step: 0.5, hint: 'Below −0.8° the sun has set.' },
-    () => state.elevation, (v) => { state.elevation = v; update(); }));
+  refreshers.push(slider(document.getElementById('sun-slider'), { name: 'Time of day', min: 0, max: 1435, step: 5,
+    hint: 'A standard day: sunrise 06:30, sunset 19:30. The moon rises at sunset.',
+    format: (m) => `${clock(m)} · sun ${fmt(Math.round(elevationAt(m) * 10) / 10, '°')}` },
+    () => state.minutes, (v) => { state.minutes = v; update(); syncButtons(); }));
   refreshers.push(slider(document.getElementById('wind-speed'), { name: 'Wind speed', unit: 'km/h', min: 0, max: 100, step: 1 },
     () => state.windSpeed, (v) => { state.windSpeed = v; update(); }));
   const COMPASS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
@@ -439,7 +467,7 @@
       refreshers.forEach((r) => r());
     }));
   group('conditions', 'condition', String);
-  group('sun-presets', 'elevation', Number);
+  group('sun-presets', 'minutes', Number);
   group('wind-style', 'windStyle', String, true);
   group('wind-from', 'windFrom', Number);
   group('compass', 'compass', String, true);
@@ -455,7 +483,7 @@
   function syncButtons() {
     faunaMessage.textContent = state.perf === 'low' ? 'Low performance mode has no birds or planes.' : '';
     mark('conditions', state.condition);
-    mark('sun-presets', state.elevation);
+    mark('sun-presets', state.minutes);
     mark('wind-style', state.windStyle);
     mark('wind-from', state.windFrom);
     mark('compass', state.compass);
@@ -493,10 +521,10 @@
     const a = card._atmo || {};
     const label = (CONDITIONS.find(([v]) => v === state.condition) || [])[1] || state.condition;
     const tags = [
-      ['Blue hour', a.twilight > 0.05], ['Haze', a.haze > 0.05], ['Ground mist', a.mist > 0.05],
+      ['Golden hour', a.golden > 0.05], ['Blue hour', a.twilight > 0.05], ['Haze', a.haze > 0.05], ['Ground mist', a.mist > 0.05],
       ['Sun rays', a.rays > 0.05], ['Closed cloud deck', !!(card._params && card._params.overcast)],
     ];
-    statusBox.innerHTML = `<b>${label}</b> · ${isNight() ? 'night' : 'day'} · sun ${fmt(state.elevation, '°')} · ` +
+    statusBox.innerHTML = `<b>${label}</b> · ${isNight() ? 'night' : 'day'} · ${clock(state.minutes)} · sun ${fmt(elevation(), '°')} · ` +
       `${card._clouds ? card._clouds.length : 0} clouds · ${(card._rain || []).length + (card._snow || []).length} drops and flakes · wind ${state.windSpeed} km/h` +
       `<div class="tags">${tags.map(([t, on]) => `<span class="tag${on ? ' on' : ''}">${t}</span>`).join('')}</div>`;
   }, 400);

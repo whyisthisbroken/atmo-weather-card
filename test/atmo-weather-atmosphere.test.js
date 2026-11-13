@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   adjustParams,
   computeAtmosphere,
+  easeGoldenLight,
   readWeatherData,
 } from "../src/atmo-weather-atmosphere.js";
 
@@ -129,4 +130,35 @@ test("switched off effects stay off", () => {
   const dusk = sky({}, { isTimeNight: true, sunElev: -1.5, effects: { blueHour: false } });
   assert.equal(dusk.twilight, 0);
   assert.equal(dusk.starVisibility, 1);
+});
+
+test("a low sun turns the light golden, and orange to violet at sunset", () => {
+  assert.equal(sky({}, { sunElev: 30 }).golden, 0);
+  assert.equal(sky({}, { sunElev: 12 }).golden, 0);
+  const golden = sky({}, { sunElev: 6 });
+  assert.ok(golden.golden > 0.5 && golden.golden < 0.8, String(golden.golden));
+  assert.equal(golden.sunset, 0);
+  const sunset = sky({}, { sunElev: 0 });
+  assert.equal(sunset.golden, 1);
+  near(sunset.sunset, 0.75);
+  // Only where the sun gets through, and never at night.
+  assert.ok(sky({}, { state: "cloudy", sunElev: 2 }).golden < 0.5);
+  assert.equal(sky({}, { state: "rainy", sunElev: 2 }).golden, 0);
+  assert.equal(sky({}, { isTimeNight: true, sunElev: -2 }).golden, 0);
+  assert.equal(sky({}, { sunElev: null }).golden, 0);
+  const off = sky({}, { sunElev: 0, effects: { goldenHour: false } });
+  assert.equal(off.golden, 0);
+  assert.equal(off.sunset, 0);
+});
+
+test("the golden light glides to a new sun position instead of jumping", () => {
+  const card = { _atmo: { golden: 0.4, sunset: 0 }, _frameScale: 1 };
+  // A card that just appeared starts at the current light.
+  assert.deepEqual(easeGoldenLight(card), { g: 0.4, s: 0 });
+  // Home Assistant moves the sun: the light follows over a few seconds.
+  card._atmo = { golden: 0.6, sunset: 0.2 };
+  const first = { ...easeGoldenLight(card) };
+  assert.ok(first.g > 0.4 && first.g < 0.41, String(first.g));
+  for (let i = 0; i < 600; i++) easeGoldenLight(card);
+  assert.deepEqual(card._golden, { g: 0.6, s: 0.2 });
 });

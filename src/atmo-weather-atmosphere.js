@@ -66,6 +66,9 @@ export function adjustParams(params, data) {
   return p;
 }
 
+// How much warm low sun reaches the scene in each weather state.
+const GOLDEN_STATES = { sunny: 1, partlycloudy: 1, windy: 0.9, "windy-variant": 0.7, exceptional: 1, cloudy: 0.45, fog: 0.3 };
+
 // Strength (0..1) of every sky light effect for the current conditions.
 export function computeAtmosphere(
   data,
@@ -77,6 +80,8 @@ export function computeAtmosphere(
     twilight: 0,
     starVisibility: 1,
     rays: 0,
+    golden: 0,
+    sunset: 0,
     sunElev,
   };
   const elev = sunElev;
@@ -105,6 +110,15 @@ export function computeAtmosphere(
     out.twilight = clamp(1 + elev / 6, 0, 1);
     out.starVisibility = clamp(-elev / 8, 0.15, 1);
   }
+  // Golden hour: below about 12 degrees the light turns warm, and in the last
+  // few degrees before the horizon it deepens to the orange of a sunset.
+  // Only where the sun gets through.
+  if (!isTimeNight && elev != null && elev < 12) {
+    const sunny = GOLDEN_STATES[state] || 0;
+    const s = clamp((12 - elev) / 10, 0, 1);
+    out.golden = sunny * s * s * (3 - 2 * s);
+    out.sunset = sunny * clamp((3 - elev) / 4, 0, 1);
+  }
   if (!isTimeNight && (elev == null || elev > 0)) {
     const base = state === "partlycloudy" ? 1 : state === "cloudy" ? 0.6 : 0;
     const closed = data.coverage != null && data.coverage >= 95;
@@ -116,6 +130,10 @@ export function computeAtmosphere(
   if (fx.haze === false) out.haze = 0;
   if (fx.mist === false) out.mist = 0;
   if (fx.sunRays === false) out.rays = 0;
+  if (fx.goldenHour === false) {
+    out.golden = 0;
+    out.sunset = 0;
+  }
   if (fx.blueHour === false) {
     out.twilight = 0;
     out.starVisibility = 1;
@@ -169,6 +187,98 @@ export function drawTwilight(card, ctx, w, h) {
   ctx.save();
   ctx.globalAlpha = Math.min(1, 0.85 * Math.pow(t, 1.4));
   ctx.fillStyle = card._twilightGrad;
+  ctx.fillRect(0, 0, w, h);
+  ctx.restore();
+}
+
+const mix = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
+
+// Home Assistant moves the sun every two minutes near the horizon. The light
+// glides to each new value over a few seconds instead of jumping, and starts
+// at its value when the card appears. Call once per frame.
+export function easeGoldenLight(card) {
+  const a = card._atmo;
+  const target = { g: (a && a.golden) || 0, s: (a && a.sunset) || 0 };
+  const cur = card._golden;
+  if (!cur) {
+    card._golden = target;
+    return target;
+  }
+  const k = 1 - Math.pow(0.985, card._frameScale || 1);
+  for (const key of ["g", "s"]) {
+    const d = target[key] - cur[key];
+    cur[key] = Math.abs(d) < 0.002 ? target[key] : cur[key] + d * k;
+  }
+  return cur;
+}
+
+// Golden hour sky: warm light that rises from the horizon, gold at first,
+// then orange and rose at sunset with a touch of violet higher up. Drawn
+// behind the clouds.
+export function drawGoldenSky(card, ctx, w, h) {
+  const cur = card._golden;
+  if (!cur || cur.g <= 0.01 || card._isImmersive) return;
+  const g = cur.g,
+    s = cur.s;
+  const key = `${Math.round(w)}|${Math.round(h)}|${Math.round(g * 60)}|${Math.round(s * 60)}`;
+  if (!card._goldenSkyGrad || card._goldenSkyKey !== key) {
+    const low = mix([255, 198, 104], [255, 116, 56], s);
+    const mid = mix([255, 226, 166], [240, 116, 116], s);
+    const upper = mix([255, 234, 196], [186, 112, 158], s);
+    const high = mix([255, 240, 214], [128, 100, 162], s);
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, `rgba(${high}, ${(0.26 + 0.2 * s) * g})`);
+    grad.addColorStop(0.3, `rgba(${upper}, ${(0.38 + 0.12 * s) * g})`);
+    grad.addColorStop(0.6, `rgba(${mid}, ${0.55 * g})`);
+    grad.addColorStop(1, `rgba(${low}, ${0.8 * g})`);
+    card._goldenSkyGrad = grad;
+    card._goldenSkyKey = key;
+  }
+  ctx.save();
+  ctx.fillStyle = card._goldenSkyGrad;
+  ctx.fillRect(0, 0, w, h);
+  // A bright warm halo where the sun stands.
+  const c = card._getCelestialPosition(w, h);
+  const haloKey = `${key}|${Math.round(c.x)}|${Math.round(c.y)}`;
+  if (!card._goldenHalo || card._goldenHaloKey !== haloKey) {
+    const halo = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, Math.max(w, h) * 0.75);
+    const core = mix([255, 214, 140], [255, 150, 80], s);
+    halo.addColorStop(0, `rgba(${core}, ${0.55 * g})`);
+    halo.addColorStop(0.35, `rgba(${core}, ${0.18 * g})`);
+    halo.addColorStop(1, `rgba(${core}, 0)`);
+    card._goldenHalo = halo;
+    card._goldenHaloKey = haloKey;
+  }
+  ctx.fillStyle = card._goldenHalo;
+  ctx.fillRect(0, 0, w, h);
+  ctx.restore();
+}
+
+// Golden hour light on everything already drawn on the layer (clouds, wind,
+// birds): gold on the side of the sun, rose and at sunset a little violet
+// further away.
+export function drawGoldenLight(card, ctx, w, h) {
+  const cur = card._golden;
+  if (!cur || cur.g <= 0.01) return;
+  const g = cur.g,
+    s = cur.s;
+  const c = card._getCelestialPosition(w, h);
+  const key = `${Math.round(w)}|${Math.round(h)}|${Math.round(c.x)}|${Math.round(c.y)}|${Math.round(g * 60)}|${Math.round(s * 60)}`;
+  if (!card._goldenLight || card._goldenLightKey !== key) {
+    const r = Math.hypot(Math.max(c.x, w - c.x), Math.max(c.y, h - c.y));
+    const near = mix([255, 196, 112], [255, 146, 74], s);
+    const far = mix([255, 176, 150], [178, 112, 166], s);
+    const light = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, r);
+    light.addColorStop(0, `rgba(${near}, ${0.62 * g})`);
+    light.addColorStop(0.45, `rgba(${near}, ${0.42 * g})`);
+    light.addColorStop(1, `rgba(${far}, ${0.36 * g})`);
+    card._goldenLight = light;
+    card._goldenLightKey = key;
+  }
+  ctx.save();
+  // Only on what is there: the light colors the clouds, not the empty sky.
+  ctx.globalCompositeOperation = "source-atop";
+  ctx.fillStyle = card._goldenLight;
   ctx.fillRect(0, 0, w, h);
   ctx.restore();
 }

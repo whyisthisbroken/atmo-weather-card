@@ -1,4 +1,7 @@
 import {
+  drawGoldenLight,
+  drawGoldenSky,
+  easeGoldenLight,
   drawHaze,
   drawMist,
   drawSunRays,
@@ -1214,6 +1217,8 @@ export function renderAnimationFrame(
   if (card._cloudSunAngleLighting) card._trackCloudSunAngle(w, h);
 
   drawTwilight(card, bg, w, h);
+  easeGoldenLight(card);
+  drawGoldenSky(card, bg, w, h);
   if (rs.glow && rs.glow.drawPhase === "bg") card._drawCelestialGlow(bg, w, h);
   card._drawStars(bg, w, h, dpr);
   card._drawMoon(bg, w, h);
@@ -1262,6 +1267,7 @@ export function renderAnimationFrame(
   if (canDrawBirds) card._drawBirds(mid, w, h);
   else if (card._birds.length > 0) card._birds.length = 0;
   drawClouds(card, mid, card._fgClouds, w, h, effectiveWind);
+  drawGoldenLight(card, mid, w, h);
   if (fx >= 1) drawMist(card, mid, w, h);
   if (fauna >= 2 && card._faunaPlanes !== false) card._drawPlanes(mid, w, h);
 

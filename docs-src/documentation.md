@@ -11,7 +11,7 @@ These entities connect the card to Home Assistant. Only `weather_entity` is requ
 | Option               | Type     | Default | Description                                                                                                                                                                                                                             |
 | :------------------- | :------- | :------ | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **`weather_entity`** | `string` | —       | **Required.** Your weather integration entity (e.g., `weather.your_weather_entity`). See [Troubleshooting: Weather entity is unavailable or values look wrong](#weather-entity-is-unavailable-or-values-look-wrong).                    |
-| `sun_entity`         | `string` | —       | _Recommended._ Usually `sun.sun`. Switches between day and night and drives sunrise and sunset colors, the blue hour, sun rays and the moving sun. Without it the card always shows day. How it also sets the card colors is explained in [Color Mode](#color-mode). |
+| `sun_entity`         | `string` | —       | _Recommended._ Usually `sun.sun`. Switches between day and night and drives the golden hour, sunset colors, the blue hour, sun rays and the moving sun. Without it the card always shows day. How it also sets the card colors is explained in [Color Mode](#color-mode). |
 | `moon_phase_entity`  | `string` | —       | _Recommended._ Displays the correct moon phase (e.g., `sensor.moon_phase`).                                                                                                                                                             |
 | `precipitation_entity` | `string` | —     | _Optional._ A sensor with the current rain intensity in mm/h (or in/h). The editor lists only sensors with one of these units. Rain and snow then follow the measured amount, from drizzle to downpour. Without it the density follows the weather state. See [Weather Data & Sky Light](#weather-data). |
 
@@ -473,8 +473,8 @@ Card editor
 ├─ Performance & effects
 │  ├─ perf_mode
 │  ├─ Graphics ▸ perf_fps, perf_cloud_quality, perf_effects, perf_dpr
-│  ├─ Sky & light ▸ effect_blue_hour, effect_sun_rays, effect_haze,
-│  │                effect_ground_mist, effect_cloud_coverage
+│  ├─ Sky & light ▸ effect_blue_hour, effect_golden_hour, effect_sun_rays,
+│  │                effect_haze, effect_ground_mist, effect_cloud_coverage
 │  ├─ Wind ▸ wind_style, wind_compass, wind_compass_position,
 │  │         wind_compass_cardinal, wind_compass_degrees,
 │  │         wind_compass_speed, wind_compass_background
@@ -982,16 +982,17 @@ The card reads optional attributes of your weather entity and uses them to make 
 | `humidity` (weather attribute, %)              | Above 80 % humidity the air gets slightly hazy as well.                                                                                                                                                |
 | `dew_point` + `temperature` (weather attributes) | When the temperature is within 2.5 °C of the dew point, ground mist drifts along the bottom of the card at night and in the morning (sun below 12°), not during downpours.                            |
 | `precipitation_entity` (sensor, mm/h or in/h)  | Sets the rain and snow density: light drizzle just above 0 mm/h, a downpour from about 8 mm/h. The weather entity has no standard attribute for this, so the value comes from a sensor you choose in the editor.       |
-| Sun elevation (`sun_entity`)                   | **Blue hour:** from sunset until the sun is 6° below the horizon (and before sunrise) the sky stays deep blue with a warm glow at the horizon, and the stars come out one by one until about 8°.        |
+| Sun elevation (`sun_entity`)                   | **Golden hour:** below about 12° the light turns warm: the sky glows gold towards the horizon, clouds catch gold light on the side of the sun, and the sun itself turns gold. In the last degrees before sunset (and after sunrise) it deepens to orange and rose, with a touch of violet higher up. It works by day in clear, partly cloudy and windy weather, weaker under clouds and in fog, not in rain or snow. Home Assistant updates the sun every two minutes near the horizon; the light glides to each new value. **Blue hour:** from sunset until the sun is 6° below the horizon (and before sunrise) the sky stays deep blue with a warm glow at the horizon, and the stars come out one by one until about 8°.        |
 | Weather state + sun elevation                  | **Sun rays:** soft beams fan out from the sun in `partlycloudy` and `cloudy` weather, strongest with a low sun (below 35°) and not under a closed cloud cover (95 % or more).                         |
 
-Cloud cover and precipitation are rounded into steps, so small sensor changes do not rebuild the scene every few minutes. Haze, ground mist and sun rays need `perf_effects` 1 or higher. The blue hour works in every mode, but it tints the sky only in the `standalone` card style, because the `immersive` style has no sky of its own.
+Cloud cover and precipitation are rounded into steps, so small sensor changes do not rebuild the scene every few minutes. Haze, ground mist and sun rays need `perf_effects` 1 or higher. The golden and the blue hour work in every mode, but they tint the sky only in the `standalone` card style, because the `immersive` style has no sky of its own; the golden light on the clouds shows in both styles.
 
 Each of these effects can be switched off on its own, in the editor under **Performance & effects** › **Sky & light** or in YAML:
 
 | Option                  | Type      | Default | Description                                                                                  |
 | :---------------------- | :-------- | :------ | :------------------------------------------------------------------------------------------- |
 | `effect_blue_hour`      | `boolean` | `true`  | Blue hour after sunset and before sunrise. Off: the night starts right at sunset.            |
+| `effect_golden_hour`    | `boolean` | `true`  | Warm light on the sky, the clouds and the sun when the sun is low, orange to violet at sunset. Off: the sky stays blue until the sun sets. |
 | `effect_sun_rays`       | `boolean` | `true`  | Sun rays through broken clouds.                                                              |
 | `effect_haze`           | `boolean` | `true`  | Haze from low visibility or humid air.                                                       |
 | `effect_ground_mist`    | `boolean` | `true`  | Ground mist near the dew point.                                                              |
@@ -1037,14 +1038,14 @@ The options below follow the groups of the editor panel **Performance & effects*
 | `perf_mode`                | `string`  | `default` | Performance preset: `low`, `default` or `ultra`. See the table above. |
 | `perf_fps`                 | `number`  | _preset_  | Animation frame rate: `24`, `30`, `45` or `60`. `30` saves battery, `60` is smoother. Shooting stars, comets, birds and planes appear equally often at every frame rate. See [Troubleshooting: Editor preview stutters or FPS looks wrong after install/update](#editor-preview-stutters-or-fps-looks-wrong-after-installupdate). |
 | `perf_cloud_quality`       | `number`  | _preset_  | Cloud detail. Controls how many puffs each cloud shape gets. `0.5` = low, `1` = medium, `1.5` = high, `2` = ultra. |
-| `perf_effects`             | `number`  | _preset_  | Weather effects. `0` turns off shooting stars, comets, fog banks, sun rays, haze and ground mist; the fog haze, the wind display (with fewer lines), the blue hour and the cloud amount from data stay. `1` is the normal amount. `2` brings more shooting stars and comets (comets about 1.8× as often) and turns on the two cloud options below. See [Troubleshooting: No night effects (stars/comets) are visible](#no-night-effects-starscomets-are-visible). |
+| `perf_effects`             | `number`  | _preset_  | Weather effects. `0` turns off shooting stars, comets, fog banks, sun rays, haze and ground mist; the fog haze, the wind display (with fewer lines), the golden hour, the blue hour and the cloud amount from data stay. `1` is the normal amount. `2` brings more shooting stars and comets (comets about 1.8× as often) and turns on the two cloud options below. See [Troubleshooting: No night effects (stars/comets) are visible](#no-night-effects-starscomets-are-visible). |
 | `perf_dpr`                 | `number`  | _preset_  | Canvas sharpness (device pixel ratio). `0.5` = low, `1` = medium, `1.5` = high, `2` = full retina. Lower values reduce GPU load on high-DPI screens. |
 | `cloud_sun_angle_lighting` | `boolean` | _auto_    | YAML only. Lights clouds from the current sun angle. On by default when `perf_effects` is `2`. |
 | `cloud_breathing_shapes`   | `boolean` | _auto_    | YAML only. Slowly reshapes clouds over time. On by default when `perf_effects` is `2`. |
 
 ### Sky & light
 
-The switches for the blue hour, sun rays, haze, ground mist and the cloud amount from data are explained in [Weather Data & Sky Light](#weather-data).
+The switches for the blue hour, the golden hour, sun rays, haze, ground mist and the cloud amount from data are explained in [Weather Data & Sky Light](#weather-data).
 
 ### Wind
 

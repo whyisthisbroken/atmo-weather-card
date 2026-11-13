@@ -105,6 +105,7 @@ const LABELS = Object.freeze({
   fauna_birds_at_night: "Birds at night",
   fauna_plane_speed: "Plane speed",
   effect_blue_hour: "Blue hour",
+  effect_golden_hour: "Golden hour",
   effect_sun_rays: "Sun rays",
   effect_haze: "Haze",
   effect_ground_mist: "Ground mist",
@@ -165,6 +166,7 @@ const HELPERS = Object.freeze({
   fauna_plane_speed:
     "Near planes fly faster than distant ones; the slider scales all of them.",
   effect_blue_hour: "Deep blue sky after sunset and before sunrise.",
+  effect_golden_hour: "Warm light on the sky and clouds when the sun is low, orange to violet at sunset.",
   effect_sun_rays: "Beams of light through broken clouds.",
   effect_haze: "A veil with poor visibility or high humidity.",
   effect_ground_mist: "Mist near the dew point, at night and in the morning.",
@@ -306,6 +308,7 @@ const KEY_ORDER = Object.freeze([
   "wind_compass_speed",
   "wind_compass_background",
   "effect_blue_hour",
+  "effect_golden_hour",
   "effect_sun_rays",
   "effect_haze",
   "effect_ground_mist",
@@ -378,6 +381,7 @@ const TOP_LEVEL_BOOLEAN_FIELDS = Object.freeze([
   "fauna_birds",
   "fauna_planes",
   "effect_blue_hour",
+  "effect_golden_hour",
   "effect_sun_rays",
   "effect_haze",
   "effect_ground_mist",
@@ -5662,13 +5666,14 @@ class AtmosphericWeatherCardEditor extends LitElement {
         html`${effectsOff
             ? html`<div class="info">
                 ${t(
-                  "Effect Quality is Off: sun rays, haze and ground mist are not drawn. Blue hour and cloud amount still work.",
+                  "Effect Quality is Off: sun rays, haze and ground mist are not drawn. Blue hour, golden hour and cloud amount still work.",
                 )}
               </div>`
             : ""}
           <div class="toggle-group">
             ${[
               "effect_blue_hour",
+              "effect_golden_hour",
               "effect_sun_rays",
               "effect_haze",
               "effect_ground_mist",

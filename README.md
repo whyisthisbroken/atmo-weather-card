@@ -24,7 +24,7 @@ The documentation runs every example live, and the [demo](https://whyisthisbroke
 - **Sun and moon** that follow the real sun position, with sunrise and sunset colors, live moon phases and a moon tilted for your latitude
 - **Night sky** with stars, shooting stars and comets, and **birds and planes** passing by; near planes fly faster than distant ones
 - **Real weather data** shapes the sky: the measured cloud cover sets the clouds, low visibility or humid air adds haze, ground mist forms near the dew point, and an optional precipitation sensor sets how hard it rains
-- **Sky light** with a blue hour after sunset and before sunrise, stars that come out one by one, and soft sun rays through broken clouds
+- **Sky light** with a golden hour that turns the sky and clouds gold, orange and violet at sunset, a blue hour after sunset and before sunrise, stars that come out one by one, and soft sun rays through broken clouds
 - **Every effect can be switched off** on its own, and shooting stars, comets, birds and planes have their own frequency
 - **Chips** for any entity or attribute, weather forecasts, ring and bar gauges, free positioning and many styles
 - **Visual editor** for everything, with built-in help, in English or German following your Home Assistant language, plus full YAML control

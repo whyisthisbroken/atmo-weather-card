@@ -255,6 +255,7 @@ test("effect switches save only when turned off", async () => {
   const sw = (key) => editor.shadowRoot.querySelector(`ha-switch[data-key="${key}"]`);
   for (const key of [
     "effect_blue_hour",
+    "effect_golden_hour",
     "effect_sun_rays",
     "effect_haze",
     "effect_ground_mist",
@@ -476,7 +477,7 @@ test("Effect Quality Off explains which effects still work", async () => {
   editor._openPanel = "performance";
   await settle(editor);
   const notes = [...editor.shadowRoot.querySelectorAll(".info")].map((el) => el.textContent.trim());
-  assert.ok(notes.some((n) => n.includes("Blue hour and cloud amount still work")));
+  assert.ok(notes.some((n) => n.includes("Blue hour, golden hour and cloud amount still work")));
   assert.ok(notes.some((n) => n.includes("no shooting stars or comets")));
 });
 

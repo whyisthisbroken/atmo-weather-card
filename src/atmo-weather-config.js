@@ -23,6 +23,7 @@ export const CONFIG_DEFAULTS = Object.freeze({
   wind_compass_speed: false,
   wind_compass_background: false,
   effect_blue_hour: true,
+  effect_golden_hour: true,
   effect_sun_rays: true,
   effect_haze: true,
   effect_ground_mist: true,
