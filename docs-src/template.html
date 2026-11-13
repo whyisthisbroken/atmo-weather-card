@@ -267,6 +267,10 @@
     { entity: "weather.demo", attribute: "humidity", icon: "mdi:water-percent" },
     { entity: "weather.demo", forecast: "daily", forecast_offset: 1, attribute: "temperature", icon: "weather", sub_value_attribute: "templow", sub_value_position: "beside", forecast_precision: 0 },
   ] };
+  // Sun and moon on the right, where a new card puts them, away from the temperature.
+  // Examples that place them themselves keep their own position.
+  const SKY = { celestial_alignment: "right", celestial_x: 45 };
+  const skyFor = (cfg) => (cfg.celestial_alignment || cfg.celestial_position || cfg.celestial_x != null || cfg.celestial_y != null ? {} : SKY);
   let current = DEFAULT, card = null;
   const slot = document.getElementById("card-slot");
   function mount(cfg) {
@@ -323,7 +327,7 @@
       // Examples without chips of their own keep the chips of the default card;
       // next to embedded cards only the temperature, so nothing overlaps.
       const chips = cfg.chips || (cfg.custom_cards ? DEFAULT.chips.slice(0, 1) : DEFAULT.chips);
-      mount({ ...DEFAULT, ...cfg, chips });
+      mount({ ...DEFAULT, ...skyFor(cfg), ...cfg, chips });
       syncButtons();
       if (window.innerWidth <= 1180) document.querySelector(".live").scrollIntoView({ behavior: "smooth", block: "start" });
       return;
@@ -333,8 +337,8 @@
       navigator.clipboard?.writeText(c.closest(".code").querySelector("code").textContent).then(() => { c.textContent = "Copied"; setTimeout(() => (c.textContent = "Copy"), 1200); }, () => {});
     }
   });
-  document.getElementById("reset").onclick = () => { state.condition = "sunny"; state.night = false; title.textContent = "Default card"; document.querySelectorAll(".code.showing").forEach((c) => c.classList.remove("showing")); mount(DEFAULT); syncButtons(); };
-  mount(DEFAULT); syncButtons();
+  document.getElementById("reset").onclick = () => { state.condition = "sunny"; state.night = false; title.textContent = "Default card"; document.querySelectorAll(".code.showing").forEach((c) => c.classList.remove("showing")); mount({ ...DEFAULT, ...SKY }); syncButtons(); };
+  mount({ ...DEFAULT, ...SKY }); syncButtons();
   setInterval(() => card && (card.hass = buildHass()), 1000);
 
   // Highlight the section in view.

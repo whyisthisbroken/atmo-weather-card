@@ -303,7 +303,8 @@ weather_entity: weather.home</pre>
       formatEntityAttributeValue: (st, a) => { const v = st.attributes[a]; const u = UNITS[a]; return v == null ? "" : String(v) + (u ? (u === "%" ? " %" : " " + u) : ""); },
     };
   }
-  const BASE = { type: "custom:atmo-weather-card", weather_entity: "weather.home", sun_entity: "sun.sun", moon_phase_entity: "sensor.moon_phase", theme_entity: "sun.sun" };
+  // Sun and moon on the right, where a new card puts them, away from the big temperature.
+  const BASE = { type: "custom:atmo-weather-card", weather_entity: "weather.home", sun_entity: "sun.sun", moon_phase_entity: "sensor.moon_phase", theme_entity: "sun.sun", celestial_alignment: "right", celestial_x: 45 };
   function mountCard(slot, cfg, s) {
     slot.replaceChildren();
     const card = document.createElement("atmo-weather-card");
@@ -397,7 +398,8 @@ weather_entity: weather.home</pre>
   for (const ex of EXAMPLES) {
     const el = document.createElement("article");
     el.className = "shot";
-    const code = yaml({ type: "custom:atmo-weather-card", weather_entity: "weather.home", ...ex.cfg });
+    // The same config the preview runs, so the copy looks the same in Home Assistant.
+    const code = yaml({ ...BASE, ...ex.cfg });
     el.innerHTML = `<div class="frame"></div><div class="body"><h3>${ex.title}</h3><p>${ex.text}</p><div class="actions"><button type="button" class="copy">Copy YAML</button><a href="docs/examples.html">More examples →</a></div></div><details><summary>Show YAML</summary><pre></pre></details>`;
     el.querySelector("pre").textContent = code;
     el.querySelector(".copy").onclick = (e) => navigator.clipboard?.writeText(code).then(() => { e.target.textContent = "Copied"; setTimeout(() => (e.target.textContent = "Copy YAML"), 1200); }, () => {});
