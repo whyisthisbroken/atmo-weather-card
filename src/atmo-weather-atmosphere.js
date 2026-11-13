@@ -35,6 +35,20 @@ function bearingOf(state) {
   const i = POINTS.indexOf(String(state || "").trim().toUpperCase());
   return i >= 0 ? i * 22.5 : null;
 }
+// Wind speed in km/h from any unit Home Assistant offers.
+export function windSpeedKmh(value, unit) {
+  const v = num(value);
+  if (v == null) return 0;
+  const u = String(unit || "km/h").trim().toLowerCase();
+  if (u === "m/s") return v * 3.6;
+  if (u === "mph") return v * 1.609;
+  if (u === "kn" || u === "kt" || u === "knots") return v * 1.852;
+  if (u === "ft/s") return v * 1.097;
+  // Beaufort scale: v = 0.836 * B^1.5 m/s.
+  if (u === "beaufort" || u === "bft") return 0.836 * Math.pow(Math.max(0, v), 1.5) * 3.6;
+  return v;
+}
+
 // Dew point in °C from temperature in °C and relative humidity (Magnus).
 export function dewPointC(tempC, humidity) {
   if (tempC == null || humidity == null || humidity <= 0) return null;
@@ -84,6 +98,8 @@ export function readWeatherData(attrs, precipEntity) {
   const visUnit = String(a.visibility_unit || "km").toLowerCase();
   if (visibility != null && visUnit.startsWith("mi")) visibility *= 1.609;
   else if (visibility != null && visUnit === "m") visibility /= 1000;
+  else if (visibility != null && visUnit === "ft") visibility *= 0.0003048;
+  else if (visibility != null && visUnit === "yd") visibility *= 0.0009144;
   let precipitation = precipEntity ? num(precipEntity.state) : null;
   const precUnit = String(
     (precipEntity &&

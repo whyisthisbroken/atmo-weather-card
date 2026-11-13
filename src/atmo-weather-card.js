@@ -34,6 +34,7 @@ import {
   mergeWeatherSensors,
   readWeatherData,
   SENSOR_OPTIONS,
+  windSpeedKmh,
 } from "./atmo-weather-atmosphere.js";
 import {
   CONFIG_DEFAULTS,
@@ -895,19 +896,13 @@ class AtmosphericWeatherCard extends HTMLElement {
       typeof windSpeedRaw === "number"
         ? windSpeedRaw
         : parseFloat(windSpeedRaw) || 0;
-    this._windSpeed = Math.min(Math.max(windSpeed / 10, 0), 2);
-    const wsu = (
-      (wEntity && wEntity.attributes && wEntity.attributes.wind_speed_unit) ||
-      "km/h"
-    ).toLowerCase();
-    const toKmh = wsu.includes("m/s")
-      ? 3.6
-      : wsu.includes("mph")
-        ? 1.609
-        : wsu.includes("kn")
-          ? 1.852
-          : 1;
-    this._windKmh = windSpeed * toKmh;
+    this._windKmh = windSpeedKmh(
+      windSpeed,
+      wEntity && wEntity.attributes && wEntity.attributes.wind_speed_unit,
+    );
+    // Drift of clouds and slant of rain, in km/h whatever the unit: 10 km/h
+    // per step, at most 2.
+    this._windSpeed = Math.min(Math.max(this._windKmh / 10, 0), 2);
     const bearing = parseFloat(
       this._getEntityAttribute(wEntity, "wind_bearing", NaN),
     );

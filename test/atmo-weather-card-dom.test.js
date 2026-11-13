@@ -995,3 +995,23 @@ test("your own sensors drive the wind, and a change of a sensor updates the card
   card.hass = { ...hass, states: { ...hass.states, "sensor.station_dir": { ...hass.states["sensor.station_dir"], state: "unavailable" } } };
   assert.equal(card._windBearing, Number(hass.states["weather.home"].attributes.wind_bearing));
 });
+
+test("clouds and rain move with the wind in km/h, whatever the unit", () => {
+  const speed = (wind_speed, wind_speed_unit) => {
+    const hass = makeHass();
+    hass.states["weather.home"] = { ...hass.states["weather.home"], attributes: { ...hass.states["weather.home"].attributes, wind_speed, wind_speed_unit } };
+    document.body.replaceChildren();
+    return mountCard({}, hass)._windSpeed;
+  };
+  // 5 m/s is 18 km/h, not 5.
+  assert.ok(Math.abs(speed(5, "m/s") - 1.8) < 1e-9);
+  assert.ok(Math.abs(speed(18, "km/h") - 1.8) < 1e-9);
+  assert.equal(speed(40, "mph"), 2);
+});
+
+test("the system time format follows the browser", async () => {
+  const { timeFormatOptions } = await import("../src/atmo-weather-helpers.js");
+  const h12 = new Intl.DateTimeFormat(undefined, { hour: "numeric" }).resolvedOptions().hour12;
+  assert.deepEqual(timeFormatOptions({ time_format: "system" }), h12 ? { hour12: true } : { hourCycle: "h23" });
+  assert.deepEqual(timeFormatOptions(undefined), {});
+});

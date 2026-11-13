@@ -245,7 +245,7 @@
 <p>Check the values under <strong>Developer Tools</strong> › <strong>States</strong> on your weather entity first. Some providers report a cloud cover that does not fit the weather state.</p>
 <h4 id="my-station-sensor-is-not-in-the-list-of-my-own-sensors"><a class="anchor" href="#my-station-sensor-is-not-in-the-list-of-my-own-sensors" aria-hidden="true">#</a>My station sensor is not in the list of my own sensors</h4>
 <ol>
-<li>Each picker lists only sensors that fit: wind speed in km/h, mph, m/s or kn; wind direction with the device class <code>wind_direction</code> or the unit °; temperature and dew point in °C or °F; humidity with the device class <code>humidity</code>; cloud cover in % without a device class; visibility in km, mi or m.</li>
+<li>Each picker lists only sensors that fit: wind speed in km/h, mph, m/s, kn, ft/s or Beaufort; wind direction with the device class <code>wind_direction</code>, the unit ° or a compass point like <code>NW</code> as its state; temperature and dew point in °C or °F; humidity with the device class <code>humidity</code>; cloud cover in % without a device class; visibility in km, mi, m, ft or yd.</li>
 <li>Check the unit and device class of your sensor under <strong>Developer Tools</strong> › <strong>States</strong>. A sensor without a unit can get one in its entity settings, or through a template sensor.</li>
 <li>In YAML any sensor works; the card reads its state as a number, or a wind direction like <code>NW</code>.</li>
 </ol>

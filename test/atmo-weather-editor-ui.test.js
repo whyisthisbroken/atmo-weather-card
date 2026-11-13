@@ -276,6 +276,25 @@ test("your own sensors: each picker lists only fitting sensors", async () => {
   assert.deepEqual(list("visibility_entity"), ["sensor.visibility"]);
   const set = await mountEditor({ weather_entity: "weather.home", wind_speed_entity: "sensor.station_wind" }, hass);
   assert.equal(set.editor.shadowRoot.querySelector("details.own-sensors").open, true);
+  // A rain sensor from before keeps the group open too, so it stays in sight.
+  const rain = await mountEditor({ weather_entity: "weather.home", precipitation_entity: "sensor.rain_rate" }, hass);
+  assert.equal(rain.editor.shadowRoot.querySelector("details.own-sensors").open, true);
+});
+
+test("your own sensors: a wind direction that reports a compass point can be picked", async () => {
+  const hass = makeHass({
+    states: {
+      "sensor.station_dir_text": { state: "NW", attributes: {} },
+      "sensor.station_status": { state: "online", attributes: {} },
+      "sensor.station_gust_bft": { state: "4", attributes: { unit_of_measurement: "Beaufort" } },
+    },
+  });
+  const { editor } = await mountEditor({ weather_entity: "weather.home" }, hass);
+  const form = editor.shadowRoot.querySelector("details.own-sensors ha-form");
+  const list = (name) => form.schema.find((x) => x.name === name).selector.entity.include_entities;
+  assert.ok(list("wind_bearing_entity").includes("sensor.station_dir_text"));
+  assert.ok(!list("wind_bearing_entity").includes("sensor.station_status"));
+  assert.ok(list("wind_speed_entity").includes("sensor.station_gust_bft"));
 });
 
 test("a chosen precipitation sensor stays in the list", async () => {

@@ -29,15 +29,17 @@ function isRainRateUnit(unit) {
   return u === "mm/h" || u === "in/h";
 }
 // Which sensors each of your own readings accepts, by unit and device class.
-const SPEED_UNITS = ["km/h", "mph", "m/s", "kn", "kt", "knots", "ft/s"];
+const SPEED_UNITS = ["km/h", "mph", "m/s", "kn", "kt", "knots", "ft/s", "beaufort", "bft"];
+const COMPASS_POINTS = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
 const OWN_SENSOR_FILTERS = Object.freeze({
   wind_speed_entity: (u, dc) => dc === "wind_speed" || SPEED_UNITS.includes(u.toLowerCase()),
-  wind_bearing_entity: (u, dc) => dc === "wind_direction" || u === "°",
+  // Also text sensors that report a compass point like "NW".
+  wind_bearing_entity: (u, dc, state) => dc === "wind_direction" || u === "°" || COMPASS_POINTS.includes(String(state || "").trim().toUpperCase()),
   temperature_entity: (u, dc) => dc === "temperature" || u === "°C" || u === "°F",
   humidity_entity: (u, dc) => dc === "humidity",
   dew_point_entity: (u, dc) => dc === "temperature" || u === "°C" || u === "°F",
   cloud_coverage_entity: (u, dc) => u === "%" && !dc,
-  visibility_entity: (u, dc) => dc === "distance" || ["km", "mi", "m"].includes(u),
+  visibility_entity: (u, dc) => dc === "distance" || ["km", "mi", "m", "ft", "yd"].includes(u),
 });
 // Keeps a user path usable inside url("...").
 function cssUrl(value) {
@@ -146,13 +148,13 @@ const HELPERS = Object.freeze({
   moon_phase_entity: "Your moon phase sensor.",
   precipitation_entity:
     "Optional. Current rain intensity in mm/h or in/h, so rain and snow follow the measured amount. Only sensors with these units are listed.",
-  wind_speed_entity: "Moves the sky, the wind lines and the compass. Sensors in km/h, mph, m/s or kn.",
+  wind_speed_entity: "Moves the sky, the wind lines and the compass. Sensors in km/h, mph, m/s, kn, ft/s or Beaufort.",
   wind_bearing_entity: "Where the wind comes from, in degrees or as a compass point like NW.",
   temperature_entity: "With the humidity it decides on ground mist.",
   humidity_entity: "Humid air makes haze and, near the dew point, ground mist.",
   dew_point_entity: "Empty: worked out from your temperature and humidity.",
   cloud_coverage_entity: "Sets the amount of clouds. A sensor in %.",
-  visibility_entity: "Low visibility makes haze. Sensors in km, mi or m.",
+  visibility_entity: "Low visibility makes haze. Sensors in km, mi, m, ft or yd.",
   theme_entity: "An entity whose state switches between light and dark mode.",
   card_height: "In pixels, e.g. 220. Use 'auto' for dashboard grid layouts.",
   card_padding: "Inner padding, e.g. 16px or 12px 20px.",
@@ -6043,7 +6045,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
     const list = Object.keys(states).filter((id) => {
       if (!id.startsWith("sensor.")) return false;
       const a = (states[id] && states[id].attributes) || {};
-      return fits(String(a.unit_of_measurement || "").trim(), a.device_class || "");
+      return fits(String(a.unit_of_measurement || "").trim(), a.device_class || "", states[id] && states[id].state);
     });
     if (current && !list.includes(current)) list.push(current);
     this._ownSensorCache[field] = { states, current, list };
@@ -6051,7 +6053,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
   }
   _renderOwnSensors() {
     const fields = ["precipitation_entity", ...Object.keys(OWN_SENSOR_FILTERS)];
-    const open = Object.keys(OWN_SENSOR_FILTERS).some((f) => this._config && this._config[f]);
+    const open = fields.some((f) => this._config && this._config[f]);
     const picker = (name, include) => ({
       name,
       selector: { entity: { domain: "sensor", include_entities: include } },

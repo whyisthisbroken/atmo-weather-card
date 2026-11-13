@@ -7,6 +7,7 @@ import {
   easeGoldenLight,
   dewPointC,
   mergeWeatherSensors,
+  windSpeedKmh,
   readWeatherData,
 } from "../src/atmo-weather-atmosphere.js";
 
@@ -223,4 +224,19 @@ test("your own temperature and humidity work out the dew point, in any unit", ()
     dew_point: { state: "50", attributes: { unit_of_measurement: "°F" } },
   });
   near(readWeatherData(own).dewPoint, 10);
+});
+
+test("wind speed and visibility are read in every unit Home Assistant offers", () => {
+  near(windSpeedKmh(10, "km/h"), 10);
+  near(windSpeedKmh(10, "m/s"), 36);
+  near(windSpeedKmh(10, "mph"), 16.09);
+  near(windSpeedKmh(10, "kn"), 18.52);
+  near(windSpeedKmh(10, "ft/s"), 10.97);
+  // Beaufort 6 is a strong breeze, about 40 to 50 km/h.
+  const bft = windSpeedKmh(6, "Beaufort");
+  assert.ok(bft > 40 && bft < 50, String(bft));
+  assert.equal(windSpeedKmh("x", "km/h"), 0);
+  near(windSpeedKmh(12, undefined), 12);
+  near(readWeatherData({ visibility: 1000, visibility_unit: "ft" }).visibility, 0.3048);
+  near(readWeatherData({ visibility: 1000, visibility_unit: "yd" }).visibility, 0.9144);
 });

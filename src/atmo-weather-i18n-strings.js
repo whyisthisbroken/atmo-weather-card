@@ -426,13 +426,13 @@ const ROWS = [
   ["Dew point", "Taupunkt"],
   ["Cloud cover", "Bewölkung"],
   ["Visibility", "Sichtweite"],
-  ["Moves the sky, the wind lines and the compass. Sensors in km/h, mph, m/s or kn.", "Bewegt Himmel, Windlinien und Kompass. Sensoren in km/h, mph, m/s oder kn."],
+  ["Moves the sky, the wind lines and the compass. Sensors in km/h, mph, m/s, kn, ft/s or Beaufort.", "Bewegt Himmel, Windlinien und Kompass. Sensoren in km/h, mph, m/s, kn, ft/s oder Beaufort."],
   ["Where the wind comes from, in degrees or as a compass point like NW.", "Woher der Wind kommt, in Grad oder als Himmelsrichtung wie NW."],
   ["With the humidity it decides on ground mist.", "Entscheidet zusammen mit der Luftfeuchte über Bodennebel."],
   ["Humid air makes haze and, near the dew point, ground mist.", "Feuchte Luft macht Dunst und nahe am Taupunkt Bodennebel."],
   ["Empty: worked out from your temperature and humidity.", "Leer: wird aus deiner Temperatur und Luftfeuchte berechnet."],
   ["Sets the amount of clouds. A sensor in %.", "Bestimmt die Menge der Wolken. Ein Sensor in %."],
-  ["Low visibility makes haze. Sensors in km, mi or m.", "Geringe Sichtweite macht Dunst. Sensoren in km, mi oder m."],
+  ["Low visibility makes haze. Sensors in km, mi, m, ft or yd.", "Geringe Sichtweite macht Dunst. Sensoren in km, mi, m, ft oder yd."],
 ];
 
 export const TRANSLATIONS = Object.freeze({

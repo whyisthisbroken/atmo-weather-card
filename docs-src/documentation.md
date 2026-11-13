@@ -998,13 +998,13 @@ A weather station on your house measures the wind, the temperature and the humid
 
 | Option                  | Type     | Default | Replaces                         | Description |
 | :---------------------- | :------- | :------ | :------------------------------- | :---------- |
-| `wind_speed_entity`     | `string` | —       | `wind_speed`                     | Wind speed in km/h, mph, m/s or kn. Moves the sky and drives the wind lines, the compass and the speed in wind direction chips. |
-| `wind_bearing_entity`   | `string` | —       | `wind_bearing`                   | Where the wind comes from, in degrees or as a compass point like `NW`. Turns the sky, the compass and turning chip icons. |
+| `wind_speed_entity`     | `string` | —       | `wind_speed`                     | Wind speed in km/h, mph, m/s, kn, ft/s or Beaufort. Moves the sky and drives the wind lines, the compass and the speed in wind direction chips. |
+| `wind_bearing_entity`   | `string` | —       | `wind_bearing`                   | Where the wind comes from, in degrees or as a compass point like `NW`, as some stations report it. Turns the sky, the compass and turning chip icons. |
 | `temperature_entity`    | `string` | —       | `temperature`                    | Temperature in °C or °F, for ground mist. |
 | `humidity_entity`       | `string` | —       | `humidity`                       | Relative humidity in %, for haze and ground mist. |
 | `dew_point_entity`      | `string` | —       | `dew_point`                      | Dew point in °C or °F. Without it, but with your own temperature or humidity, the card works the dew point out from both. |
 | `cloud_coverage_entity` | `string` | —       | `cloud_coverage`                 | Cloud cover in %. Sets the amount of clouds. |
-| `visibility_entity`     | `string` | —       | `visibility`                     | Visibility in km, mi or m, for haze. |
+| `visibility_entity`     | `string` | —       | `visibility`                     | Visibility in km, mi, m, ft or yd, for haze. |
 | `precipitation_entity`  | `string` | —       | —                                | Rain rate in mm/h or in/h, see the table above. |
 
 ```yaml
@@ -1449,7 +1449,7 @@ Check the values under **Developer Tools** › **States** on your weather entity
 
 #### My station sensor is not in the list of my own sensors
 
-1. Each picker lists only sensors that fit: wind speed in km/h, mph, m/s or kn; wind direction with the device class `wind_direction` or the unit °; temperature and dew point in °C or °F; humidity with the device class `humidity`; cloud cover in % without a device class; visibility in km, mi or m.
+1. Each picker lists only sensors that fit: wind speed in km/h, mph, m/s, kn, ft/s or Beaufort; wind direction with the device class `wind_direction`, the unit ° or a compass point like `NW` as its state; temperature and dew point in °C or °F; humidity with the device class `humidity`; cloud cover in % without a device class; visibility in km, mi, m, ft or yd.
 2. Check the unit and device class of your sensor under **Developer Tools** › **States**. A sensor without a unit can get one in its entity settings, or through a template sensor.
 3. In YAML any sensor works; the card reads its state as a number, or a wind direction like `NW`.
 
