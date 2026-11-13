@@ -33,10 +33,19 @@ function animate(card, frames = 40) {
   assert.ok(card.shadowRoot.querySelectorAll("canvas").length >= 3);
 }
 
+// Removes the card and checks it logged no errors, so the next combination
+// starts clean and a failure names the combination.
+function done(label) {
+  document.body.replaceChildren();
+  assert.deepEqual(errors.splice(0), [], label);
+}
+
+// One test per weather; inside it every scene and both card styles.
 for (const weather of Object.keys(WEATHER_MAP)) {
-  for (const [label, scene] of Object.entries({ NIGHT, DAY_DARK, DAY_LIGHT, NIGHT_LIGHT })) {
-    for (const card_style of ["standalone", "immersive"]) {
-      test(`renders ${weather}, ${label}, ${card_style}`, () => {
+  test(`renders ${weather} by day and night, light and dark, in both card styles`, () => {
+    for (const [label, scene] of Object.entries({ NIGHT, DAY_DARK, DAY_LIGHT, NIGHT_LIGHT })) {
+      for (const card_style of ["standalone", "immersive"]) {
+        const combo = `${weather}, ${label}, ${card_style}`;
         seedRandom(7);
         const card = mountCard(
           { card_style, perf_mode: "ultra", moon_phase_entity: "sensor.moon" },
@@ -45,20 +54,23 @@ for (const weather of Object.keys(WEATHER_MAP)) {
 
         animate(card);
 
-        assert.ok(card._initializationComplete);
-        assert.ok(canvasCalls.size > 0, "nothing was drawn");
-      });
+        assert.ok(card._initializationComplete, combo);
+        assert.ok(canvasCalls.size > 0, `nothing was drawn: ${combo}`);
+        done(combo);
+      }
     }
-  }
+  });
 }
 
-for (const perf_mode of ["low", "default", "ultra"]) {
-  test(`renders with perf_mode ${perf_mode}`, () => {
+test("renders in every performance mode", () => {
+  for (const perf_mode of ["low", "default", "ultra"]) {
     const card = mountCard({ perf_mode }, makeHass({ weather: "pouring" }));
 
     animate(card);
-  });
-}
+    assert.ok(card._initializationComplete, perf_mode);
+    done(perf_mode);
+  }
+});
 
 test("the weather can change while the animation runs", () => {
   const card = mountCard({ perf_mode: "ultra" });

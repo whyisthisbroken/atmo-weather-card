@@ -50,63 +50,6 @@ function createSetterCard(config) {
   return card;
 }
 
-test("set hass tolerates missing configured entities", () => {
-  const card = createSetterCard({
-    weather_entity: "weather.missing",
-    sun_entity: "sun.missing",
-    theme_entity: "sensor.theme_missing",
-  });
-
-  assert.doesNotThrow(() => {
-    card.hass = {
-      states: {},
-      themes: { darkMode: false },
-      config: { latitude: 50 },
-      locale: { language: "de" },
-    };
-  });
-  assert.equal(card._lastSnapshot.weather, "cloudy");
-  assert.equal(card._lastSnapshot.temp, "--");
-});
-
-test("set hass tolerates unavailable and unknown entities", () => {
-  const card = createSetterCard({
-    weather_entity: "weather.home",
-    sun_entity: "sun.home",
-    theme_entity: "sensor.theme",
-  });
-
-  assert.doesNotThrow(() => {
-    card.hass = {
-      states: {
-        "weather.home": { state: "unavailable", attributes: {} },
-        "sun.home": { state: "unknown", attributes: {} },
-        "sensor.theme": { state: "unavailable", attributes: {} },
-      },
-      themes: { darkMode: true },
-      config: { latitude: 50 },
-      locale: { language: "de" },
-    };
-  });
-  assert.equal(card._lastSnapshot.weather, "unavailable");
-  assert.equal(card._lastSnapshot.temp, "");
-});
-
-test("weather effects survive a simulated day/night transition", () => {
-  const card = createSetterCard({ weather_entity: "weather.home" });
-  card._params = { type: "cloud" };
-  card._lastState = "cloudy";
-  card._buildRenderState = () => {};
-  card._handleWeatherChange =
-    AtmosphericWeatherCard.prototype._handleWeatherChange;
-
-  card._handleWeatherChange("rainy", { type: "rain", count: 120 }, true);
-
-  assert.equal(card._lastState, "rainy");
-  assert.equal(card._params.type, "rain");
-  assert.equal(card._params.count, 120);
-});
-
 test("missing card_style defaults to standalone", () => {
   const card = Object.create(AtmosphericWeatherCard.prototype);
   card._config = {};

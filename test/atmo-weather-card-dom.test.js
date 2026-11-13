@@ -23,8 +23,8 @@ test("chips render values in the shadow DOM", () => {
   assert.ok(text(chips(card)[1]).includes("Hum"));
 });
 
-for (const chip_area_layout of ["wrap", "grid", "horizontal-scroll", "vertical-scroll"]) {
-  test(`chip layout ${chip_area_layout} sets its class`, () => {
+test("every chip layout sets its class", () => {
+  for (const chip_area_layout of ["wrap", "grid", "horizontal-scroll", "vertical-scroll"]) {
     const card = mountCard({
       chip_area_layout,
       chip_area_columns: 2,
@@ -36,31 +36,42 @@ for (const chip_area_layout of ["wrap", "grid", "horizontal-scroll", "vertical-s
       chips: [SENSOR, SENSOR, SENSOR],
     });
 
-    assert.equal(chips(card).length, 3);
-    assert.ok(row(card).className.includes(chip_area_layout));
-  });
-}
+    assert.equal(chips(card).length, 3, chip_area_layout);
+    assert.ok(row(card).className.includes(chip_area_layout), chip_area_layout);
+    document.body.replaceChildren();
+  }
+});
 
-for (const anchor of ["top-left", "top-center", "top-right", "left", "center", "right", "bottom-left", "bottom-center", "bottom-right"]) {
-  test(`chip area and free chips can sit at ${anchor}`, () => {
+test("the chip area and free chips can sit at every anchor", () => {
+  for (const anchor of ["top-left", "top-center", "top-right", "left", "center", "right", "bottom-left", "bottom-center", "bottom-right"]) {
     const card = mountCard({
       chip_area_position: anchor,
       custom_cards_position: anchor,
       custom_cards_css_class: "one two",
       chips: [SENSOR, { ...SENSOR, position: "custom", position_anchor: anchor, position_x: "pad", position_y: "12px" }],
     });
+    const html = card.shadowRoot.innerHTML;
 
-    assert.ok(card.shadowRoot.innerHTML.length > 0);
-  });
-}
+    // The chip area, the free chip and the embedded cards all name the anchor.
+    assert.ok(row(card).outerHTML.includes(anchor), `chip area at ${anchor}`);
+    assert.equal(chips(card).length, 2, anchor);
+    assert.ok(html.split(anchor).length > 2, `free chip and cards at ${anchor}`);
+    document.body.replaceChildren();
+  }
+});
 
-for (const chip_style of ["inline", "stacked", "vertical"]) {
-  test(`chip style ${chip_style} applies to all chips`, () => {
+test("every chip style applies to all chips", () => {
+  for (const chip_style of ["inline", "stacked", "vertical"]) {
     const card = mountCard({ chip_style, chip_area_align: "spread", chips: [SENSOR, { ...SENSOR, type: "ring" }, { ...SENSOR, type: "bar" }] });
+    const classes = chips(card).map((c) => c.className);
 
-    if (chip_style !== "inline") assert.ok(chips(card)[0].className.includes(`format-${chip_style}`));
-  });
-}
+    assert.equal(classes.length, 3, chip_style);
+    // Inline is the plain chip without a format class.
+    for (const c of classes)
+      assert.equal(c.includes(`format-${chip_style}`), chip_style !== "inline", `${chip_style}: ${c}`);
+    document.body.replaceChildren();
+  }
+});
 
 test("gauges use thresholds in solid and gradient mode", () => {
   const thresholds = [{ value: 10, color: "green" }, { value: 20, color: "red" }];
@@ -169,27 +180,29 @@ test("custom cards are created and receive hass", async () => {
   assert.equal(created[0].hass, hass);
 });
 
-for (const celestial_position of ["dynamic_sun", "dynamic_both"]) {
-  for (const sun of ["above_horizon", "below_horizon"]) {
-    test(`${celestial_position} moves the body along its arc, ${sun}`, () => {
+test("the dynamic sun and moon move along their arc by day and night", () => {
+  for (const celestial_position of ["dynamic_sun", "dynamic_both"]) {
+    for (const sun of ["above_horizon", "below_horizon"]) {
       const card = mountCard({ celestial_position, perf_mode: "ultra", celestial_size: 40 }, makeHass({ sun, weather: "sunny" }));
       runFrames(20);
       const position = card._getCelestialPosition(400, 200);
 
-      assert.ok(Number.isFinite(position.x) && Number.isFinite(position.y));
-    });
+      assert.ok(Number.isFinite(position.x) && Number.isFinite(position.y), `${celestial_position}, ${sun}`);
+      document.body.replaceChildren();
+    }
   }
-}
+});
 
-for (const align of ["top-left", "top-right", "left", "right", "center", "bottom-center", "bottom-right"]) {
-  test(`fixed sun at ${align} stays inside the card`, () => {
+test("a fixed sun stays inside the card at every alignment", () => {
+  for (const align of ["top-left", "top-right", "left", "right", "center", "bottom-center", "bottom-right"]) {
     const card = mountCard({ celestial_alignment: align, celestial_x: 10, celestial_y: 10 });
     const { x, y } = card._getCelestialPosition(400, 200);
 
-    assert.ok(x > 0 && x < 400, `x ${x}`);
-    assert.ok(y > 0 && y < 200, `y ${y}`);
-  });
-}
+    assert.ok(x > 0 && x < 400, `${align}: x ${x}`);
+    assert.ok(y > 0 && y < 200, `${align}: y ${y}`);
+    document.body.replaceChildren();
+  }
+});
 
 test("golden hour tints the card near sunset", () => {
   const hass = makeHass({ weather: "sunny", dark: true });
@@ -201,12 +214,25 @@ test("golden hour tints the card near sunset", () => {
   assert.ok(card.shadowRoot.querySelector("#card-root").style.getPropertyValue("--gh-wash") !== null);
 });
 
-test("wind speed and unit systems drive the wind", () => {
-  for (const [wind_speed, wind_speed_unit] of [[90, "km/h"], [40, "mph"], [15, "m/s"], [50, "kn"], [0, "km/h"]]) {
+test("wind speed is read in every unit system", () => {
+  for (const [wind_speed, wind_speed_unit, kmh] of [[90, "km/h", 90], [40, "mph", 64.36], [15, "m/s", 54], [50, "kn", 92.6], [0, "km/h", 0]]) {
     const hass = makeHass({ weather: "windy" });
     Object.assign(hass.states["weather.home"].attributes, { wind_speed, wind_speed_unit });
-    mountCard({ perf_mode: "ultra" }, hass);
+    const card = mountCard({ perf_mode: "ultra" }, hass);
     runFrames(10);
+
+    assert.ok(Math.abs(card._windKmh - kmh) < 0.01, `${wind_speed} ${wind_speed_unit}: ${card._windKmh}`);
+    document.body.replaceChildren();
+  }
+  // In rain the wind only shows once it is strong.
+  for (const [kmh, shown] of [[60, true], [20, false]]) {
+    const hass = makeHass({ weather: "rainy" });
+    hass.states["weather.home"].attributes.wind_speed = kmh;
+    const card = mountCard({}, hass);
+    runFrames(5);
+
+    assert.equal(Boolean(card._windLines), shown, `rain at ${kmh} km/h`);
+    document.body.replaceChildren();
   }
 });
 
@@ -217,6 +243,16 @@ test("missing and unavailable entities render without errors", () => {
   runFrames(5);
 
   assert.equal(card._lastSnapshot.weather, "cloudy");
+  assert.equal(card._lastSnapshot.temp, "--");
+
+  // Unavailable and unknown states draw the card too.
+  const down = makeHass();
+  down.states["weather.home"] = { entity_id: "weather.home", state: "unavailable", attributes: {} };
+  down.states["sun.sun"] = { entity_id: "sun.sun", state: "unknown", attributes: {} };
+  const card2 = mountCard({}, down);
+  runFrames(5);
+  assert.equal(card2._lastSnapshot.weather, "unavailable");
+  assert.equal(card2._lastSnapshot.temp, "");
 });
 
 test("every moon phase renders in both color modes", () => {
@@ -327,17 +363,6 @@ test("wind style and bearing reach the card", () => {
   assert.equal(mountCard({ wind_style: "sideways" }, hass)._windStyle, "lines");
   // Off brings back the old wind streaks.
   assert.ok(mountCard({ wind_style: "off" }, hass)._windVapor.length > 0);
-});
-
-test("strong wind shows up in rain but light wind does not", () => {
-  for (const [kmh, shown] of [[60, true], [20, false]]) {
-    const hass = makeHass({ weather: "rainy" });
-    hass.states["weather.home"].attributes.wind_speed = kmh;
-    const card = mountCard({}, hass);
-    runFrames(5);
-
-    assert.equal(Boolean(card._windLines), shown, `${kmh} km/h`);
-  }
 });
 
 test("clouds are baked with a slight blur against the gradient grid", () => {
@@ -586,16 +611,6 @@ test("the canvases follow every height change, the scene only bigger ones", () =
   assert.equal(card._updateCanvasDimensions(400, 340), false);
 });
 
-test("a change of the wind direction alone reaches the card", () => {
-  const hass = makeHass({ weather: "windy" });
-  const card = mountCard({}, hass);
-  assert.equal(card._windBearing, 90);
-  const turned = makeHass({ weather: "windy" });
-  turned.states["weather.home"].attributes.wind_bearing = 270;
-  card.hass = turned;
-  assert.equal(card._windBearing, 270);
-});
-
 test("ultra keeps large cards sharp, other modes cap the pixels", () => {
   const ratio = window.devicePixelRatio;
   window.devicePixelRatio = 2;
@@ -767,13 +782,6 @@ test("the wind direction comes from the weather entity and turns smoothly", () =
 
 const compassEl = (card) => card.shadowRoot.querySelector("#wind-compass");
 
-test("the wind compass is off by default", () => {
-  const card = mountCard({}, makeHass({ weather: "windy" }));
-  runFrames(2);
-  assert.equal(compassEl(card).hidden, true);
-  assert.equal(compassEl(card).innerHTML, "");
-});
-
 test("the wind compass shows the bearing of the weather entity", () => {
   const card = mountCard(
     { wind_compass: "rose", wind_compass_degrees: true, wind_compass_speed: true },
@@ -808,7 +816,11 @@ test("the compass turns the short way and follows the language", () => {
   assert.match(el.querySelector(".cmp-rot").style.transform, /rotate\(-10deg\)/);
 });
 
-test("the compass hides without a bearing and falls back on unknown styles", () => {
+test("the compass is off by default, hides without a bearing and falls back on unknown styles", () => {
+  const plain = mountCard({}, makeHass({ weather: "windy" }));
+  runFrames(2);
+  assert.equal(compassEl(plain).hidden, true);
+  assert.equal(compassEl(plain).innerHTML, "");
   const hass = makeHass({ weather: "windy" });
   delete hass.states["weather.home"].attributes.wind_bearing;
   const card = mountCard({ wind_compass: "pill" }, hass);

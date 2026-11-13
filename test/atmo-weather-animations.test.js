@@ -193,8 +193,8 @@ test("drawFog keeps the veil and the light in low mode but skips the banks", () 
   assert.equal(ctx.fillRectCalls, 3);
 });
 
-for (const fps of [24, 30, 60, 120]) {
-  test(`animation speed per second is the same at ${fps} fps`, () => {
+test("animation speed per second is the same at every frame rate", () => {
+  for (const fps of [24, 30, 60, 120]) {
     const card = { _perfFps: fps, _lastFrameTime: 0 };
     let progress = 0;
     for (let t = 1000 / fps; t <= 1000.01; t += 1000 / fps) {
@@ -202,9 +202,9 @@ for (const fps of [24, 30, 60, 120]) {
     }
 
     // One second always advances 30 base frames, whatever the frame rate.
-    assert.ok(Math.abs(progress - 30) < 0.5, `${progress}`);
-  });
-}
+    assert.ok(Math.abs(progress - 30) < 0.5, `${fps} fps: ${progress}`);
+  }
+});
 
 test("trails get more points at higher frame rates to keep their length", () => {
   assert.equal(trailPoints({ _perfFps: 30 }, 22), 22);
@@ -598,12 +598,33 @@ test("the demo can spawn a shooting star or a comet on demand", () => {
   assert.equal(card._forceComet, false);
 });
 
-test("comets get colors for dark themes and ink tones for light ones", () => {
-  const dark = cometColors({ _isThemeDark: true });
+test("comets and shooting stars get every color on dark themes and ink tones on light ones", () => {
   const light = cometColors({ _isThemeDark: false });
-  for (const c of [dark, light]) assert.match(c._coreRgb, /^[0-9]+,[0-9]+,[0-9]+$/);
   assert.equal(light._coreRgb, "50,60,75");
-  assert.notEqual(dark._coreRgb, light._coreRgb);
+  // Each roll picks another color; walk through all of them instead of hoping
+  // the random numbers of a test run hit every one.
+  const originalRandom = Math.random;
+  const comets = new Set();
+  const stars = new Set();
+  try {
+    for (const roll of [0.1, 0.6, 0.85, 0.95]) {
+      Math.random = () => roll;
+      const dark = cometColors({ _isThemeDark: true });
+      assert.match(dark._coreRgb, /^[0-9]+,[0-9]+,[0-9]+$/);
+      comets.add(dark._coreRgb);
+      const card = baseCard();
+      Object.assign(card, { _isNight: true, _isThemeDark: true, _perfEffects: 1, _shootingStars: [], _forceShootingStar: true });
+      card._layerFadeProgress.stars = 1;
+      card._renderState = { isBadWeatherForComets: false };
+      drawShootingStars(card, createContext(), 100, 100, { MAX_SHOOTING_STARS: 2 }, 12);
+      stars.add(card._shootingStars[0]._headRgb);
+    }
+  } finally {
+    Math.random = originalRandom;
+  }
+  assert.ok(comets.size >= 3, [...comets].join(" "));
+  assert.ok(!comets.has(light._coreRgb));
+  assert.equal(stars.size, 4, [...stars].join(" "));
 });
 
 test("spawn rates follow the effect switches and sliders", () => {
