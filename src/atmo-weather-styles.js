@@ -75,6 +75,35 @@ export function buildStyles() {
           #image-slot > img { display: block; height: 100%; width: auto; max-width: 100%; object-fit: contain; border: none; outline: none; }
           #image-slot > img[src=""],
           #image-slot > img:not([src]) { display: none; visibility: hidden; }
+          #wind-compass { position: absolute; inset: 0; pointer-events: none; z-index: 1; font-family: var(--awc-font-family, var(--ha-font-family, var(--paper-font-body1_-_font-family, sans-serif))); color: var(--awc-text-color, #fff); --_cmp-glow: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8)) drop-shadow(0 0 6px rgba(0, 0, 0, 0.5)); --_cmp-alt: rgba(20, 20, 24, 0.85); }
+          #card-root.scheme-day #wind-compass { --_cmp-glow: none; --_cmp-alt: #ffffff; }
+          #wind-compass .cmp { position: absolute; display: flex; flex-direction: column; gap: 2px; transform: scale(var(--_cmp-scale, 1)); }
+          #wind-compass .cmp-pos-top-left { top: 12px; left: 14px; align-items: flex-start; transform-origin: top left; }
+          #wind-compass .cmp-pos-top-right { top: 12px; right: 14px; align-items: flex-end; transform-origin: top right; }
+          #wind-compass .cmp-pos-bottom-left { bottom: 10px; left: 14px; align-items: flex-start; transform-origin: bottom left; }
+          #wind-compass .cmp-pos-bottom-right { bottom: 10px; right: 14px; align-items: flex-end; transform-origin: bottom right; }
+          #wind-compass .cmp-pos-top-center { top: 12px; left: 50%; align-items: center; transform-origin: top center; transform: translateX(-50%) scale(var(--_cmp-scale, 1)); }
+          #wind-compass .cmp-pos-bottom-center { bottom: 8px; left: 50%; align-items: center; transform-origin: bottom center; transform: translateX(-50%) scale(var(--_cmp-scale, 1)); }
+          #wind-compass .cmp-pos-top-left, #wind-compass .cmp-pos-top-right, #wind-compass .cmp-pos-top-center { flex-direction: column-reverse; }
+          #wind-compass .cmp-svg { display: block; overflow: visible; }
+          #wind-compass .cmp-glow, #wind-compass .cmp-label { filter: var(--_cmp-glow); }
+          #wind-compass .cmp-rot, #wind-compass .cmp-band { transition: transform 3s ease-in-out; }
+          #wind-compass .cmp-line { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+          #wind-compass .cmp-thin { fill: none; stroke: currentColor; stroke-width: 1; stroke-linecap: round; }
+          #wind-compass .cmp-ink { fill: currentColor; }
+          #wind-compass .cmp-alt { fill: var(--_cmp-alt); }
+          #wind-compass .cmp-paper { fill: currentColor; }
+          #wind-compass .cmp-frost { fill: var(--_text-bg, rgba(255, 255, 255, 0.22)); stroke: var(--_text-bg-border, rgba(255, 255, 255, 0.35)); stroke-width: 1; }
+          #wind-compass .cmp-label { font-size: 13px; font-weight: 600; letter-spacing: 0.05em; line-height: 1.2; white-space: nowrap; }
+          #wind-compass .cmp-label:empty { display: none; }
+          #wind-compass .cmp-label span + span { margin-left: 0.4em; font-weight: 500; opacity: 0.8; }
+          #wind-compass .cmp-style-arrow .cmp-line { stroke-width: 2.4; }
+          #wind-compass .cmp-style-arrow .cmp-thin { stroke-width: 1.6; }
+          #wind-compass .cmp-style-arrow .cmp-label { font-size: 14px; font-weight: 700; }
+          #wind-compass .cmp.cmp-bg { --_cmp-glow: none; padding: 4px 10px 6px; border-radius: 12px; background: var(--_text-bg, rgba(255, 255, 255, 0.22)); border: 1px solid var(--_text-bg-border, rgba(255, 255, 255, 0.35)); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+          #wind-compass .cmp-style-pill { flex-direction: row; align-items: center; gap: 8px; padding: 5px 12px 5px 6px; border-radius: 999px; background: var(--_text-bg, rgba(255, 255, 255, 0.22)); border: 1px solid var(--_text-bg-border, rgba(255, 255, 255, 0.35)); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+          #wind-compass .cmp-style-pill .cmp-label { filter: none; }
+          #wind-compass .cmp-style-pill .cmp-label span + span::before { content: "· "; }
           #text-wrapper { position: absolute; inset: 0; pointer-events: none; box-sizing: border-box; overflow: visible; }
           #text-wrapper > .pos-top-left { top: var(--_awc-pad-v, var(--awc-card-padding, 16px)); left: var(--_awc-pad-h, var(--awc-card-padding, 16px)); }
           #text-wrapper > .pos-top-center { top: var(--_awc-pad-v, var(--awc-card-padding, 16px)); left: 50%; transform: translateX(-50%); }

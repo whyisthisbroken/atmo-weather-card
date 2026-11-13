@@ -509,6 +509,7 @@ test("forecast chip asks to check the provider when there is no data", () => {
   assert.ok(render("de").includes("Bitte prüfen Sie Ihren Wetteranbieter"));
   assert.ok(render("de-CH").includes("Bitte prüfen Sie Ihren Wetteranbieter"));
   assert.ok(render("xx").includes("Please check your weather provider"));
+  assert.ok(render("fr").includes("Please check your weather provider"));
   assert.ok(!render("en").includes("chip-loading"));
 });
 

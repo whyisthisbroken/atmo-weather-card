@@ -20,7 +20,7 @@ The documentation runs every example live, and the [demo](https://whyisthisbroke
 ### Features
 
 - **Live weather scenes** for every Home Assistant condition, by day and by night — layered clouds, rain, hail, snow, fog, thunderstorms with lightning, and overcast skies
-- **Wind you can see** — direction and strength from your weather entity, drawn as wind lines or a flow field
+- **Wind you can see** — direction and strength from your weather entity, drawn as wind lines or a flow field; clouds, rain and snow drift the same way, and an optional compass shows where it comes from
 - **Sun and moon** that follow the real sun position, with sunrise and sunset colors, live moon phases and a moon tilted for your latitude
 - **Night sky** with stars, shooting stars and comets, and **birds and planes** passing by; near planes fly faster than distant ones
 - **Real weather data** shapes the sky: the measured cloud cover sets the clouds, low visibility or humid air adds haze, ground mist forms near the dew point, and an optional precipitation sensor sets how hard it rains

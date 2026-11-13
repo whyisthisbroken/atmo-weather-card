@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 import { buildDocs } from "../scripts/build-docs.mjs";
 
@@ -91,4 +91,11 @@ test("tables and the demo stay readable on phones", () => {
   const phone = demo.search(/@media \(max-width: 900px\) \{[^}]*\}\s*\.stage \{ position: static; display: contents; \}/);
   assert.ok(sticky > 0 && phone > sticky);
   assert.match(demo.slice(phone), /#card-slot \{ position: sticky; top: 0; z-index: \d+;[^}]*background:/);
+});
+
+test("every image the docs keep in the repo exists", () => {
+  const local = [...page.matchAll(/<img[^>]+src="(images\/[^"]+)"/g)].map((m) => m[1]);
+  assert.ok(local.length > 0);
+  for (const src of local)
+    assert.ok(existsSync(new URL(`../docs/${src}`, import.meta.url)), src);
 });

@@ -113,6 +113,12 @@ const LABELS = Object.freeze({
   shooting_star_rate: "Frequency",
   comet_rate: "Frequency",
   wind_style: "Wind Display",
+  wind_compass: "Wind compass",
+  wind_compass_position: "Compass position",
+  wind_compass_cardinal: "Show compass point",
+  wind_compass_degrees: "Show degrees",
+  wind_compass_speed: "Show wind speed",
+  wind_compass_background: "Frosted background",
 });
 const HELPERS = Object.freeze({
   weather_entity: "",
@@ -168,6 +174,10 @@ const HELPERS = Object.freeze({
   card_stack_order: "Higher values sit in front of other cards.",
   wind_style:
     "Shows wind direction and strength in windy weather, and in rain, hail or snow from 40 km/h.",
+  wind_compass:
+    "Shows where the wind comes from, read from wind_bearing of the weather entity. The arrow points where it blows to.",
+  wind_compass_position: "Automatic puts each style in its usual corner.",
+  wind_compass_background: "A frosted box behind the compass, readable on any sky.",
 });
 const CHIP_LABELS = Object.freeze({
   entity: "Entity",
@@ -286,6 +296,12 @@ const KEY_ORDER = Object.freeze([
   "fauna_planes",
   "fauna_plane_speed",
   "wind_style",
+  "wind_compass",
+  "wind_compass_position",
+  "wind_compass_cardinal",
+  "wind_compass_degrees",
+  "wind_compass_speed",
+  "wind_compass_background",
   "effect_blue_hour",
   "effect_sun_rays",
   "effect_haze",
@@ -407,6 +423,23 @@ const OPT = Object.freeze({
     },
     { value: "force_light", short: "Light", label: "Force light mode" },
     { value: "force_dark", short: "Dark", label: "Force dark mode" },
+  ],
+  wind_compass: [
+    { value: "off", label: "Off" },
+    { value: "arrow", label: "Wind arrow" },
+    { value: "rose", label: "Compass rose" },
+    { value: "pill", label: "Compass chip" },
+    { value: "band", label: "Compass band" },
+    { value: "vane", label: "Wind vane" },
+  ],
+  wind_compass_position: [
+    { value: "auto", label: "Automatic" },
+    { value: "top-left", label: "Top left" },
+    { value: "top-center", label: "Top center" },
+    { value: "top-right", label: "Top right" },
+    { value: "bottom-left", label: "Bottom left" },
+    { value: "bottom-center", label: "Bottom center" },
+    { value: "bottom-right", label: "Bottom right" },
   ],
   card_filter_clouds: [
     { value: "none", label: "None" },
@@ -2511,6 +2544,14 @@ class AtmosphericWeatherCardEditor extends LitElement {
       out.add("chip_area_full_width");
     }
     if (!c.chip_area_grouped) out.add("chip_area_separator");
+    if (!c.wind_compass || c.wind_compass === "off") {
+      out.add("wind_compass_position");
+      out.add("wind_compass_cardinal");
+      out.add("wind_compass_degrees");
+      out.add("wind_compass_speed");
+    }
+    if (!c.wind_compass || c.wind_compass === "off" || c.wind_compass === "pill")
+      out.add("wind_compass_background");
     return out;
   }
   _cleanConfig(config) {
@@ -5536,6 +5577,25 @@ class AtmosphericWeatherCardEditor extends LitElement {
       )}
       ${this._renderGroup(
         "Sky & light",
+        html`${effectsOff
+            ? html`<div class="info">
+                ${t(
+                  "Effect Quality is Off: sun rays, haze and ground mist are not drawn. Blue hour and cloud amount still work.",
+                )}
+              </div>`
+            : ""}
+          <div class="toggle-group">
+            ${[
+              "effect_blue_hour",
+              "effect_sun_rays",
+              "effect_haze",
+              "effect_ground_mist",
+              "effect_cloud_coverage",
+            ].map((k) => this._renderSwitch(k, true))}
+          </div>`,
+      )}
+      ${this._renderGroup(
+        "Wind",
         html`<div class="settings-group">
             <div class="settings-group-label">${t(LABELS.wind_style)}</div>
             <div
@@ -5565,22 +5625,37 @@ class AtmosphericWeatherCardEditor extends LitElement {
             </div>
             <div class="composite-helper">${t(HELPERS.wind_style)}</div>
           </div>
-          ${effectsOff
-            ? html`<div class="info">
-                ${t(
-                  "Effect Quality is Off: sun rays, haze and ground mist are not drawn. Blue hour and cloud amount still work.",
-                )}
+          ${this._renderForm([
+            {
+              name: "wind_compass",
+              selector: {
+                select: { mode: "dropdown", options: tOpts(OPT.wind_compass) },
+              },
+            },
+            ...(cfg.wind_compass && cfg.wind_compass !== "off"
+              ? [
+                  {
+                    name: "wind_compass_position",
+                    selector: {
+                      select: {
+                        mode: "dropdown",
+                        options: tOpts(OPT.wind_compass_position),
+                      },
+                    },
+                  },
+                ]
+              : []),
+          ])}
+          ${cfg.wind_compass && cfg.wind_compass !== "off"
+            ? html`<div class="toggle-group indent">
+                ${this._renderSwitch("wind_compass_cardinal", true)}
+                ${this._renderSwitch("wind_compass_degrees", false)}
+                ${this._renderSwitch("wind_compass_speed", false)}
+                ${cfg.wind_compass !== "pill"
+                  ? this._renderSwitch("wind_compass_background", false)
+                  : ""}
               </div>`
-            : ""}
-          <div class="toggle-group">
-            ${[
-              "effect_blue_hour",
-              "effect_sun_rays",
-              "effect_haze",
-              "effect_ground_mist",
-              "effect_cloud_coverage",
-            ].map((k) => this._renderSwitch(k, true))}
-          </div>`,
+            : ""}`,
       )}
       ${this._renderGroup(
         "Night sky",

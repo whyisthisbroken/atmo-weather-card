@@ -122,6 +122,17 @@
           <button data-v="225">South-west</button>
           <button data-v="270">West</button>
         </div>
+        <div id="wind-bearing"></div>
+        <div class="label">Compass</div>
+        <div class="buttons" id="compass">
+          <button data-v="off">Off</button>
+          <button data-v="arrow">Arrow</button>
+          <button data-v="rose">Rose</button>
+          <button data-v="pill">Chip</button>
+          <button data-v="band">Band</button>
+          <button data-v="vane">Vane</button>
+        </div>
+        <div id="compass-controls"></div>
       </section>
 
       <section>
@@ -182,6 +193,7 @@
   const START = {
     condition: 'partlycloudy', elevation: 35, height: 200, perf: 'ultra',
     windStyle: 'lines', windSpeed: 25, windFrom: 270,
+    compass: 'off', compassCardinal: true, compassDegrees: false, compassSpeed: false, compassBackground: false,
     fx: { effect_blue_hour: true, effect_sun_rays: true, effect_haze: true, effect_ground_mist: true, effect_cloud_coverage: true, effect_shooting_stars: true, effect_comets: true },
     shootingStarRate: 1, cometRate: 1,
     birds: true, planes: true, birdDensity: 1.3, planeDensity: 1, planeSpeed: 1,
@@ -200,6 +212,9 @@
       card_height: state.height, card_padding: '16px',
       celestial_size: 60, celestial_alignment: 'right', celestial_x: 45, celestial_y: 'center',
       perf_mode: state.perf, wind_style: state.windStyle,
+      wind_compass: state.compass, wind_compass_cardinal: state.compassCardinal,
+      wind_compass_degrees: state.compassDegrees, wind_compass_speed: state.compassSpeed,
+      wind_compass_background: state.compassBackground,
       perf_fauna: state.perf === 'low' ? 0 : 2,
       fauna_birds: state.birds, fauna_planes: state.planes,
       fauna_bird_density: state.birdDensity, fauna_plane_density: state.planeDensity, fauna_plane_speed: state.planeSpeed,
@@ -249,7 +264,8 @@
   }
 
   // A labelled slider, optionally with an on/off switch.
-  function slider(parent, { name, unit, min, max, step, hint }, get, set, toggle) {
+  function slider(parent, { name, unit, min, max, step, hint, format }, get, set, toggle) {
+    const show = (v) => (format ? format(Number(v)) : fmt(v, unit));
     const el = document.createElement('div');
     el.className = 'control';
     el.innerHTML = `<div class="head">${toggle ? '<label class="switch"><input type="checkbox"><span></span></label>' : ''}
@@ -261,11 +277,11 @@
     const check = el.querySelector('input[type=checkbox]');
     const refresh = () => {
       range.value = get();
-      value.textContent = toggle && !toggle.get() ? 'off' : fmt(get(), unit);
+      value.textContent = toggle && !toggle.get() ? 'off' : show(get());
       if (check) check.checked = toggle.get();
       el.classList.toggle('off', !!toggle && !toggle.get());
     };
-    range.addEventListener('input', () => { value.textContent = fmt(range.value, unit); set(Number(range.value), false); });
+    range.addEventListener('input', () => { value.textContent = show(range.value); set(Number(range.value), false); });
     range.addEventListener('change', () => set(Number(range.value), true));
     if (check) check.addEventListener('change', () => { toggle.set(check.checked); refresh(); });
     parent.appendChild(el);
@@ -323,6 +339,9 @@
     (on) => { state.fx.effect_comets = on; reconfigure(); update(); }));
   refreshers.push(configSlider(nightBox, { name: 'Frequency', unit: '×', min: 0.25, max: 3, step: 0.25, hint: '1× is about one a minute on Ultra.' }, 'cometRate'));
 
+  const compassBox = document.getElementById('compass-controls');
+  for (const [key, name] of [['compassCardinal', 'Compass point'], ['compassDegrees', 'Degrees'], ['compassSpeed', 'Wind speed'], ['compassBackground', 'Background']])
+    refreshers.push(toggle(compassBox, { name }, () => state[key], (on) => { state[key] = on; reconfigure(); update(); }));
   const faunaBox = document.getElementById('fauna-controls');
   refreshers.push(toggle(faunaBox, { name: 'Birds', hint: 'Only by day in this demo.' }, () => state.birds,
     (on) => { state.birds = on; reconfigure(); update(); }));
@@ -336,6 +355,11 @@
     () => state.elevation, (v) => { state.elevation = v; update(); }));
   refreshers.push(slider(document.getElementById('wind-speed'), { name: 'Wind speed', unit: 'km/h', min: 0, max: 100, step: 1 },
     () => state.windSpeed, (v) => { state.windSpeed = v; update(); }));
+  const COMPASS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+  const compass = (deg) => COMPASS[Math.round((((deg % 360) + 360) % 360) / 22.5) % 16];
+  refreshers.push(slider(document.getElementById('wind-bearing'),
+    { name: 'Wind bearing', min: 0, max: 360, step: 1, hint: 'Where the wind comes from, as wind_bearing of the weather entity.', format: (v) => `${v}° ${compass(v)}` },
+    () => state.windFrom, (v) => { state.windFrom = v; update(); }));
 
   const conditionBox = document.getElementById('conditions');
   for (const [value, label] of CONDITIONS) {
@@ -354,6 +378,7 @@
   group('sun-presets', 'elevation', Number);
   group('wind-style', 'windStyle', String, true);
   group('wind-from', 'windFrom', Number);
+  group('compass', 'compass', String, true);
   group('height', 'height', Number, true);
   group('perf', 'perf', String, true);
 
@@ -365,6 +390,7 @@
     mark('sun-presets', state.elevation);
     mark('wind-style', state.windStyle);
     mark('wind-from', state.windFrom);
+    mark('compass', state.compass);
     mark('height', state.height);
     mark('perf', state.perf);
   }

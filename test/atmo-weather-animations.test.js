@@ -22,6 +22,8 @@ import {
   drawWindLines,
   drawWindFlow,
   STRONG_WIND_KMH,
+  advanceWindAndPulse,
+  windTargetDirection,
 } from "../src/atmo-weather-animations.js";
 
 function createContext() {
@@ -633,4 +635,149 @@ test("near planes fly faster than distant ones", () => {
   assert.ok(Math.abs(planeSpeedForScale(0.5) - 0.5) < 1e-9);
   assert.ok(Math.abs(planeSpeedForScale(0.9) - 1.2) < 1e-9);
   assert.ok(planeSpeedForScale(0.7) > planeSpeedForScale(0.6));
+});
+
+// ── Wind direction ──
+function gustCard(bearing) {
+  return {
+    ...baseCard(),
+    _params: { wind: 1 },
+    _windBearing: bearing,
+    _windGust: 0,
+    _gustPhase: 0,
+    _microGustPhase: 0,
+    _sunPulsePhase: 0,
+    _windDir: null,
+    _windDirTarget: 1,
+  };
+}
+
+test("the wind blows left from the east and right from the west", () => {
+  assert.ok(advanceWindAndPulse(gustCard(90)) < 0);
+  assert.ok(advanceWindAndPulse(gustCard(270)) > 0);
+  assert.ok(advanceWindAndPulse(gustCard(45)) < 0);
+  assert.ok(advanceWindAndPulse(gustCard(315)) > 0);
+  // Without a bearing the wind keeps coming from the west.
+  assert.ok(advanceWindAndPulse(gustCard(undefined)) > 0);
+});
+
+test("near north and south the wind keeps its last direction", () => {
+  const card = gustCard(275);
+  assert.equal(windTargetDirection(card), 1);
+  card._windDirTarget = 1;
+  card._windBearing = 5;
+  assert.equal(windTargetDirection(card), 1);
+  card._windBearing = 355;
+  assert.equal(windTargetDirection(card), 1);
+  card._windBearing = 20;
+  assert.equal(windTargetDirection(card), -1);
+  card._windDirTarget = -1;
+  card._windBearing = 175;
+  assert.equal(windTargetDirection(card), -1);
+  card._windBearing = 185;
+  assert.equal(windTargetDirection(card), -1);
+  card._windBearing = 200;
+  assert.equal(windTargetDirection(card), 1);
+});
+
+test("a wind turn eases through a stop instead of jumping", () => {
+  const card = gustCard(270);
+  advanceWindAndPulse(card);
+  assert.equal(card._windDir, 1);
+  card._windBearing = 90;
+  const dirs = [];
+  for (let i = 0; i < 400; i++) {
+    advanceWindAndPulse(card);
+    dirs.push(card._windDir);
+  }
+  for (let i = 1; i < dirs.length; i++) assert.ok(dirs[i] <= dirs[i - 1]);
+  assert.ok(dirs[10] > 0.9 && dirs[10] < 1);
+  assert.ok(Math.abs(dirs[149]) < 0.02);
+  assert.equal(dirs[299], -1);
+  assert.equal(dirs[399], -1);
+});
+
+function ringCloud(x, extra = {}) {
+  return {
+    x,
+    y: 20,
+    speed: 0.03,
+    layer: 2,
+    seed: 120,
+    breathPhase: 0,
+    breathSpeed: 0,
+    opacity: 1,
+    scale: 1,
+    _bakedCanvas: {},
+    _bakeOffX: -50,
+    _bakeOffY: 0,
+    _atlasX: 0,
+    _atlasY: 0,
+    _atlasW: 100,
+    _atlasH: 10,
+    _bakeLogicalW: 100,
+    _bakeLogicalH: 10,
+    ...extra,
+  };
+}
+
+function cloudCard() {
+  const card = baseCard();
+  card._layerFadeProgress.clouds = 1;
+  card._renderState = {};
+  card._perfEffects = 0;
+  return card;
+}
+
+test("a cloud that left the card comes back just outside the windward edge", () => {
+  const card = cloudCard();
+  const w = 400;
+  // Image spans x-50 .. x+50, so at x = 460 it is fully past the right edge.
+  const cloud = ringCloud(460);
+  drawClouds(card, createContext(), [cloud], w, 100, 1);
+  assert.ok(cloud.x + 50 < 0, `right edge off the left side, x=${cloud.x}`);
+  assert.ok(cloud.x + 50 > -300, `close to the edge, x=${cloud.x}`);
+  assert.ok(cloud._fadeAlpha < 1);
+  // It fades in before it shows and then drifts on with the wind.
+  let frames = 0;
+  while (cloud.x + 50 < 0 && frames < 100000) {
+    drawClouds(card, createContext(), [cloud], w, 100, 1);
+    frames++;
+  }
+  assert.equal(cloud._fadeAlpha, 1);
+  assert.ok(frames > 0);
+});
+
+test("with the wind from the east a cloud leaves on the left and returns on the right", () => {
+  const card = cloudCard();
+  const cloud = ringCloud(-60);
+  drawClouds(card, createContext(), [cloud], 400, 100, -1);
+  assert.ok(cloud.x - 50 > 400, `left edge past the right side, x=${cloud.x}`);
+  assert.ok(cloud.x - 50 < 700, `close to the edge, x=${cloud.x}`);
+});
+
+test("a cloud still partly on the card drifts on and is not moved", () => {
+  const card = cloudCard();
+  const cloud = ringCloud(430);
+  drawClouds(card, createContext(), [cloud], 400, 100, 1);
+  assert.ok(cloud.x > 430 && cloud.x < 431, `x=${cloud.x}`);
+  assert.equal(cloud._fadeAlpha, 1);
+  // A cloud without its baked image is never wrapped either.
+  const unbaked = ringCloud(460, { _bakedCanvas: null });
+  drawClouds(card, createContext(), [unbaked], 400, 100, 1);
+  assert.ok(unbaked.x > 460);
+});
+
+test("in strong wind the fade keeps up with the drift", () => {
+  const card = cloudCard();
+  const w = 400;
+  const cloud = ringCloud(460, { speed: 3 });
+  drawClouds(card, createContext(), [cloud], w, 100, 10);
+  let frames = 0;
+  while (cloud.x + 50 < 0 && frames < 1000) {
+    drawClouds(card, createContext(), [cloud], w, 100, 10);
+    frames++;
+  }
+  assert.equal(cloud._fadeAlpha, 1, "opaque before it shows");
+  assert.ok(frames < 60, `fast re-entry, ${frames} frames`);
 });

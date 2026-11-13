@@ -498,9 +498,37 @@ export function shouldSkipFrame(card, timestamp) {
   return false;
 }
 
+// Screen direction of the wind from wind_bearing, shared by clouds, rain,
+// snow, hail and the vapor: wind from the east (0-180°) blows to the left,
+// wind from the west (180-360°) to the right, the same as the wind lines.
+// Within 10° of north or south the previous direction is kept, so wavering
+// data cannot flip the whole scene back and forth.
+const WIND_DIR_DEADBAND = Math.sin((10 * Math.PI) / 180);
+// Frames at the 30 fps baseline for a full turn: the drift slows down, stops
+// and sets off the other way instead of jumping.
+const WIND_TURN_FRAMES = 150;
+
+export function windTargetDirection(card) {
+  const rad = ((card._windBearing ?? 270) * Math.PI) / 180;
+  const x = -Math.sin(rad);
+  const prev = card._windDirTarget || 1;
+  if (Math.abs(x) < WIND_DIR_DEADBAND) return prev;
+  return x < 0 ? -1 : 1;
+}
+
 export function advanceWindAndPulse(card) {
   const p = card._params;
   const animSpeed = card._animationSpeed * (card._frameScale || 1);
+  const target = windTargetDirection(card);
+  card._windDirTarget = target;
+  if (card._windDir == null) card._windDir = target;
+  else if (card._windDir !== target) {
+    const step = animSpeed / WIND_TURN_FRAMES;
+    card._windDir =
+      card._windDir < target
+        ? Math.min(target, card._windDir + step)
+        : Math.max(target, card._windDir - step);
+  }
   card._gustPhase += 0.012 * animSpeed;
   card._microGustPhase += 0.03 * animSpeed;
   card._windGust =
@@ -513,12 +541,18 @@ export function advanceWindAndPulse(card) {
     // Gusts share one value across all clouds — letting it go negative made
     // every cloud reverse direction together (looked like a curtain swaying).
     minWind = baseWind * 0.15;
-  return Math.max(minWind, gustWind) * (1 + card._windSpeed);
+  return Math.max(minWind, gustWind) * (1 + card._windSpeed) * card._windDir;
 }
 
-// Instead of an abrupt teleport, off-screen clouds dissolve and reappear
-// elsewhere after a smooth fade — avoids any hard "wrap" point being visible.
-const CLOUD_FADE_FRAMES = 240; // ~4s at the nominal 30fps baseline
+// A cloud that has left the card completely starts again just outside the
+// edge the wind comes in from, so the sky stays evenly covered instead of
+// thinning out on the windward side. It fades in on the way, within ~4s at
+// the 30fps baseline or within a short distance in strong wind, and the gap
+// it starts at covers that fade, so it is opaque by the time it shows.
+const CLOUD_FADE_FRAMES = 240;
+const CLOUD_FADE_PX = 120;
+// Room for the breathing scale, so a cloud never pops while still visible.
+const CLOUD_EDGE_SCALE = 1.04;
 // Single knob for overall cloud drift speed (1.0 = original v7.1.0 pace).
 const CLOUD_SPEED_SCALE = 0.5;
 
@@ -541,7 +575,7 @@ export function drawClouds(card, ctx, cloudList, w, h, effectiveWind) {
   if (fadeOpacity <= 0) return;
   if (!card._renderState) return;
   const animSpeed = card._animationSpeed * (card._frameScale || 1);
-  const fadeStep = animSpeed / CLOUD_FADE_FRAMES;
+  const windDir = effectiveWind < 0 ? -1 : 1;
   for (let i = 0; i < cloudList.length; i++) {
     const cloud = cloudList[i];
     const layer = cloud.layer || 0;
@@ -570,29 +604,34 @@ export function drawClouds(card, ctx, cloudList, w, h, effectiveWind) {
       : Math.sin(layerPhase + (cloud.seed || 0) * 0.001) * (1 + layer * 1.25);
     const effectiveSpeed =
       baseSpeed * effectiveWind * depthFactor * animSpeed * CLOUD_SPEED_SCALE;
-    let fadePhase = cloud._fadePhase || "drift";
     let fadeAlpha = cloud._fadeAlpha != null ? cloud._fadeAlpha : 1;
-    if (fadePhase === "drift") {
-      cloud.x += effectiveSpeed + microDrift * animSpeed;
-      // Random per-cloud margin so clouds don't all start fading at once.
-      if (cloud._fadeMargin === undefined)
-        cloud._fadeMargin = 60 + ((cloud.seed || 0) % 220);
-      if (cloud.x > w + cloud._fadeMargin) fadePhase = "out";
-    } else if (fadePhase === "out") {
-      fadeAlpha -= fadeStep;
-      if (fadeAlpha <= 0) {
+    cloud.x += effectiveSpeed + microDrift * animSpeed;
+    if (cloud._bakedCanvas) {
+      // Span of the baked image around cloud.x; _bakeOffX is negative.
+      const scale = (cloud.scale || 1) * CLOUD_EDGE_SCALE;
+      const left = cloud._bakeOffX * scale;
+      const right = left + cloud._bakeLogicalW * scale;
+      const gone =
+        windDir > 0 ? cloud.x + left > w : cloud.x + right < 0;
+      if (gone) {
+        const pxPerFrame = Math.abs(effectiveSpeed);
+        const fadePx = Math.min(CLOUD_FADE_PX, pxPerFrame * CLOUD_FADE_FRAMES);
+        // A small per-cloud stagger keeps the clouds from coming in as a row.
+        const gap = fadePx + 10 + (((cloud.seed || 0) * 7) % 90);
+        cloud.x = windDir > 0 ? -right - gap : w - left + gap;
         fadeAlpha = 0;
-        cloud.x = -320 - (((cloud.seed || 0) * 7) % 260);
-        fadePhase = "in";
-      }
-    } else {
-      fadeAlpha += fadeStep;
-      if (fadeAlpha >= 1) {
-        fadeAlpha = 1;
-        fadePhase = "drift";
       }
     }
-    cloud._fadePhase = fadePhase;
+    if (fadeAlpha < 1) {
+      fadeAlpha = Math.min(
+        1,
+        fadeAlpha +
+          Math.max(
+            animSpeed / CLOUD_FADE_FRAMES,
+            Math.abs(effectiveSpeed) / CLOUD_FADE_PX,
+          ),
+      );
+    }
     cloud._fadeAlpha = fadeAlpha;
     cloud.breathPhase =
       (cloud.breathPhase || 0) + (cloud.breathSpeed || 0.002) * animSpeed;
@@ -679,9 +718,12 @@ export function drawWindVapor(card, ctx, w, h, effectiveWind) {
     const v = card._windVapor[i];
     v.phase += v.phaseSpeed * Math.max(speedMul, 0.04) * animSpeed;
     const gustBoost = Math.max(0, gustVal) * v.gustWeight * 1.2;
-    const baseVelocity = v.speed * speedMul + effectiveWind * speedMul;
+    const dir = card._windDir == null ? 1 : card._windDir;
+    const baseVelocity = (v.speed * dir + effectiveWind) * speedMul;
     v.x +=
-      (baseVelocity + gustBoost) * (1 + card._windSpeed * 0.15) * animSpeed;
+      (baseVelocity + gustBoost * dir) *
+      (1 + card._windSpeed * 0.15) *
+      animSpeed;
     const undulation = Math.sin(v.phase) * v.drift;
     if (v.x > w + v.w) v.x = -v.w;
     if (v.x < -v.w * 1.5) v.x = w + v.w;

@@ -154,3 +154,20 @@ test("editor drops empty values and keeps custom_cards last", () => {
   assert.equal(output.some_unknown_key, 1);
   assert.equal(Object.keys(output).at(-1), "custom_cards");
 });
+
+test("compass settings are dropped while the compass is off", () => {
+  const keys = {
+    wind_compass_position: "top-left",
+    wind_compass_cardinal: false,
+    wind_compass_degrees: true,
+    wind_compass_speed: true,
+    wind_compass_background: true,
+  };
+  assert.deepEqual(createEditor()._cleanConfig({ ...keys }), {});
+  assert.deepEqual(createEditor()._cleanConfig({ ...keys, wind_compass: "off" }), {});
+  const on = createEditor()._cleanConfig({ ...keys, wind_compass: "band" });
+  assert.deepEqual(on, { wind_compass: "band", ...keys });
+  // The chip has its own background, so the switch is dropped there.
+  const pill = createEditor()._cleanConfig({ ...keys, wind_compass: "pill" });
+  assert.equal(pill.wind_compass_background, undefined);
+});

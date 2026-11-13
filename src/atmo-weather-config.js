@@ -16,6 +16,12 @@ export const CONFIG_DEFAULTS = Object.freeze({
   fauna_planes: true,
   fauna_plane_speed: 1,
   wind_style: "lines",
+  wind_compass: "off",
+  wind_compass_position: "auto",
+  wind_compass_cardinal: true,
+  wind_compass_degrees: false,
+  wind_compass_speed: false,
+  wind_compass_background: false,
   effect_blue_hour: true,
   effect_sun_rays: true,
   effect_haze: true,
@@ -103,6 +109,8 @@ const STRING_ONLY_KEYS = Object.freeze([
   "custom_cards_position",
   "custom_cards_css_class",
   "wind_style",
+  "wind_compass",
+  "wind_compass_position",
 ]);
 
 function renameKey(obj, oldKey, newKey) {

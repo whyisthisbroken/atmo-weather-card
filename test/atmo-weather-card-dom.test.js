@@ -732,3 +732,113 @@ test("fancy_unit shows the unit once when Home Assistant formats it with a unit"
   assert.equal((html.match(/°C/g) || []).length, 1, html);
   assert.match(html, /<span class="fancy-unit">°C<\/span>/);
 });
+
+test("the clouds fill a ring wider than the card so the wind carries no hole across it", () => {
+  // Wind from the west keeps the ring overhang on the left where it was built.
+  const hass = makeHass({ weather: "windy" });
+  hass.states["weather.home"].attributes.wind_bearing = 270;
+  const card = mountCard({ perf_mode: "ultra" }, hass);
+  runFrames(3);
+  const w = card._width;
+  const xs = card._clouds.map((c) => c.x);
+  assert.ok(xs.some((x) => x < -w * 0.1), "clouds beyond the left edge");
+  assert.ok(xs.every((x) => x > -w * 0.5 && x < w * 1.1), `all within the ring, ${Math.min(...xs)}..${Math.max(...xs)}`);
+  // The banks share the clouds evenly along the ring.
+  const thirds = [0, 0, 0];
+  for (const x of xs) thirds[Math.max(0, Math.min(2, Math.floor(((x + w * 0.3) / (w * 1.3)) * 3)))]++;
+  assert.ok(Math.min(...thirds) >= card._clouds.length * 0.15, thirds.join("/"));
+});
+
+test("the wind direction comes from the weather entity and turns smoothly", () => {
+  const card = mountCard({}, makeHass({ weather: "windy" }));
+  runFrames(2);
+  // The test weather blows from the east, so everything drifts to the left.
+  assert.equal(card._windBearing, 90);
+  assert.equal(card._windDir, -1);
+  const hass = makeHass({ weather: "windy" });
+  hass.states["weather.home"].attributes.wind_bearing = 250;
+  card.hass = hass;
+  runFrames(2);
+  assert.equal(card._windBearing, 250);
+  assert.ok(card._windDir > -1 && card._windDir < 1, `turning, ${card._windDir}`);
+  runFrames(400);
+  assert.equal(card._windDir, 1);
+});
+
+const compassEl = (card) => card.shadowRoot.querySelector("#wind-compass");
+
+test("the wind compass is off by default", () => {
+  const card = mountCard({}, makeHass({ weather: "windy" }));
+  runFrames(2);
+  assert.equal(compassEl(card).hidden, true);
+  assert.equal(compassEl(card).innerHTML, "");
+});
+
+test("the wind compass shows the bearing of the weather entity", () => {
+  const card = mountCard(
+    { wind_compass: "rose", wind_compass_degrees: true, wind_compass_speed: true },
+    makeHass({ weather: "windy" }),
+  );
+  runFrames(2);
+  const el = compassEl(card);
+  assert.equal(el.hidden, false);
+  assert.ok(el.querySelector(".cmp-style-rose.cmp-pos-bottom-right"));
+  // The test weather blows from the east at 20 km/h.
+  assert.deepEqual([...el.querySelectorAll(".cmp-label span")].map((s) => s.textContent), ["E", "90°", "20 km/h"]);
+  assert.match(el.querySelector(".cmp-rot").style.transform, /rotate\(90deg\)/);
+});
+
+test("the compass turns the short way and follows the language", () => {
+  const card = mountCard({ wind_compass: "vane", wind_compass_position: "top-left" }, makeHass({ weather: "windy" }));
+  runFrames(2);
+  const hass = makeHass({ weather: "windy", language: "de" });
+  hass.states["weather.home"].attributes.wind_bearing = 60;
+  card.hass = hass;
+  runFrames(2);
+  const el = compassEl(card);
+  assert.ok(el.querySelector(".cmp-pos-top-left"));
+  assert.equal(el.querySelector(".cmp-label").textContent, "ONO");
+  // Rebuilt for the new language, so it starts at the current bearing.
+  assert.match(el.querySelector(".cmp-rot").style.transform, /rotate\(60deg\)/);
+  const next = makeHass({ weather: "windy", language: "de" });
+  next.states["weather.home"].attributes.wind_bearing = 350;
+  card.hass = next;
+  runFrames(2);
+  // From 60° to 350° is 70° back, not 290° forward.
+  assert.match(el.querySelector(".cmp-rot").style.transform, /rotate\(-10deg\)/);
+});
+
+test("the compass hides without a bearing and falls back on unknown styles", () => {
+  const hass = makeHass({ weather: "windy" });
+  delete hass.states["weather.home"].attributes.wind_bearing;
+  const card = mountCard({ wind_compass: "pill" }, hass);
+  runFrames(2);
+  assert.equal(compassEl(card).hidden, true);
+  const odd = mountCard({ wind_compass: "spinner", wind_compass_position: 5 }, makeHass({ weather: "windy" }));
+  runFrames(2);
+  assert.equal(compassEl(odd).hidden, true);
+  assert.equal(odd._compass.style, "off");
+});
+
+test("the compass gets a frosted background on request, the chip keeps its own", () => {
+  const card = mountCard({ wind_compass: "arrow", wind_compass_background: true }, makeHass({ weather: "windy" }));
+  runFrames(2);
+  assert.ok(compassEl(card).querySelector(".cmp-style-arrow.cmp-bg"));
+  const pill = mountCard({ wind_compass: "pill", wind_compass_background: true }, makeHass({ weather: "windy" }));
+  runFrames(2);
+  assert.ok(compassEl(pill).querySelector(".cmp-style-pill"));
+  assert.equal(compassEl(pill).querySelector(".cmp-bg"), null);
+});
+
+test("the wind arrow keeps its full size on a low card", () => {
+  const card = mountCard({ wind_compass: "arrow" }, makeHass({ weather: "windy" }));
+  runFrames(2);
+  card._cachedDimensions = { width: 400, height: 140, dpr: 1 };
+  card._updateCompassScale();
+  assert.equal(compassEl(card).style.getPropertyValue("--_cmp-scale"), "1.000");
+  const rose = mountCard({ wind_compass: "rose" }, makeHass({ weather: "windy" }));
+  runFrames(2);
+  rose._cachedDimensions = { width: 400, height: 140, dpr: 1 };
+  rose._updateCompassScale();
+  assert.equal(compassEl(rose).style.getPropertyValue("--_cmp-scale"), "0.700");
+});

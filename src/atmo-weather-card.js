@@ -79,6 +79,17 @@ import {
   _FC_UNIT_MAP,
 } from "./atmo-weather-data.js";
 import {
+  applyCompassAngle,
+  COMPASS_STYLES,
+  compassLabel,
+  COMPASS_MIN_SCALE,
+  compassMarkup,
+  compassPoint,
+  resolveCompassPosition,
+  unwrapAngle,
+} from "./atmo-weather-compass.js";
+import { editorLanguage } from "./atmo-weather-i18n.js";
+import {
   computeGauge,
   escapeHtml,
   escapeHtmlAttr,
@@ -115,6 +126,8 @@ const atmoSignature = (a) =>
   [a.cloud_coverage, a.visibility, a.humidity, a.dew_point].join("|");
 // Blur radius in atlas pixels used while baking clouds, see _cloudBakeFilter.
 const CLOUD_BAKE_SMOOTH = 1.35;
+// Share of the card width the ring of drifting clouds extends beyond the card.
+const CLOUD_RING_OVERHANG = 0.3;
 // Breathing moves each puff by up to this share of its radius.
 const CLOUD_BREATH_AMOUNT = 0.04;
 // Puffs re-baked per frame while clouds breathe, see _processPendingCloudBakes.
@@ -150,6 +163,9 @@ class AtmosphericWeatherCard extends HTMLElement {
     this._birdAnimationSpeed = 0.3;
     this._starAnimationSpeed = 0.5;
     this._windKmh = 0;
+    // Screen direction of the wind, -1 left to 1 right, eased on a turn.
+    this._windDir = null;
+    this._windDirTarget = 1;
     this._microGustPhase = 0;
     this._layerFadeProgress = {
       stars: 1,
@@ -520,6 +536,30 @@ class AtmosphericWeatherCard extends HTMLElement {
     this._windStyle = ["lines", "flow", "off"].includes(windStyle)
       ? windStyle
       : CONFIG_DEFAULTS.wind_style;
+    const compassStyle = String(
+      config.wind_compass ?? CONFIG_DEFAULTS.wind_compass,
+    );
+    this._compass = {
+      style: COMPASS_STYLES.includes(compassStyle)
+        ? compassStyle
+        : CONFIG_DEFAULTS.wind_compass,
+      position: resolveCompassPosition(
+        compassStyle,
+        String(
+          config.wind_compass_position ??
+            CONFIG_DEFAULTS.wind_compass_position,
+        ),
+      ),
+      show: {
+        cardinal: config.wind_compass_cardinal !== false,
+        degrees: config.wind_compass_degrees === true,
+        speed: config.wind_compass_speed === true,
+      },
+      background: config.wind_compass_background === true,
+    };
+    this._compassScale = null;
+    // Rebuild the compass markup with the next update.
+    this._compassSig = null;
     const rawAnimSpeed =
       config.animation_speed != null
         ? parseFloat(config.animation_speed)
@@ -851,6 +891,13 @@ class AtmosphericWeatherCard extends HTMLElement {
     );
     // Where the wind comes from; without a value it blows left to right.
     this._windBearing = Number.isFinite(bearing) ? bearing : 270;
+    this._updateWindCompass(hass, {
+      bearing: Number.isFinite(bearing) ? bearing : null,
+      speed: windSpeed,
+      unit:
+        (wEntity && wEntity.attributes && wEntity.attributes.wind_speed_unit) ||
+        "",
+    });
     const imageNight = axes.isImageNight;
     this._updateImage(hass, imageNight);
     // Golden hour: warm glow + ambient wash (after base styles are set)
@@ -1699,6 +1746,82 @@ class AtmosphericWeatherCard extends HTMLElement {
     }
     return { t, y01 };
   }
+  // Optional wind compass over the scene. Hidden without a bearing.
+  _updateWindCompass(hass, data) {
+    const el = this._elements && this._elements.compass;
+    const cfg = this._compass;
+    if (!el || !cfg) return;
+    if (data) this._compassData = data;
+    const d = this._compassData;
+    if (cfg.style === "off" || !d || d.bearing == null) {
+      el.hidden = true;
+      return;
+    }
+    const lang = editorLanguage(hass || this._hass);
+    const sig = `${cfg.style}|${cfg.position}|${lang}|${cfg.background}`;
+    let angle = unwrapAngle(this._compassAngle, d.bearing);
+    if (sig !== this._compassSig) {
+      this._compassSig = sig;
+      el.innerHTML = compassMarkup(cfg.style, cfg.position, lang, cfg.background);
+      // A new compass starts at the current bearing instead of turning to it.
+      angle = d.bearing;
+    } else if (Math.abs(angle) > 360) {
+      // Keep the unwrapped angle near zero: shift the current position by
+      // whole turns without a transition, which looks the same, then ease on.
+      const shift = Math.round(angle / 360) * 360;
+      const rotating = el.querySelectorAll(".cmp-rot, .cmp-band");
+      for (const g of rotating) g.style.transition = "none";
+      applyCompassAngle(el, cfg.style, this._compassAngle - shift);
+      void el.offsetWidth;
+      for (const g of rotating) g.style.transition = "";
+      angle -= shift;
+    }
+    this._compassAngle = angle;
+    applyCompassAngle(el, cfg.style, angle);
+    const parts = compassLabel({
+      bearing: d.bearing,
+      lang,
+      speed: d.speed,
+      speedUnit: d.unit,
+      show: cfg.show,
+    });
+    const label = el.querySelector(".cmp-label");
+    if (label) {
+      const text = parts.join("|");
+      if (label.dataset.text !== text) {
+        label.dataset.text = text;
+        label.replaceChildren(
+          ...parts.map((p) => {
+            const s = document.createElement("span");
+            s.textContent = p;
+            return s;
+          }),
+        );
+      }
+    }
+    const box = el.firstElementChild;
+    if (box)
+      box.setAttribute(
+        "aria-label",
+        `${compassPoint(d.bearing, lang)} ${Math.round(d.bearing)}°`,
+      );
+    this._updateCompassScale();
+    el.hidden = false;
+  }
+  // The compass grows with the card height, within limits.
+  _updateCompassScale() {
+    const el = this._elements && this._elements.compass;
+    if (!el) return;
+    const dims = this._cachedDimensions;
+    const h = dims && dims.height ? dims.height / (dims.dpr || 1) : 0;
+    const style = this._compass && this._compass.style;
+    const min = COMPASS_MIN_SCALE[style] || 0.7;
+    const scale = h ? Math.min(1.15, Math.max(min, h / 300)) : Math.max(1, min);
+    if (scale !== this._compassScale) {
+      this._compassScale = scale;
+      el.style.setProperty("--_cmp-scale", scale.toFixed(3));
+    }
+  }
   // DOM & STYLES
   _initDOM() {
     if (this._initialized) return;
@@ -1708,7 +1831,7 @@ class AtmosphericWeatherCard extends HTMLElement {
     style.textContent = buildStyles();
     const root = document.createElement("div");
     root.id = "card-root";
-    root.innerHTML = `<canvas id="bg-canvas"></canvas><canvas id="mid-canvas"></canvas><div id="image-slot"><img /></div><canvas id="fg-canvas"></canvas><div id="text-wrapper"><div id="chips-group"><div id="chips-row"></div></div></div><div id="custom-cards-wrapper"></div>`;
+    root.innerHTML = `<canvas id="bg-canvas"></canvas><canvas id="mid-canvas"></canvas><div id="image-slot"><img /></div><canvas id="fg-canvas"></canvas><div id="wind-compass" hidden></div><div id="text-wrapper"><div id="chips-group"><div id="chips-row"></div></div></div><div id="custom-cards-wrapper"></div>`;
     this.shadowRoot.append(style, root);
     const q = (sel) => root.querySelector(sel);
     const bg = q("#bg-canvas"),
@@ -1734,6 +1857,7 @@ class AtmosphericWeatherCard extends HTMLElement {
       chipsRow,
       textWrapper: q("#text-wrapper"),
       customCardsWrapper: q("#custom-cards-wrapper"),
+      compass: q("#wind-compass"),
     };
     const ctxOpts = { alpha: true, willReadFrequently: false };
     const bgCtx = bg.getContext("2d", ctxOpts),
@@ -3031,6 +3155,7 @@ class AtmosphericWeatherCard extends HTMLElement {
     const heightDiff = Math.abs(this._cachedDimensions.height - scaledHeight);
     if (!widthChanged && !dprChanged && heightDiff === 0) return false;
     this._cachedDimensions = { width: scaledWidth, height: scaledHeight, dpr };
+    this._updateCompassScale();
     for (const k of ["bg", "mid", "fg"]) {
       const canvas = this._elements[k],
         ctx = this._ctxs[k];
@@ -3450,10 +3575,14 @@ class AtmosphericWeatherCard extends HTMLElement {
     // Immersive dark-day has no sky layer, so clouds must cover more vertical space.
     const isDarkDayImmersive = this._isDarkDayImmersive;
     const heightLimit = isStandalone ? 0.75 : isDarkDayImmersive ? 0.72 : 0.55;
-    const totalClouds = p.cloud || 0;
-    if (totalClouds <= 0) return;
+    if ((p.cloud || 0) <= 0) return;
+    // The clouds fill a ring wider than the card, see CLOUD_RING_OVERHANG. The
+    // count grows with it, so the card itself stays as full as before.
+    const ringStart = -w * CLOUD_RING_OVERHANG;
+    const ringW = w * (1 + CLOUD_RING_OVERHANG);
+    const totalClouds = Math.round(p.cloud * (1 + CLOUD_RING_OVERHANG));
     const configScale = p.scale || 1.0;
-    const isHeavy = totalClouds >= 18;
+    const isHeavy = p.cloud >= 18;
     const pq = Math.max(0.3, this._perfCloudQuality / 1.5);
     // Per-session size bias (~±0.13). Shifts rollLarge/rollMedium so reloads
     // yield visibly different size mixes.
@@ -3475,35 +3604,28 @@ class AtmosphericWeatherCard extends HTMLElement {
         : 2 + Math.floor(Math.random() * 2);
     const clusters = [];
     for (let c = 0; c < clusterCount; c++) {
-      const baseX = w * ((c + 0.5) / clusterCount);
+      const baseX = ringStart + ringW * ((c + 0.5) / clusterCount);
       clusters.push(
         overcast
           ? {
-              x: baseX + (Math.random() - 0.5) * (w / clusterCount),
+              x: baseX + (Math.random() - 0.5) * (ringW / clusterCount),
               y: h * (0.04 + Math.random() * (heightLimit * 1.1)),
               spreadX: w * (0.16 + Math.random() * 0.12),
               spreadY: h * (0.08 + Math.random() * 0.08),
               weight: 0.8 + Math.random() * 0.4,
             }
           : {
-              x: baseX + (Math.random() - 0.5) * w * 0.6,
+              x: baseX + (Math.random() - 0.5) * (ringW / clusterCount) * 0.4,
               y: h * (0.11 + Math.random() * (heightLimit - 0.16)),
-              spreadX: w * (0.12 + Math.random() * 0.18),
+              spreadX: (ringW / clusterCount) * (0.3 + Math.random() * 0.2),
               spreadY: h * (0.06 + Math.random() * 0.1),
               weight: 0.5 + Math.random(),
             },
       );
     }
-    const totalWeight = clusters.reduce((sum, c) => sum + c.weight, 0);
-    // Weighted cluster picker (closure reused per cloud)
-    const pickCluster = () => {
-      let roll = Math.random() * totalWeight;
-      for (let c = 0; c < clusters.length; c++) {
-        roll -= clusters[c].weight;
-        if (roll <= 0) return clusters[c];
-      }
-      return clusters[clusters.length - 1];
-    };
+    // Clouds go to the banks in turn, so every bank gets the same share.
+    let nextCluster = 0;
+    const pickCluster = () => clusters[nextCluster++ % clusters.length];
     // Approximate Gaussian via Irwin-Hall (sum of 3 uniforms)
     const gaussRand = () =>
       (Math.random() + Math.random() + Math.random() - 1.5) / 1.5;
@@ -3513,7 +3635,7 @@ class AtmosphericWeatherCard extends HTMLElement {
     for (let i = 0; i < fillerCount; i++) {
       const seed = Math.random() * 10000;
       this._clouds.push({
-        x: Math.random() * w,
+        x: ringStart + Math.random() * ringW,
         y: overcast
           ? h * (0.02 + Math.random() * heightLimit * 0.35)
           : h * (0.08 + Math.random() * (heightLimit * 0.6 - 0.08)),
@@ -3556,7 +3678,7 @@ class AtmosphericWeatherCard extends HTMLElement {
       const isLoner = Math.random() < lonerChance,
         cluster = pickCluster();
       if (isLoner) {
-        xPos = Math.random() * w;
+        xPos = ringStart + Math.random() * ringW;
       } else {
         xPos = cluster.x + gaussRand() * cluster.spreadX;
       }

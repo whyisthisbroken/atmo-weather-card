@@ -474,8 +474,11 @@ Card editor
 ├─ Performance & effects
 │  ├─ perf_mode
 │  ├─ Graphics ▸ perf_fps, perf_cloud_quality, perf_effects, perf_dpr
-│  ├─ Sky & light ▸ wind_style, effect_blue_hour, effect_sun_rays,
-│  │                effect_haze, effect_ground_mist, effect_cloud_coverage
+│  ├─ Sky & light ▸ effect_blue_hour, effect_sun_rays, effect_haze,
+│  │                effect_ground_mist, effect_cloud_coverage
+│  ├─ Wind ▸ wind_style, wind_compass, wind_compass_position,
+│  │         wind_compass_cardinal, wind_compass_degrees,
+│  │         wind_compass_speed, wind_compass_background
 │  ├─ Night sky ▸ effect_shooting_stars, shooting_star_rate,
 │  │              effect_comets, comet_rate, star_animation_speed
 │  ├─ Birds & planes ▸ fauna_birds, fauna_bird_density, bird_animation_speed,
@@ -1099,13 +1102,48 @@ The options below follow the groups of the editor panel **Performance & effects*
 
 ### Sky & light
 
+The switches for the blue hour, sun rays, haze, ground mist and the cloud amount from data are explained in [Weather Data & Sky Light](#weather-data).
+
+### Wind
+
+The wind follows `wind_speed` and `wind_bearing` of the weather entity. `wind_bearing` is where the wind comes from, as in Home Assistant. Clouds, rain, snow, hail and haze drift with it: wind from the east (0 to 180°) moves them to the left, wind from the west to the right. When the wind turns, the scene slows down, stops and sets off the other way over about ten seconds.
+
 <p align="center"><img src="https://github.com/user-attachments/assets/336cf73a-0518-42d6-9534-aa927fe3b272" alt="wind_style lines and flow" width="560" /></p>
 
 | Option       | Type     | Default | Description |
 | :----------- | :------- | :------ | :---------- |
-| `wind_style` | `string` | `lines` | Wind display. `lines` draws long wind lines (left in the image), `flow` a field of short streaks (right), `off` hides it. Direction follows `wind_bearing` of the weather entity, strength follows the wind speed. Shown in windy weather, and in rain, hail or snow from 40 km/h. |
+| `wind_style` | `string` | `lines` | Wind display. `lines` draws long wind lines (left in the image), `flow` a field of short streaks (right), `off` hides it. Shown in windy weather, and in rain, hail or snow from 40 km/h. |
 
-The switches for the blue hour, sun rays, haze, ground mist and the cloud amount from data are explained in [Weather Data & Sky Light](#weather-data).
+#### Wind compass
+
+An optional compass shows where the wind comes from. It is off by default. Pick a style in the editor under **Performance & effects ▸ Wind**. The arrow points where the wind blows, like the wind lines; the needles of the rose, chip and vane point into the wind, and the band shows the direction under its marker. North is up. When the wind turns, the compass turns with it over three seconds, always the short way round. Without `wind_bearing` on the weather entity the compass stays hidden.
+
+<p align="center"><img src="images/wind-compass-styles.webp" alt="wind_compass styles arrow, rose, pill, band and vane" width="560" /></p>
+
+| Option                  | Type     | Default | Description |
+| :---------------------- | :------- | :------ | :---------- |
+| `wind_compass`          | `string` | `off`   | `arrow` a wind arrow, `rose` a small compass rose, `pill` a compass chip with a frosted background, `band` a compass band like a heading display, `vane` a wind vane. `off` hides the compass. |
+| `wind_compass_position` | `string` | `auto`  | `top-left`, `top-center`, `top-right`, `bottom-left`, `bottom-center` or `bottom-right`. `auto` uses the usual place of each style: arrow bottom left, rose and vane bottom right, chip top right, band bottom center. |
+
+The text next to the compass is built from three switches. The compass point is in German or English, following your Home Assistant language (`O`, `SO`, `OSO` in German, `E`, `SE`, `ESE` in English); other languages show English. The wind speed keeps the unit of the weather entity, so it shows mph with the imperial unit system, or the unit you picked for the entity.
+
+<p align="center"><img src="images/wind-compass-label.webp" alt="wind_compass label with compass point, degrees and wind speed, and the frosted background" width="560" /></p>
+
+| Option                    | Type      | Default | Description |
+| :------------------------ | :-------- | :------ | :---------- |
+| `wind_compass_cardinal`   | `boolean` | `true`  | Shows the compass point, for example `WSW`. |
+| `wind_compass_degrees`    | `boolean` | `false` | Shows the bearing in degrees, for example `250°`. |
+| `wind_compass_speed`      | `boolean` | `false` | Shows the wind speed, for example `25 km/h`. |
+| `wind_compass_background` | `boolean` | `false` | Puts a frosted box behind the compass, so it stays readable on a pale or busy sky. The chip always has one. |
+
+```yaml
+type: custom:atmo-weather-card
+weather_entity: weather.home
+wind_compass: rose
+wind_compass_position: bottom-right
+wind_compass_degrees: true
+wind_compass_speed: true
+```
 
 ### Night sky
 
@@ -1224,7 +1262,7 @@ star_animation_speed: 0.6 # Stars only; twinkle speed (0.0-2.0)
 
 #### Forecast chip shows "Please check your weather provider"
 
-The chip appears in your Home Assistant language and means the weather entity delivers no forecast of the requested type.
+The chip appears in German or English, following your Home Assistant language (other languages show English), and means the weather entity delivers no forecast of the requested type.
 
 1. Check that your weather integration offers this forecast. Many offer `daily` but not `hourly`.
 2. Test it under **Developer Tools** → **Actions** with `weather.get_forecasts`.

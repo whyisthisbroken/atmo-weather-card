@@ -914,20 +914,8 @@ export const ATMOSPHERE_CSS = Object.freeze({
   exceptional: "weather-exceptional",
 });
 
+// German and English, like the editor; every other language shows English.
 export const FORECAST_UNAVAILABLE = Object.freeze({
-  cs: "Zkontrolujte svého poskytovatele počasí",
-  da: "Kontrollér din vejrudbyder",
   de: "Bitte prüfen Sie Ihren Wetteranbieter",
   en: "Please check your weather provider",
-  es: "Compruebe su proveedor meteorológico",
-  fi: "Tarkista säätietojen tarjoajasi",
-  fr: "Veuillez vérifier votre fournisseur météo",
-  it: "Controlla il tuo fornitore meteo",
-  nb: "Kontroller værleverandøren din",
-  nl: "Controleer uw weerprovider",
-  pl: "Sprawdź swojego dostawcę pogody",
-  pt: "Verifique o seu fornecedor meteorológico",
-  ru: "Проверьте своего поставщика погоды",
-  sv: "Kontrollera din väderleverantör",
-  uk: "Перевірте свого постачальника погоди",
 });
