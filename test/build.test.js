@@ -16,9 +16,20 @@ test("hacs.json points the Marketplace at the dist bundle", () => {
 });
 
 test("dist carries the package version", () => {
-  assert.ok(card.includes(`Atmo Weather Card ${version} `));
+  assert.ok(card.startsWith(`/* Atmo Weather Card ${version}\n`));
   assert.ok(card.includes(`"${version}"`));
   assert.ok(!card.includes("__AWC_VERSION__"));
+});
+
+test("dist carries the license and every copyright line of LICENSE", () => {
+  // The Marketplace installs only dist, without the LICENSE file.
+  const lines = read("LICENSE").split(/\r?\n/).filter((l) => l.startsWith("Copyright"));
+  assert.ok(lines.some((l) => l.includes("shpongledsummer")));
+  for (const bundle of [card, editor]) {
+    const head = bundle.slice(0, bundle.indexOf("*/"));
+    assert.ok(head.includes("MIT License"));
+    for (const line of lines) assert.ok(head.includes(line), `${line} is missing in dist`);
+  }
 });
 
 test("dist loads nothing from third-party hosts at runtime", () => {

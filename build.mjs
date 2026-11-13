@@ -9,6 +9,17 @@ const FONT_FILES = [
 ];
 
 const { version } = JSON.parse(await readFile("package.json", "utf8"));
+// The MIT license asks for its copyright notice in every copy, and the
+// Marketplace installs only the files in dist, so each bundle carries it.
+const copyright = (await readFile("LICENSE", "utf8"))
+  .split(/\r?\n/)
+  .filter((line) => line.startsWith("Copyright"));
+const banner = [
+  `/* Atmo Weather Card ${version}`,
+  ` * MIT License, https://github.com/whyisthisbroken/atmo-weather-card`,
+  ...copyright.map((line) => ` * ${line}`),
+  ` */`,
+].join("\n");
 
 await rm("dist", { recursive: true, force: true });
 await mkdir("dist");
@@ -23,7 +34,7 @@ await build({
   minify: true,
   legalComments: "eof",
   define: { __AWC_VERSION__: JSON.stringify(version) },
-  banner: { js: `/* Atmo Weather Card ${version} */` },
+  banner: { js: banner },
 });
 
 await Promise.all(

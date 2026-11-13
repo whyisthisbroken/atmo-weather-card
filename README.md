@@ -151,3 +151,5 @@ Atmo Weather Card is an independent, actively maintained Lovelace card project. 
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
+
+Atmo Weather Card is based on the original `atmospheric-weather-card` by `shpongledsummer`, see [Maintenance & Archive Info](MAINTENANCE.md).
