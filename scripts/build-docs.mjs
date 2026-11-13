@@ -327,7 +327,7 @@ export async function buildDocs({ version, source, template, overview, srcDir })
 export async function buildLanding({ version, template, where, srcDir }) {
   const own = new Set([...template.matchAll(/ id="([^"]+)"/g)].map((m) => m[1]));
   const redirects = Object.fromEntries([...where].filter(([id]) => !own.has(id)));
-  const icons = await iconSet(template, srcDir, ["weather-partly-rainy", "weather-sunset", "chart-donut", "tune-variant"]);
+  const icons = await iconSet(template, srcDir, ["weather-partly-rainy", "weather-sunset", "chart-donut", "tune-variant", "weather-snowy-heavy", "home-thermometer-outline", "home-variant-outline", "tablet-dashboard"]);
   return fill(template, {
     VERSION: version,
     README,

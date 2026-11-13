@@ -133,7 +133,7 @@
     <div>
       <p class="eyebrow">Weather card for Home Assistant</p>
       <h1>The sky over your dashboard.</h1>
-      <p class="lead">An animated sky that follows your weather entity: real sun and moon, clouds that drift with the wind, rain, snow, storms and a night full of stars.</p>
+      <p class="lead">An animated sky built from your real weather data. As many clouds as your cloud cover, rain as heavy as your rain gauge, and rain and snow that blow with your wind.</p>
       <div class="cta">
         <a class="btn primary" href="#install">Install</a>
         <a class="btn" href="demo.html">Open the live demo</a>
@@ -153,8 +153,8 @@
   <div class="wrap">
     <div class="head">
       <p class="kicker">Features</p>
-      <h2>Weather you can see, not just read.</h2>
-      <p>Every Home Assistant weather state has its own scene, by day and by night. Each tile below shows its feature in the card at the top.</p>
+      <h2>Real weather, not a weather icon.</h2>
+      <p>The card does not play a fixed animation per weather state. It reads your entities and sensors and builds the sky from them, by day and by night. Each tile below shows its feature in the card at the top.</p>
     </div>
     <div class="grid3" id="feature-grid"></div>
   </div>
@@ -286,7 +286,10 @@ weather_entity: weather.home</pre>
     const cond = night && s.condition === "sunny" ? "clear-night" : s.condition;
     return {
       states: {
-        "weather.home": { entity_id: "weather.home", state: cond, attributes: { temperature: s.temp ?? 14, humidity: 64, uv_index: 3, wind_speed: s.wind ?? 12, wind_bearing: s.bearing ?? 250, wind_speed_unit: "km/h", temperature_unit: "°C", friendly_name: "Home" } },
+        "weather.home": { entity_id: "weather.home", state: cond, attributes: { temperature: s.temp ?? 14, humidity: 64, uv_index: 3, wind_speed: s.wind ?? 12, wind_bearing: s.bearing ?? 250, wind_speed_unit: "km/h", temperature_unit: "°C", friendly_name: "Home", ...(s.cover != null ? { cloud_coverage: s.cover } : {}) } },
+        "sensor.rain_rate": { entity_id: "sensor.rain_rate", state: String(s.rain ?? 0), attributes: { unit_of_measurement: "mm/h", device_class: "precipitation_intensity", friendly_name: "Rain" } },
+        "sensor.station_wind_speed": { entity_id: "sensor.station_wind_speed", state: String(s.stationWind ?? 12), attributes: { unit_of_measurement: "km/h", device_class: "wind_speed", friendly_name: "Station wind" } },
+        "sensor.station_wind_direction": { entity_id: "sensor.station_wind_direction", state: s.stationFrom || "NW", attributes: { friendly_name: "Station wind direction" } },
         "sun.sun": { entity_id: "sun.sun", state: night ? "below_horizon" : "above_horizon", attributes: { elevation: s.elevation ?? (night ? -14 : 32), azimuth: 200, rising: false } },
         "sensor.moon_phase": { entity_id: "sensor.moon_phase", state: s.moon || "waxing_gibbous", attributes: {} },
         "sensor.time": { entity_id: "sensor.time", state: new Date().toISOString(), attributes: {} },
@@ -348,20 +351,27 @@ weather_entity: weather.home</pre>
   sync();
 
   // Features: each one shows itself in the hero card.
+  // The sample house of the docs guide, by day and lit up at night.
+  const HOUSE_CFG = { ...HERO_CFG, image_day: "images/house-day.webp", image_night: "images/house-night.webp", image_alignment: "bottom-right", image_scale: 92, image_x: "10", image_y: "4", celestial_alignment: "top-center", celestial_x: -110, celestial_y: 24, wind_compass: "off",
+    chips: [TEMP, COND, { entity: "sensor.indoor_temperature", name: "Inside", icon: "mdi:sofa" }] };
   const FEATURES = [
-    ["weather-lightning-rainy", "Every weather, live", "Layered clouds, rain, hail, snow, fog and thunderstorms with lightning, for every Home Assistant condition.", { condition: "lightning-rainy", night: false }],
-    ["weather-sunset", "Real sun and moon", "The sun follows its real position with sunrise and sunset colors. The moon shows its live phase.", { condition: "sunny", night: false }],
-    ["weather-windy", "Wind you can see", "Wind lines and drifting clouds follow speed and direction. An optional compass shows where it comes from.", { condition: "windy", wind: 48, night: false }],
-    ["weather-night", "A night full of stars", "Stars come out one by one after the blue hour, with shooting stars and the odd comet.", { condition: "sunny", night: true }],
-    ["chart-donut", "Chips, rings and bars", "Show any sensor or forecast as text, ring or bar, in a row, a grid or anywhere on the card.", { condition: "sunny", night: false }, GAUGE_CFG],
-    ["tune-variant", "Tuned to your data", "Measured cloud cover sets the clouds, a rain sensor sets the rain, humid air adds haze and ground mist.", { condition: "rainy", night: false }],
+    ["tune-variant", "Driven by your data", "No fixed scenes: cloud cover sets the number of clouds, a rain sensor sets how hard it rains, low visibility adds haze and the dew point brings ground mist.", { condition: "rainy", cover: 95, rain: 9 }, { ...HERO_CFG, precipitation_entity: "sensor.rain_rate" }],
+    ["weather-snowy-heavy", "Rain and snow in the wind", "Rain, snow and hail fly with the real wind direction and speed, and slant harder the stronger it blows. Clouds and wind lines drift the same way, and a compass shows where it comes from.", { condition: "snowy", wind: 45, bearing: 90, temp: -2 }],
+    ["home-thermometer-outline", "Your own weather station", "Wind, temperature, humidity and more can come from your own sensors instead of a weather service. If one goes offline, the card falls back on its own.", { condition: "partlycloudy", stationWind: 38, stationFrom: "NW" }, { ...HERO_CFG, wind_speed_entity: "sensor.station_wind_speed", wind_bearing_entity: "sensor.station_wind_direction", chips: [TEMP, COND, { entity: "sensor.station_wind_speed", name: "Station", icon: "mdi:weather-windy" }, { entity: "sensor.station_wind_direction", icon: "mdi:compass-outline", bearing_icon: "arrow" }] }],
+    ["weather-sunset", "Real sun and moon", "The sun follows its real elevation, with a golden hour before sunset and a blue hour after. The moon shows its live phase.", { condition: "sunny", elevation: 5 }],
+    ["weather-night", "A night full of stars", "Stars come out one by one after sunset, with shooting stars and the odd comet.", { condition: "sunny", night: true }],
+    ["weather-lightning-rainy", "Every weather, live", "Thunderstorms with lightning, fog that thickens towards the ground, a closed sky when it is overcast. Every Home Assistant condition has its own scene.", { condition: "lightning-rainy" }],
+    ["home-variant-outline", "Your home in the sky", "Put a drawing of your own house into the card, in daylight by day and with lit windows at night.", { condition: "sunny", night: true }, HOUSE_CFG],
+    ["chart-donut", "Chips, rings and bars", "Show any sensor or forecast as text, ring or bar, in a row, a grid or anywhere on the card.", { condition: "sunny" }, GAUGE_CFG],
+    ["tablet-dashboard", "Light on wall tablets", "Three performance presets from old tablets to smooth 60 fps. The card pauses when it is off screen and sends nothing to other servers.", { condition: "partlycloudy" }, { ...HERO_CFG, perf_mode: "low" }],
   ];
   const grid = document.getElementById("feature-grid");
   for (const [icon, title, text, scene, cfg] of FEATURES) {
     const el = document.createElement("article");
     el.className = "feature";
     el.innerHTML = `<div class="ico">${svgOf(iconFor(icon), "22px")}</div><h3>${title}</h3><p>${text}</p><button type="button">Show it above ↑</button>`;
-    el.querySelector("button").onclick = () => { setHero({ wind: 18, ...scene }, cfg || HERO_CFG); document.getElementById("top").scrollIntoView({ behavior: "smooth" }); };
+    // Every tile starts from the plain scene, so nothing of the tile before carries over.
+    el.querySelector("button").onclick = () => { setHero({ night: false, wind: 18, bearing: 250, temp: undefined, cover: undefined, rain: undefined, elevation: undefined, stationWind: undefined, stationFrom: undefined, ...scene }, cfg || HERO_CFG); document.getElementById("top").scrollIntoView({ behavior: "smooth" }); };
     grid.append(el);
   }
 
