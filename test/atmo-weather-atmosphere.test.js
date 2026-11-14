@@ -72,6 +72,10 @@ test("the measured amount sets the rain and snow density", () => {
   assert.equal(adjustParams(rain, { precipitation: 2 }).count, 100);
   assert.equal(adjustParams(rain, { precipitation: 20 }).count, 280);
   assert.equal(adjustParams({ type: "snow", count: 60 }, { precipitation: 3 }).count, 80);
+  // Sleet follows the sensor too, between rain and snow.
+  assert.equal(adjustParams({ type: "mix", count: 100 }, { precipitation: 0 }).count, 30);
+  assert.equal(adjustParams({ type: "mix", count: 100 }, { precipitation: 4 }).count, 130);
+  assert.equal(adjustParams({ type: "mix", count: 100 }, { precipitation: 20 }).count, 220);
   // Hail keeps its count.
   assert.equal(adjustParams({ type: "hail", count: 150 }, { precipitation: 5 }).count, 150);
 });

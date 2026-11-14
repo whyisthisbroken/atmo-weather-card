@@ -60,6 +60,7 @@ const LABELS = Object.freeze({
   theme_entity: "Theme Entity",
   _color_mode: "Color Mode",
   card_style: "Card Style",
+  card_layout: "Layout",
   card_square: "Square Mode",
   card_height: "Card Height",
   card_padding: "Card Padding",
@@ -135,6 +136,13 @@ const LABELS = Object.freeze({
   shooting_star_rate: "Frequency",
   comet_rate: "Frequency",
   wind_style: "Wind Display",
+  leaf_density: "Amount of leaves",
+  rain_density: "Amount of rain",
+  snow_density: "Amount of snow",
+  effect_rain_splash: "Splashes",
+  effect_snow_edge: "Snow edge",
+  effect_spill: "Fall out of the card",
+  effect_text_scrim: "Veil behind the text",
   wind_compass: "Wind compass",
   wind_compass_position: "Compass position",
   wind_compass_cardinal: "Show compass point",
@@ -203,7 +211,16 @@ const HELPERS = Object.freeze({
     "1× is about one shooting star every 12 s and a comet about once a minute (Ultra, clear night).",
   card_stack_order: "Higher values sit in front of other cards.",
   wind_style:
-    "Shows wind direction and strength in windy weather, and in rain, hail or snow from 40 km/h.",
+    "Shows wind direction and strength in windy weather, and in rain, hail or snow from 40 km/h. Leaves are green in spring and summer and turn to autumn colours in autumn and winter.",
+  rain_density: "1× is the usual amount for the weather. The rain sensor, if you have one, still sets how hard it rains.",
+  effect_rain_splash: "Part of the drops splash on the bottom edge of the card.",
+  snow_density:
+    "Snow has no sensor of its own. A precipitation sensor that measures melted snow, like a weather service's or a heated gauge, sets it too; this slider scales it on top.",
+  effect_snow_edge: "A thin edge of snow builds up along the bottom of the card.",
+  effect_spill:
+    "Rain and snow fall out of the bottom of the card onto the dashboard and fade there.",
+  effect_text_scrim:
+    "A soft veil behind the chip row keeps the text readable on any sky.",
   wind_compass:
     "Shows where the wind comes from, read from wind_bearing of the weather entity. The arrow points where it blows to.",
   wind_compass_position: "Automatic puts each style in its usual corner and moves it away from chips.",
@@ -263,6 +280,7 @@ const KEY_ORDER = Object.freeze([
   "color_mode",
   "card_color_mode",
   "theme_entity",
+  "card_layout",
   "card_style",
   "card_height",
   "card_padding",
@@ -335,6 +353,7 @@ const KEY_ORDER = Object.freeze([
   "fauna_planes",
   "fauna_plane_speed",
   "wind_style",
+  "leaf_density",
   "wind_compass",
   "wind_compass_position",
   "wind_compass_cardinal",
@@ -351,6 +370,12 @@ const KEY_ORDER = Object.freeze([
   "shooting_star_rate",
   "effect_comets",
   "comet_rate",
+  "rain_density",
+  "effect_rain_splash",
+  "snow_density",
+  "effect_snow_edge",
+  "effect_spill",
+  "effect_text_scrim",
   "chips",
   "custom_cards",
 ]);
@@ -398,6 +423,9 @@ const TOP_LEVEL_NUMBER_FIELDS = Object.freeze([
   "fauna_plane_speed",
   "shooting_star_rate",
   "comet_rate",
+  "rain_density",
+  "snow_density",
+  "leaf_density",
 ]);
 const TOP_LEVEL_BOOLEAN_FIELDS = Object.freeze([
   "card_square",
@@ -422,6 +450,10 @@ const TOP_LEVEL_BOOLEAN_FIELDS = Object.freeze([
   "effect_cloud_coverage",
   "effect_shooting_stars",
   "effect_comets",
+  "effect_rain_splash",
+  "effect_snow_edge",
+  "effect_spill",
+  "effect_text_scrim",
 ]);
 const CHIP_NUMBER_FIELDS = Object.freeze([
   "forecast_offset",
@@ -2599,6 +2631,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
     }
     if (!c.wind_compass || c.wind_compass === "off" || c.wind_compass === "pill")
       out.add("wind_compass_background");
+    if (c.wind_style !== "leaves") out.add("leaf_density");
     return out;
   }
   _cleanConfig(config) {
@@ -2893,6 +2926,39 @@ class AtmosphericWeatherCardEditor extends LitElement {
           ? ""
           : this._renderCompactField("card_height", "e.g. 220 or auto")}
         ${this._renderCompactField("card_padding", "e.g. 16px")}
+      </div>
+      ${current === "standalone"
+        ? html`<div class="toggle-group">${this._renderSwitch("effect_text_scrim", true)}</div>`
+        : ""}
+    </div>`;
+  }
+  _renderLayoutSegmented() {
+    const current = this._formData.card_layout || "";
+    const opts = [
+      { value: "", label: "Free" },
+      { value: "standard", label: "Standard" },
+      { value: "compact", label: "Compact" },
+      { value: "wide", label: "Wide" },
+    ];
+    return html`<div class="settings-group">
+      <div class="segmented" role="radiogroup" aria-label=${t(LABELS.card_layout)}>
+        ${opts.map(
+          (o) =>
+            html`<button
+              type="button"
+              role="radio"
+              class=${current === o.value ? "active" : ""}
+              data-field="card_layout"
+              data-value=${o.value}
+              data-value-type=${o.value ? "string" : "empty"}
+              @click=${this._onSegmentedFieldSelect}
+            >
+              ${t(o.label)}
+            </button>`,
+        )}
+      </div>
+      <div class="composite-helper">
+        ${current ? t("A finished look. Your own chips and values still win; without chips the layout brings its own.") : t("Your own chips and sizes, set below.")}
       </div>
     </div>`;
   }
@@ -5505,7 +5571,10 @@ class AtmosphericWeatherCardEditor extends LitElement {
         },
       },
     ];
-    return html` <div class="sensor-list">
+    return html`${this._formData.card_layout && !list.length
+        ? html`<div class="info">${t("The card shows the chips of its layout. Add a chip to use your own instead.")}</div>`
+        : ""}
+      <div class="sensor-list">
         ${list.map((chip, idx) => this._renderChipRow(chip, idx, list.length))}
       </div>
       <button type="button" class="add-chip-btn" @click=${this._addChip}>
@@ -5725,6 +5794,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
               ${[
                 { v: "lines", l: "Wind lines" },
                 { v: "flow", l: "Flow field" },
+                { v: "leaves", l: "Leaves" },
                 { v: "off", l: "Off" },
               ].map(
                 (o) =>
@@ -5744,6 +5814,17 @@ class AtmosphericWeatherCardEditor extends LitElement {
             </div>
             <div class="composite-helper">${t(HELPERS.wind_style)}</div>
           </div>
+          ${cfg.wind_style === "leaves"
+            ? html`<div class="indent">
+                ${this._renderSlider(
+                  "leaf_density",
+                  t(LABELS.leaf_density),
+                  0.25,
+                  3,
+                  0.25,
+                )}
+              </div>`
+            : ""}
           ${this._renderForm([
             {
               name: "wind_compass",
@@ -5779,6 +5860,32 @@ class AtmosphericWeatherCardEditor extends LitElement {
             ${t(
               "Wind direction chips can show the compass point too: open the chip under Chips, then Text ▸ Value ▸ Wind direction as.",
             )}
+          </div>`,
+      )}
+      ${this._renderGroup(
+        "Rain & snow",
+        html`${this._renderSlider(
+            "rain_density",
+            t(LABELS.rain_density),
+            0.25,
+            3,
+            0.25,
+            t(HELPERS.rain_density),
+          )}
+          <div class="toggle-group">
+            ${this._renderSwitch("effect_rain_splash", true)}
+          </div>
+          ${this._renderSlider(
+            "snow_density",
+            t(LABELS.snow_density),
+            0.25,
+            3,
+            0.25,
+            t(HELPERS.snow_density),
+          )}
+          <div class="toggle-group">
+            ${this._renderSwitch("effect_snow_edge", true)}
+            ${this._renderSwitch("effect_spill", false)}
           </div>`,
       )}
       ${this._renderGroup(
@@ -6177,6 +6284,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
               ])
             : ""}`,
       )}
+      ${this._renderGroup("Layout", this._renderLayoutSegmented())}
       ${this._renderGroup("Card style", this._renderCardStyleSegmented())}
       ${this._renderGroup(
         "Frame & layers",

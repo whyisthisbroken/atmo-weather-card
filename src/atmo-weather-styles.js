@@ -6,6 +6,14 @@ export function buildStyles() {
           }
           #card-root { position: relative; width: 100%; height: 100%; container-type: size; z-index: var(--awc-stack-order, 1); overflow: hidden; background: transparent; display: block; transform: translateZ(0); will-change: transform, opacity; opacity: 0; }
           #card-root.clickable { cursor: pointer; }
+          #text-scrim { position: absolute; inset: 0; pointer-events: none; display: none; }
+          #card-root.standalone.scrim #text-scrim { display: block; background: linear-gradient(0deg, var(--_scrim) 0%, transparent 46%); }
+          #card-root.standalone.scrim.scrim-top #text-scrim { background: linear-gradient(180deg, var(--_scrim) 0%, transparent 46%); }
+          #card-root.scheme-day { --_scrim: rgba(255, 255, 255, 0.22); }
+          #card-root.scheme-night { --_scrim: rgba(0, 0, 0, 0.28); }
+          :host(.spill) { overflow: visible; z-index: 2; }
+          #spill-canvas { position: absolute; left: 0; top: 100%; pointer-events: none; z-index: 2; }
+          #spill-canvas[hidden] { display: none; }
           #card-root.clickable:active { transform: scale(0.98); transition: scale 0.3s ease-in-out; }
           #card-root.standalone { border-radius: var(--awc-card-border-radius, var(--ha-card-border-radius, 12px)); }
           #card-root.revealed { opacity: 1; }
@@ -24,7 +32,7 @@ export function buildStyles() {
           #card-root.standalone.scheme-day.weather-overcast { --bg-hl:248,248,244; --bg-a1:0.35; --bg-a2:0.05; --bg-s2:22%; --bg-s3:48%; --bg-c1:#2560A0; --bg-c2:#5088BD; --bg-c3:#9FBEDB; --bg-hz:248,228,196; --bg-hz-a:0.07; }
           #card-root.standalone.scheme-day.weather-rainy { --bg-hl:225,240,245; --bg-a1:0.35; --bg-a2:0.05; --bg-s2:20%; --bg-s3:45%; --bg-c1:#426A93; --bg-c2:#658FBA; --bg-c3:#B3D6E1; --bg-hz:190,210,225; --bg-hz-a:0.10; }
           #card-root.standalone.scheme-day.weather-pouring { --bg-hl:210,225,235; --bg-a1:0.32; --bg-a2:0.05; --bg-s2:20%; --bg-s3:45%; --bg-c1:#325478; --bg-c2:#527A9E; --bg-c3:#92B8C6; --bg-hz:170,190,210; --bg-hz-a:0.08; }
-          #card-root.standalone.scheme-day.weather-storm { --bg-hl:212,224,238; --bg-a1:0.30; --bg-a2:0.05; --bg-s2:22%; --bg-s3:48%; --bg-c1:#3D5A82; --bg-c2:#587DA6; --bg-c3:#95C7CC; --bg-hz:175,190,212; --bg-hz-a:0.07; }
+          #card-root.standalone.scheme-day.weather-storm { --bg-hl:176,184,206; --bg-a1:0.16; --bg-a2:0.03; --bg-s2:26%; --bg-s3:58%; --bg-c1:#1E2536; --bg-c2:#2E3A50; --bg-c3:#556378; --bg-hz:120,128,152; --bg-hz-a:0.06; }
           #card-root.standalone.scheme-day.weather-snow { --bg-hl:234,240,252; --bg-a1:0.36; --bg-a2:0.06; --bg-s2:20%; --bg-s3:45%; --bg-c1:#4887AB; --bg-c2:#77A4C1; --bg-c3:#ABC4D4; --bg-hz:226,234,250; --bg-hz-a:0.10; }
           #card-root.standalone.scheme-day.weather-fog { --bg-hl:235,240,245; --bg-a1:0.38; --bg-a2:0.05; --bg-s2:20%; --bg-s3:45%; --bg-c1:#3C5E78; --bg-c2:#5F84A0; --bg-c3:#A3BDCD; --bg-hz:205,215,225; --bg-hz-a:0.15; }
           #card-root.standalone.scheme-night { --bg-hl: 155,185,252; --bg-a1: 0.14; --bg-a2: 0.04; --bg-s2: 40%; --bg-s3: 70%; --bg-c1: #000000; --bg-c2: #050E1A; --bg-c3: #122438; background-image:
@@ -48,7 +56,7 @@ export function buildStyles() {
           #card-root.standalone.scheme-night.time-day.weather-overcast { --bg-hl:148,172,210; --bg-a1:0.18; --bg-a2:0.05; --bg-s2:22%; --bg-s3:50%; --bg-c1:#0B1D40; --bg-c2:#19325A; --bg-c3:#2B4B7C; --bg-hz-a:0; }
           #card-root.standalone.scheme-night.time-day.weather-rainy { --bg-hl:130,160,185; --bg-a1:0.17; --bg-a2:0.05; --bg-s2:24%; --bg-s3:55%; --bg-c1:#081C28; --bg-c2:#16344A; --bg-c3:#285270; --bg-hz-a:0; }
           #card-root.standalone.scheme-night.time-day.weather-pouring { --bg-hl:110,135,165; --bg-a1:0.15; --bg-a2:0.04; --bg-s2:24%; --bg-s3:55%; --bg-c1:#061822; --bg-c2:#122E40; --bg-c3:#224C66; --bg-hz-a:0; }
-          #card-root.standalone.scheme-night.time-day.weather-storm { --bg-hl:130,138,185; --bg-a1:0.17; --bg-a2:0.05; --bg-s2:22%; --bg-s3:52%; --bg-c1:#0C1028; --bg-c2:#1A1E48; --bg-c3:#42506E; --bg-hz:105,112,160; --bg-hz-a:0.04; }
+          #card-root.standalone.scheme-night.time-day.weather-storm { --bg-hl:110,116,150; --bg-a1:0.12; --bg-a2:0.03; --bg-s2:26%; --bg-s3:58%; --bg-c1:#070A16; --bg-c2:#10152A; --bg-c3:#262E44; --bg-hz:90,96,130; --bg-hz-a:0.03; }
           #card-root.standalone.scheme-night.time-day.weather-snow { --bg-hl:165,195,235; --bg-a1:0.22; --bg-a2:0.06; --bg-s2:20%; --bg-s3:48%; --bg-c1:#0C1C38; --bg-c2:#1E3656; --bg-c3:#405C82; --bg-hz:140,160,208; --bg-hz-a:0.06; }
           #card-root.standalone.scheme-night.time-day.weather-fog { --bg-hl:140,142,170; --bg-a1:0.18; --bg-a2:0.05; --bg-s2:28%; --bg-s3:60%; --bg-c1:#14162A; --bg-c2:#262A44; --bg-c3:#42466A; --bg-hz-a:0; }
           #card-root::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background-image:
@@ -59,6 +67,8 @@ export function buildStyles() {
                       radial-gradient(circle calc(var(--c-r, 10cqmax) * 0.5) at var(--c-x, 60%) var(--c-y, 40%), rgba(var(--g-rgb, 245,245,240), 0.88) 0%, rgba(var(--g-rgb, 245,245,240), 0.45) 18%, rgba(var(--g-rgb, 245,245,240), 0.12) 48%, rgba(var(--g-rgb, 245,245,240), 0) 100%),
                       radial-gradient(circle calc(var(--c-r, 10cqmax) * 0.5) at var(--c-x, 60%) var(--c-y, 40%), rgba(255, 160, 60, var(--gh-wash, 0)) 0%, rgba(255, 130, 45, var(--gh-wash, 0)) 50%, transparent 100%); }
           #card-root.scheme-day { --awc-text-color: var(--awc-text-day, #2c2c2e); --awc-text-shadow-active: var(--awc-text-shadow-day, 0 1px 2px rgba(255, 255, 255, 0.9), 0 0 8px rgba(255, 255, 255, 0.7), 0 0 14px rgba(255, 255, 255, 0.5)); --_chip-no-bg-shadow: var(--awc-chip-text-shadow, var(--awc-text-shadow-day, 0 1px 2px rgba(255, 255, 255, 0.85), 0 0 6px rgba(255, 255, 255, 0.5))); --_text-bg: rgba(255, 255, 255, 0.25); --_text-bg-border: rgba(255, 255, 255, 0.2); }
+          #card-root.standalone.scheme-day.weather-storm { --_scrim: rgba(0, 0, 0, 0.26); --awc-text-color: var(--awc-text-storm, #ffffff); --awc-text-shadow-active: var(--awc-text-shadow-storm, 0 1px 3px rgba(0, 0, 0, 0.85), 0 2px 8px rgba(0, 0, 0, 0.6)); --_chip-no-bg-shadow: var(--awc-chip-text-shadow, 0 1px 3px rgba(0, 0, 0, 0.85), 0 2px 6px rgba(0, 0, 0, 0.55)); --_text-bg: rgba(0, 0, 0, 0.3); --_text-bg-border: rgba(255, 255, 255, 0.08); }
+          #card-root.standalone.scheme-day.weather-storm #wind-compass { --_cmp-glow: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8)) drop-shadow(0 0 6px rgba(0, 0, 0, 0.5)); --_cmp-alt: rgba(20, 20, 24, 0.85); }
           #card-root.scheme-day .contrast { --_text-bg: rgba(255,255,255,0.52); --_contrast-shadow: inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -1px 0 rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.08); }
           #card-root.scheme-day .frosted { --_text-bg: rgba(255,255,255,0.18); --_text-bg-border: rgba(255,255,255,0.32); --_frosted-inset: inset 0 1px 2px rgba(0,0,0,0.12), inset 0 -1px 1px rgba(0,0,0,0.06); }
           #card-root.scheme-day .has-icon-bg.with-bg.frosted { --_stacked-icon-border: 1px solid rgba(255,255,255,0.22); }

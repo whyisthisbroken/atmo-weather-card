@@ -147,6 +147,9 @@ export function adjustParams(params, data) {
       p.count = Math.round(clamp(40 + 30 * mm, 40, 280) / 10) * 10;
     else if (p.type === "snow")
       p.count = Math.round(clamp(20 + 20 * mm, 20, 150) / 10) * 10;
+    // Sleet is half rain, half snow (see precipCounts), so it sits between both.
+    else if (p.type === "mix")
+      p.count = Math.round(clamp(30 + 25 * mm, 30, 220) / 10) * 10;
   }
   return p;
 }

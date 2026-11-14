@@ -37,6 +37,9 @@ import {
   windSpeedKmh,
 } from "./atmo-weather-atmosphere.js";
 import {
+  applyCardLayout,
+  CARD_LAYOUTS,
+  WIDE_MIN_WIDTH,
   CONFIG_DEFAULTS,
   migrateConfig,
   readFlag,
@@ -113,6 +116,13 @@ import {
   thresholdSig,
 } from "./atmo-weather-helpers.js";
 import { buildStyles } from "./atmo-weather-styles.js";
+import {
+  MAX_DENSITY,
+  precipCounts,
+  rainKind,
+  setupDrop,
+  setupFlake,
+} from "./atmo-weather-precip.js";
 
 // Injected by build.mjs from package.json.
 const CARD_VERSION =
@@ -136,6 +146,24 @@ const atmoSignature = (a) =>
 const CLOUD_BAKE_SMOOTH = 1.35;
 // Share of the card width the ring of drifting clouds extends beyond the card.
 const CLOUD_RING_OVERHANG = 0.3;
+// How far rain and snow fall below the card with effect_spill, in CSS px.
+const SPILL_HEIGHT = 90;
+
+// A new card: the weather entity, the sun, the moon phase when there is a
+// sensor for it, and a layout.
+function stubConfig(weatherEntity, hass, layout) {
+  const moon =
+    hass && hass.states
+      ? Object.keys(hass.states).find((e) => e === "sensor.moon_phase" || /^sensor\..*moon_phase/.test(e))
+      : undefined;
+  return {
+    weather_entity: weatherEntity,
+    sun_entity: "sun.sun",
+    ...(moon ? { moon_phase_entity: moon } : {}),
+    theme_entity: "sun.sun",
+    card_layout: layout,
+  };
+}
 // Breathing moves each puff by up to this share of its radius.
 const CLOUD_BREATH_AMOUNT = 0.04;
 // Puffs re-baked per frame while clouds breathe, see _processPendingCloudBakes.
@@ -250,6 +278,12 @@ class AtmosphericWeatherCard extends HTMLElement {
         // padding. contentRect strips padding, which breaks full-width mode
         // where negative margins + positive padding create edge-to-edge bleed.
         const { inlineSize, blockSize } = entries[0].borderBoxSize[0];
+        // The wide layout turns into the standard one on a narrow card.
+        if (this._layoutNeedsWidth(inlineSize)) {
+          this._layoutWidth = inlineSize;
+          this.setConfig(this._sourceConfig);
+        }
+        this._layoutWidth = inlineSize;
         const changed = this._updateCanvasDimensions(inlineSize, blockSize);
         if (!this._initializationComplete) {
           this._tryInitialize();
@@ -309,7 +343,9 @@ class AtmosphericWeatherCard extends HTMLElement {
     const previousConfig = this._config;
     const previousCloudSunAngleLighting = this._cloudSunAngleLighting;
     const previousCloudBreathingShapes = this._cloudBreathingShapes;
-    config = migrateConfig(config);
+    // Kept so a resize can apply the layout again for the new width.
+    this._sourceConfig = config;
+    config = applyCardLayout(migrateConfig(config), this._layoutWidth || 0);
     const filtersChanged =
       previousConfig &&
       (previousConfig.card_filter_clouds !== config.card_filter_clouds ||
@@ -544,7 +580,7 @@ class AtmosphericWeatherCard extends HTMLElement {
           ? 0
           : parseInt(rawFauna, 10) || 0;
     const windStyle = String(config.wind_style ?? CONFIG_DEFAULTS.wind_style);
-    this._windStyle = ["lines", "flow", "off"].includes(windStyle)
+    this._windStyle = ["lines", "flow", "leaves", "off"].includes(windStyle)
       ? windStyle
       : CONFIG_DEFAULTS.wind_style;
     const compassStyle = String(
@@ -641,6 +677,26 @@ class AtmosphericWeatherCard extends HTMLElement {
       shootingStarRate: readNumber(config.shooting_star_rate, 1, 0.25, 3),
       cometRate: readNumber(config.comet_rate, 1, 0.25, 3),
     };
+    this._precip = {
+      rainDensity: readNumber(config.rain_density, 1, 0.25, MAX_DENSITY),
+      snowDensity: readNumber(config.snow_density, 1, 0.25, MAX_DENSITY),
+      leafDensity: readNumber(config.leaf_density, 1, 0.25, MAX_DENSITY),
+      rainSplash: readFlag(config.effect_rain_splash, true),
+      snowEdge: readFlag(config.effect_snow_edge, true),
+    };
+    // Rain and snow may fall out of the card onto the dashboard below.
+    this._spillOn = readFlag(config.effect_spill, false);
+    if (this.classList) this.classList.toggle("spill", this._spillOn);
+    if (this._elements && this._elements.spill)
+      this._elements.spill.hidden = !this._spillOn;
+    if (!this._spillOn) this._spill = null;
+    // A soft veil behind the chip row keeps text readable on any sky.
+    if (this._elements && this._elements.root) {
+      const scrim = readFlag(config.effect_text_scrim, true);
+      const area = String(config.chip_area_position || CONFIG_DEFAULTS.chip_area_position || "bottom-left");
+      this._elements.root.classList.toggle("scrim", scrim);
+      this._elements.root.classList.toggle("scrim-top", scrim && area.startsWith("top"));
+    }
     const rawDpr = config.perf_dpr != null ? config.perf_dpr : preset.perf_dpr;
     const parsedDpr = parseFloat(rawDpr);
     this._perfDpr = Number.isFinite(parsedDpr)
@@ -950,42 +1006,7 @@ class AtmosphericWeatherCard extends HTMLElement {
     const weatherEntity = hass
       ? Object.keys(hass.states).find((e) => e.startsWith("weather.")) || ""
       : "";
-    return {
-      weather_entity: weatherEntity,
-      sun_entity: "sun.sun",
-      theme_entity: "sun.sun",
-      card_style: "standalone",
-      card_height: 130,
-      card_padding: "16px",
-      celestial_size: "50px",
-      celestial_position: "fixed",
-      celestial_alignment: "right",
-      celestial_x: 45,
-      chip_area_position: "bottom-left",
-      chip_text_size: "12px",
-      chip_padding: "6px 10px",
-      chip_area_background: true,
-      chips: [
-        {
-          entity: weatherEntity,
-          attribute: "temperature",
-          position: "custom",
-          position_anchor: "top-left",
-          position_x: "16px",
-          position_y: "16px",
-          text_size: "34px",
-          background: false,
-          padding: "0px 4px",
-          hide_icon: true,
-          hide_label: true,
-          fancy_unit: true,
-          value_weight: "600",
-        },
-        { entity: weatherEntity, attribute: "humidity", name: "HMD" },
-        { entity: weatherEntity, attribute: "wind_speed", name: "Wind" },
-      ],
-      grid_options: { rows: "auto" },
-    };
+    return stubConfig(weatherEntity, hass, "standard");
   }
   getCardSize() {
     return 4;
@@ -1442,7 +1463,10 @@ class AtmosphericWeatherCard extends HTMLElement {
       isStandalone,
       isDarkDayImmersive,
     );
-    const rainRgb = isLight ? "58, 72, 100" : "210, 225, 255";
+    // Dark drops on a light sky; the storm sky is dark by day too.
+    const darkSkyByDay = isStandalone && !!(p && p.thunder);
+    const rainRgb =
+      isLight && !darkSkyByDay ? "58, 72, 100" : "210, 225, 255";
     let starMode = "hidden";
     if (isNight) {
       if (isDark) {
@@ -1579,7 +1603,11 @@ class AtmosphericWeatherCard extends HTMLElement {
       mood = isStandalone ? "darkDay" : "darkNight";
     } else if ((p && p.dark) || BAD_WEATHER_TYPES.has(type) || (p && p.foggy)) {
       mood =
-        (p && p.thunder) || STORM_TYPES.has(type) ? "lightStorm" : "lightRain";
+        p && p.thunder
+          ? "lightThunder"
+          : STORM_TYPES.has(type)
+            ? "lightStorm"
+            : "lightRain";
     } else if (atm === "fair" || atm === "clear") {
       mood = "lightFair";
     } else if (atm === "overcast" || atm === "cloudy") {
@@ -1876,8 +1904,13 @@ class AtmosphericWeatherCard extends HTMLElement {
     style.textContent = buildStyles();
     const root = document.createElement("div");
     root.id = "card-root";
-    root.innerHTML = `<canvas id="bg-canvas"></canvas><canvas id="mid-canvas"></canvas><div id="image-slot"><img /></div><canvas id="fg-canvas"></canvas><div id="wind-compass" hidden></div><div id="text-wrapper"><div id="chips-group"><div id="chips-row"></div></div></div><div id="custom-cards-wrapper"></div>`;
-    this.shadowRoot.append(style, root);
+    root.innerHTML = `<canvas id="bg-canvas"></canvas><canvas id="mid-canvas"></canvas><div id="image-slot"><img /></div><canvas id="fg-canvas"></canvas><div id="text-scrim"></div><div id="wind-compass" hidden></div><div id="text-wrapper"><div id="chips-group"><div id="chips-row"></div></div></div><div id="custom-cards-wrapper"></div>`;
+    // Below the card, outside its rounded corners: rain and snow that fall
+    // out of it (effect_spill).
+    const spill = document.createElement("canvas");
+    spill.id = "spill-canvas";
+    spill.hidden = true;
+    this.shadowRoot.append(style, root, spill);
     const q = (sel) => root.querySelector(sel);
     const bg = q("#bg-canvas"),
       mid = q("#mid-canvas"),
@@ -1903,6 +1936,7 @@ class AtmosphericWeatherCard extends HTMLElement {
       textWrapper: q("#text-wrapper"),
       customCardsWrapper: q("#custom-cards-wrapper"),
       compass: q("#wind-compass"),
+      spill,
     };
     const ctxOpts = { alpha: true, willReadFrequently: false };
     const bgCtx = bg.getContext("2d", ctxOpts),
@@ -1917,6 +1951,34 @@ class AtmosphericWeatherCard extends HTMLElement {
       fgCtx.imageSmoothingQuality =
         "high";
     this._ctxs = { bg: bgCtx, mid: midCtx, fg: fgCtx };
+  }
+  // The spill canvas: as wide as the card, SPILL_HEIGHT below it.
+  // True when the card crossed the width where the wide layout changes.
+  _layoutNeedsWidth(width) {
+    const src = this._sourceConfig;
+    if (!src || String(src.card_layout || "").trim().toLowerCase() !== "wide") return false;
+    const before = (this._layoutWidth || 0) > 0 && this._layoutWidth < WIDE_MIN_WIDTH;
+    const now = width > 0 && width < WIDE_MIN_WIDTH;
+    return before !== now;
+  }
+  _prepareSpill(w, dpr) {
+    const canvas = this._elements && this._elements.spill;
+    if (!this._spillOn || !canvas) {
+      this._spill = null;
+      return;
+    }
+    const pw = Math.max(1, Math.floor(w * dpr)),
+      ph = Math.max(1, Math.floor(SPILL_HEIGHT * dpr));
+    if (!this._spill || canvas.width !== pw || canvas.height !== ph) {
+      canvas.width = pw;
+      canvas.height = ph;
+      canvas.style.width = `${w}px`;
+      canvas.style.height = `${SPILL_HEIGHT}px`;
+      this._spill = { ctx: canvas.getContext("2d"), h: SPILL_HEIGHT };
+    }
+    const ctx = this._spill.ctx;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, SPILL_HEIGHT);
   }
   _clearAllParticles() {
     if (this._cloudAtlases) {
@@ -2442,6 +2504,12 @@ class AtmosphericWeatherCard extends HTMLElement {
     }
   }
   _renderChip(chip, idx, hass, weatherState, lang, rowBg, bgStyle, chipFormat) {
+    // A layout's reading the weather entity does not report stays away.
+    if (chip._layoutOptional && chip.entity && chip.attribute && !chip.forecast) {
+      const st = hass && hass.states && hass.states[chip.entity];
+      const raw = st && st.attributes ? st.attributes[chip.attribute] : undefined;
+      if (raw === undefined || raw === null) chip = { ...chip, entity: "" };
+    }
     if (!chip.entity)
       return {
         html: "",
@@ -2662,6 +2730,14 @@ class AtmosphericWeatherCard extends HTMLElement {
       height = normalizeCssSize(chip.height);
     let name = (chip.name || "").toString().trim(),
       nameSig = name;
+    if (!name && chip._layoutLabel) {
+      const st = hass && hass.states && hass.states[chip.entity];
+      name =
+        (st && typeof hass.formatEntityAttributeName === "function"
+          ? hass.formatEntityAttributeName(st, chip.attribute)
+          : "") || chip._layoutLabel;
+      nameSig = name;
+    }
     if (!name && !chip.name_sensor && isForecast && fcDatetime) {
       name = fcLabel(fcDatetime, chip.forecast !== "hourly", lang, hass && hass.locale);
       nameSig = `fc:${fcDatetime}`;
@@ -3357,61 +3433,6 @@ class AtmosphericWeatherCard extends HTMLElement {
     const isLight = this._isLightBackground,
       rs = this._renderState;
     if (!rs) return;
-    // --- Rain sprite (64x4 gradient streak) ---
-    const rainRgb = rs.rainRgb;
-    if (!this._rainTex || this._rainTexRgb !== rainRgb) {
-      this._rainTexRgb = rainRgb;
-      const rc = document.createElement("canvas");
-      rc.width = 64;
-      rc.height = 4;
-      const rCtx = rc.getContext("2d", { willReadFrequently: false });
-      const g = rCtx.createLinearGradient(64, 0, 0, 0);
-      g.addColorStop(0, `rgba(${rainRgb}, 0.85)`);
-      g.addColorStop(0.5, `rgba(${rainRgb}, 0.2)`);
-      g.addColorStop(1, `rgba(${rainRgb}, 0)`);
-      rCtx.fillStyle = g;
-      rCtx.fillRect(0, 0, 64, 4);
-      this._rainTex = rc;
-    }
-    // --- Snow sprites (foreground 32x32, background 16x16) ---
-    if (!this._snowTexFg || this._snowTexLight !== isLight) {
-      this._snowTexLight = isLight;
-      const sf = document.createElement("canvas");
-      sf.width = 32;
-      sf.height = 32;
-      const sfCtx = sf.getContext("2d", { willReadFrequently: false });
-      const sg = sfCtx.createRadialGradient(16, 16, 0, 16, 16, 16);
-      if (isLight) {
-        sg.addColorStop(0, "rgba(255,255,255,1)");
-        sg.addColorStop(0.5, "rgba(255,255,255,0.786)");
-        sg.addColorStop(1, "rgba(255,255,255,0)");
-      } else {
-        sg.addColorStop(0, "rgba(255,255,255,1)");
-        sg.addColorStop(0.5, "rgba(255,255,255,0.55)");
-        sg.addColorStop(1, "rgba(255,255,255,0)");
-      }
-      sfCtx.fillStyle = sg;
-      sfCtx.beginPath();
-      sfCtx.arc(16, 16, 16, 0, Math.PI * 2);
-      sfCtx.fill();
-      this._snowTexFg = sf;
-      const sb = document.createElement("canvas");
-      sb.width = 16;
-      sb.height = 16;
-      const sbCtx = sb.getContext("2d", { willReadFrequently: false });
-      if (isLight) {
-        const sbg = sbCtx.createRadialGradient(8, 8, 0, 8, 8, 8);
-        sbg.addColorStop(0, "rgba(255,255,255,1)");
-        sbg.addColorStop(1, "rgba(255,255,255,0)");
-        sbCtx.fillStyle = sbg;
-      } else {
-        sbCtx.fillStyle = "rgba(255,255,255,1)";
-      }
-      sbCtx.beginPath();
-      sbCtx.arc(8, 8, 8, 0, Math.PI * 2);
-      sbCtx.fill();
-      this._snowTexBg = sb;
-    }
     // --- Hail sprite (32x32 hexagonal ice pellet) ---
     if (!this._hailTex || this._hailTexLight !== isLight) {
       this._hailTexLight = isLight;
@@ -3631,61 +3652,38 @@ class AtmosphericWeatherCard extends HTMLElement {
     }
   }
   _initPrecipitation(w, h, p) {
-    const count = p.count || 0;
-    for (let i = 0; i < count; i++) {
-      let type = p.type;
-      if (p.type === "mix") {
-        type = Math.random() > 0.5 ? "rain" : "snow";
-      } else if (p.type === "hail") {
-        type = Math.random() > 0.55 ? "hail" : "rain";
-      }
+    // Rain and snow are created for the highest density; the density
+    // options decide how many are drawn (see atmo-weather-precip.js).
+    const counts = precipCounts(p.type, p.count || 0, w, h);
+    const kind = rainKind(p);
+    this._snowPile = null;
+    for (let i = 0; i < counts.rain; i++) {
+      const pt = { type: "rain", _fadeIn: 1 };
+      setupDrop(pt, kind, w, h, true);
+      this._rain.push(pt);
+    }
+    for (let i = 0; i < counts.snow; i++) {
+      const pt = { type: "snow", _fadeIn: 1 };
+      setupFlake(pt, w, h, true);
+      this._snow.push(pt);
+    }
+    for (let i = 0; i < counts.hail; i++) {
       const z = 0.5 + Math.random();
-      const particle = {
-        type,
+      this._hail.push({
+        type: "hail",
         x: Math.random() * w,
         y: Math.random() * h,
         z,
         turbulence: Math.random() * TWO_PI,
         _fadeIn: 1,
-      };
-      if (type === "hail") {
-        Object.assign(particle, {
-          speedY: (12 + Math.random() * 8) * z,
-          size: (2 + Math.random() * 2) * z,
-          rotation: Math.random() * TWO_PI,
-          rotationSpeed: (Math.random() - 0.5) * 0.25,
-          op: this._isLightBackground
-            ? 0.5 + Math.random() * 0.4
-            : 0.4 + Math.random() * 0.4,
-        });
-      } else if (type === "rain") {
-        Object.assign(particle, {
-          speedY: (6 + Math.random() * 4) * z,
-          len: (14 + Math.random() * 14) * z,
-          op: this._isLightBackground
-            ? 0.35 + Math.random() * 0.35
-            : 0.25 + Math.random() * 0.35,
-        });
-      } else {
-        // Wide size variance: tiny specks to large soft flakes
-        const sizeRoll = Math.random();
-        let flakeSize;
-        if (sizeRoll < 0.25) flakeSize = (0.5 + Math.random() * 0.7) * z;
-        else if (sizeRoll < 0.65) flakeSize = (1.5 + Math.random() * 1.5) * z;
-        else flakeSize = (2.8 + Math.random() * 2.7) * z;
-        Object.assign(particle, {
-          speedY: (0.4 + Math.random() * 0.8) * z * (flakeSize / 3),
-          size: flakeSize,
-          wobblePhase: Math.random() * TWO_PI,
-          wobbleSpeed: 0.02 + Math.random() * 0.02,
-          rotation: Math.random() * TWO_PI,
-          rotationSpeed: (Math.random() - 0.5) * 0.03,
-          op: 0.5 + Math.random() * 0.4,
-        });
-      }
-      if (particle.type === "rain") this._rain.push(particle);
-      else if (particle.type === "snow") this._snow.push(particle);
-      else if (particle.type === "hail") this._hail.push(particle);
+        speedY: (12 + Math.random() * 8) * z,
+        size: (2 + Math.random() * 2) * z,
+        rotation: Math.random() * TWO_PI,
+        rotationSpeed: (Math.random() - 0.5) * 0.25,
+        op: this._isLightBackground
+          ? 0.5 + Math.random() * 0.4
+          : 0.4 + Math.random() * 0.4,
+      });
     }
   }
   _initClouds(w, h, p) {
@@ -5609,6 +5607,7 @@ class AtmosphericWeatherCard extends HTMLElement {
     bg.clearRect(0, 0, w, h);
     mid.clearRect(0, 0, w, h);
     fg.clearRect(0, 0, w, h);
+    this._prepareSpill(w, dpr);
     if (!this._stateInitialized || !this._renderGate.isRevealed) {
       this._animID = requestAnimationFrame(this._boundAnimate);
       return;
@@ -5638,6 +5637,7 @@ class AtmosphericWeatherCard extends HTMLElement {
   }
 }
 const CARD_NAME = "atmo-weather-card";
+const LAYOUT_LABELS = Object.freeze({ standard: "Standard", compact: "Compact", wide: "Wide" });
 window.customCards = window.customCards || [];
 
 if (!customElements.get(CARD_NAME)) {
@@ -5646,6 +5646,16 @@ if (!customElements.get(CARD_NAME)) {
     type: CARD_NAME,
     name: "Atmo Weather Card",
     description:
-      "Animated weather effects with rain, snow, clouds, stars and more",
+      "An animated sky built from your weather data: clouds, rain, snow, wind, sun and moon",
+    preview: true,
+    documentationURL: "https://whyisthisbroken.github.io/atmo-weather-card/",
+    // Home Assistant suggests it for a weather entity, in each layout.
+    getEntitySuggestion: (hass, entityId) =>
+      typeof entityId === "string" && entityId.startsWith("weather.")
+        ? CARD_LAYOUTS.map((layout) => ({
+            label: LAYOUT_LABELS[layout],
+            config: { type: `custom:${CARD_NAME}`, ...stubConfig(entityId, hass, layout) },
+          }))
+        : null,
   });
 }

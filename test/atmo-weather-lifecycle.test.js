@@ -128,9 +128,14 @@ test("getStubConfig finds a weather entity and renders", () => {
   const config = Card.getStubConfig(hass);
 
   assert.equal(config.weather_entity, "weather.home");
-  // New cards keep every chip in front of the sky.
-  assert.ok(config.chips.every((c) => c.behind_effects !== true));
-  animate(mountCard(config, hass));
+  // New cards start from the standard layout and bring no chips of their own.
+  assert.equal(config.card_layout, "standard");
+  assert.equal(config.chips, undefined);
+  const card = mountCard(config, hass);
+  animate(card);
+  // The layout's chips sit in front of the sky.
+  assert.ok(card._config.chips.length >= 4);
+  assert.ok(card._config.chips.every((c) => c.behind_effects !== true));
 });
 
 test("card reports its size", () => {

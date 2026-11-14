@@ -566,6 +566,9 @@ export const PARTICLE_ARRAYS = Object.freeze([
   "_rain",
   "_snow",
   "_hail",
+  "_splashes",
+  "_settled",
+  "_leaves",
   "_clouds",
   "_fgClouds",
   "_stars",
@@ -727,6 +730,8 @@ export const CLOUD_PALETTES = Object.freeze({
   darkNight: [160, 165, 174, 104, 109, 120, 50, 54, 63, 0.8, 0.8, 0.12],
   darkDay: [218, 228, 250, 110, 128, 176, 52, 66, 114, 0.86, 0.62, 0.07],
   lightStorm: [255, 255, 255, 198, 208, 228, 114, 129, 165, 1.0, 0.89, 0.15],
+  // Thunderstorms by day: heavy slate clouds with only a pale rim of light.
+  lightThunder: [196, 202, 216, 116, 124, 142, 52, 58, 74, 0.96, 0.92, 0.18],
   lightRain: [255, 255, 255, 202, 212, 232, 120, 136, 174, 1.0, 0.88, 0.14],
   lightFair: [255, 255, 255, 222, 228, 240, 138, 152, 190, 1.0, 0.76, 0.14],
   lightOvercast: [255, 255, 255, 222, 228, 240, 138, 152, 190, 1.0, 0.76, 0.14],

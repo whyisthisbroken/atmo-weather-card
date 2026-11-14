@@ -219,6 +219,54 @@ test("the wind display style can be picked in the editor", async () => {
   assert.ok(!("wind_style" in emitted.at(-1)));
 });
 
+test("the layout picker writes a layout and Free removes it", async () => {
+  const { editor, emitted } = await mountEditor({ weather_entity: "weather.home" });
+  editor._openPanel = "appearance";
+  await settle(editor);
+  const button = (value) => editor.shadowRoot.querySelector(`button[data-field="card_layout"][data-value="${value}"]`);
+
+  assert.ok(button("").classList.contains("active"));
+  for (const layout of ["standard", "compact", "wide"]) {
+    button(layout).click();
+    await settle(editor);
+    assert.equal(emitted.at(-1).card_layout, layout);
+    assert.ok(button(layout).classList.contains("active"), layout);
+    validate(emitted.at(-1));
+  }
+  button("").click();
+  await settle(editor);
+  assert.ok(!("card_layout" in emitted.at(-1)));
+});
+
+test("leaves can be picked as wind style and bring their density slider", async () => {
+  const { editor, emitted } = await mountEditor({ weather_entity: "weather.home", sun_entity: "sun.sun" });
+  editor._openPanel = "performance";
+  await settle(editor);
+  editor.shadowRoot.querySelector('button[data-field="wind_style"][data-value="leaves"]').click();
+  await settle(editor);
+  assert.equal(emitted.at(-1).wind_style, "leaves");
+  assert.match(editor.shadowRoot.textContent, /Amount of leaves/);
+  validate(emitted.at(-1));
+});
+
+test("rain and snow switches save only the changed value", async () => {
+  const { editor, emitted } = await mountEditor({ weather_entity: "weather.home" });
+  editor._openPanel = "performance";
+  await settle(editor);
+  const sw = (key) => editor.shadowRoot.querySelector(`ha-switch[data-key="${key}"]`);
+  for (const [key, def] of [["effect_rain_splash", true], ["effect_snow_edge", true], ["effect_spill", false]]) {
+    assert.equal(sw(key).checked, def, key);
+    sw(key).checked = !def;
+    sw(key).dispatchEvent(new Event("change", { bubbles: true }));
+    await settle(editor);
+    assert.equal(emitted.at(-1)[key], !def, key);
+    sw(key).checked = def;
+    sw(key).dispatchEvent(new Event("change", { bubbles: true }));
+    await settle(editor);
+    assert.ok(!(key in emitted.at(-1)), key);
+  }
+});
+
 test("the precipitation sensor picker lists only rain rate sensors", async () => {
   const rate = (unit) => ({ state: "0.4", attributes: { unit_of_measurement: unit } });
   const hass = makeHass({

@@ -79,49 +79,36 @@ function baseCard() {
 
 test("drawRain advances and draws visible rain particles", () => {
   const card = baseCard();
-  const particle = {
-    x: 10,
-    y: 10,
-    z: 1,
-    speedY: 5,
-    turbulence: 0,
-    len: 12,
-    op: 1,
-  };
+  card._params = { atmosphere: "rain" };
+  card._renderState = { rainRgb: "200,210,220" };
+  card._rainStreakTex = {};
+  card._rainStreakRgb = "200,210,220";
+  card._splashes = [];
+  const particle = { kind: "rain", x: 10, y: 10, dw: 2, len: 20, v: 450, op: 1, splash: false };
   card._rain = [particle];
-  card._rainTex = {};
   const ctx = createContext();
 
   drawRain(card, ctx, 100, 100, 0);
 
-  assert.ok(particle.y > 10);
+  assert.equal(particle.y, 10 + 450 / 30);
   assert.equal(ctx.drawImageCalls, 1);
   assert.equal(ctx.globalAlpha, 1);
 });
 
-test("drawSnow resets particles that leave the canvas", () => {
+test("drawSnow resets flakes that leave the canvas", () => {
   const card = baseCard();
-  const particle = {
-    x: 10,
-    y: 104,
-    z: 1,
-    speedY: 2,
-    turbulence: 0,
-    wobblePhase: 0,
-    wobbleSpeed: 0.1,
-    size: 2,
-    op: 1,
-  };
+  card._flakeTex = {};
+  card._settled = [];
+  card._precip = { snowEdge: false };
+  const particle = { x: 10, y: 120, d: 4, depth: 0.5, v: 30, op: 1, swing: 0, swingRate: 1, settles: false };
   card._snow = [particle];
-  card._snowTexFg = {};
-  card._snowTexBg = {};
   const ctx = createContext();
 
   drawSnow(card, ctx, 100, 100, 0);
 
-  assert.equal(particle.y, -5);
-  assert.ok(particle.x >= 0 && particle.x <= 100);
-  assert.equal(ctx.drawImageCalls, 1);
+  assert.equal(particle.y, -particle.d * 2);
+  assert.ok(particle.x >= -10 && particle.x <= 110);
+  assert.equal(ctx.drawImageCalls, 0);
   assert.equal(ctx.globalAlpha, 1);
 });
 

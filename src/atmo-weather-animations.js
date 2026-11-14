@@ -1,3 +1,5 @@
+import { drawLeaves } from "./atmo-weather-precip.js";
+export { drawRain, drawSnow } from "./atmo-weather-precip.js";
 import {
   drawGoldenLight,
   drawGoldenSky,
@@ -852,91 +854,6 @@ function drawFogLight(card, ctx, w, h, fadeOpacity) {
   ctx.fillRect(x - r, y - r, r * 2, r * 2);
 }
 
-export function drawRain(card, ctx, w, h, effectiveWind) {
-  const fadeOpacity = card._layerFadeProgress.precipitation;
-  if (fadeOpacity <= 0) return;
-  const isDay = card._isLightBackground;
-  const animSpeed = card._animationSpeed * (card._frameScale || 1);
-  const len = card._rain.length;
-  const dpr = card._cachedDimensions.dpr;
-  if (!card._rainTex) return;
-  for (let i = 0; i < len; i++) {
-    const pt = card._rain[i];
-    pt.turbulence += 0.025 * animSpeed;
-    const turbX = Math.sin(pt.turbulence) * 0.4;
-    const speedFactor = (1 + card._windSpeed * 0.25) * (pt.z * 0.8 + 0.2);
-    const moveX = (effectiveWind * 1.8 + turbX) * (pt.z * 0.65 + 0.35);
-    const moveY = pt.speedY * speedFactor;
-    pt.x += moveX * animSpeed;
-    pt.y += moveY * animSpeed;
-    if (pt.y > h + 10) {
-      pt.y = -40 - Math.random() * 20;
-      pt.x = Math.random() * w;
-    }
-    if (pt.x > w + 20) pt.x = -20;
-    else if (pt.x < -20) pt.x = w + 20;
-    const baseOp = isDay ? 0.75 : 0.6;
-    const finalOp = pt.z * baseOp * fadeOpacity * pt.op;
-    if (finalOp < 0.02) continue;
-    const dropLen = pt.len * (1.0 + card._windSpeed * 0.3);
-    const width = Math.max(0.6, pt.z * 1.2);
-    ctx.translate(pt.x, pt.y);
-    ctx.rotate(Math.atan2(moveY, moveX));
-    ctx.globalAlpha = finalOp;
-    ctx.drawImage(card._rainTex, -dropLen, -width / 2, dropLen, width);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  }
-  ctx.globalAlpha = 1;
-}
-
-export function drawSnow(card, ctx, w, h, effectiveWind) {
-  const fadeOpacity = card._layerFadeProgress.precipitation;
-  if (fadeOpacity <= 0) return;
-  const len = card._snow.length;
-  const isLight = card._isLightBackground;
-  const animSpeed = card._animationSpeed * (card._frameScale || 1);
-  if (!card._snowTexFg) return;
-  for (let i = 0; i < len; i++) {
-    const pt = card._snow[i];
-    pt.wobblePhase += pt.wobbleSpeed * animSpeed;
-    const wobble = Math.sin(pt.wobblePhase) * 1.5;
-    pt.turbulence += 0.01 * animSpeed;
-    const turbX = Math.sin(pt.turbulence) * 0.5;
-    pt.y += pt.speedY * animSpeed;
-    pt.x +=
-      (wobble + turbX + effectiveWind * 0.8) * (pt.z * 0.65 + 0.35) * animSpeed;
-    if (pt.y > h + 5) {
-      pt.y = -5;
-      pt.x = Math.random() * w;
-    }
-    if (pt.x > w + 10) pt.x = -10;
-    else if (pt.x < -10) pt.x = w + 10;
-    const shimmer = 0.92 + Math.sin(pt.wobblePhase * 2.5) * 0.08;
-    const glimmer = 0.8 + Math.sin(pt.wobblePhase * 3) * 0.2;
-    const finalOpacity = pt.op * fadeOpacity * glimmer;
-    const drawSize = pt.size * shimmer;
-    if (pt.z > 0.7) {
-      const gMul = isLight ? 1.4 : 1.0;
-      const gRad = isLight ? 0.9 : 1.5;
-      const r = drawSize * gRad;
-      ctx.globalAlpha = Math.min(1, finalOpacity * gMul);
-      ctx.drawImage(card._snowTexFg, pt.x - r, pt.y - r, r * 2, r * 2);
-    } else {
-      const smallR = drawSize * 0.75;
-      const alphaOp = isLight ? 1.3 : 0.8;
-      ctx.globalAlpha = Math.min(1, finalOpacity * alphaOp);
-      ctx.drawImage(
-        card._snowTexBg,
-        pt.x - smallR,
-        pt.y - smallR,
-        smallR * 2,
-        smallR * 2,
-      );
-    }
-  }
-  ctx.globalAlpha = 1;
-}
-
 export function drawHail(card, ctx, w, h, effectiveWind) {
   const fadeOpacity = card._layerFadeProgress.precipitation;
   if (fadeOpacity <= 0) return;
@@ -1183,9 +1100,11 @@ export function drawCloudDeck(card, ctx, w, h) {
   const night = card._isThemeDark;
   const color = night
     ? "38,40,46"
-    : card._params.dark
-      ? "112,120,134"
-      : "150,160,176";
+    : card._params.thunder
+      ? "58,63,76"
+      : card._params.dark
+        ? "112,120,134"
+        : "150,160,176";
   const key = `${color}|${h}`;
   if (card._deckKey !== key) {
     const g = ctx.createLinearGradient(0, 0, 0, h);
@@ -1247,7 +1166,10 @@ export function renderAnimationFrame(
   drawClouds(card, mid, card._clouds, w, h, effectiveWind);
   if (windDisplayActive(card)) {
     // Only the active style keeps its state.
-    if (card._windStyle === "flow") {
+    if (card._windStyle === "leaves") {
+      card._windLines = null;
+      card._flow = null;
+    } else if (card._windStyle === "flow") {
       card._windLines = null;
       drawWindFlow(card, mid, w, h);
     } else {
@@ -1273,6 +1195,9 @@ export function renderAnimationFrame(
   if (fx >= 1) drawMist(card, mid, w, h);
   if (fauna >= 2 && card._faunaPlanes !== false) card._drawPlanes(mid, w, h);
 
+  if (card._windStyle === "leaves" && windDisplayActive(card))
+    drawLeaves(card, fg, w, h, windSetup(card).angle);
+  else if (card._leaves.length) card._leaves.length = 0;
   card._drawLightning(fg, w, h);
   card._drawRain(fg, w, h, effectiveWind);
   card._drawHail(fg, w, h, effectiveWind);

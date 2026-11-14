@@ -1,3 +1,4 @@
+import { precipCounts } from "../src/atmo-weather-precip.js";
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
 
@@ -556,7 +557,8 @@ test("a new reading of the precipitation sensor reaches the card", async () => {
     makeHass({ weather: "rainy", states: sensor("1") }),
   );
   assert.equal(card._params.count, 70);
-  assert.equal(card._rain.length, 70);
+  // The drop pool is sized from the count, see precipCounts.
+  assert.ok(card._rain.length >= precipCounts("rain", 70, 1, 1).rain);
   const rebuilds = countRebuilds(card);
   card.hass = makeHass({ weather: "rainy", states: sensor("4") });
   await nextTask();

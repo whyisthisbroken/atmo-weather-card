@@ -32,6 +32,13 @@ export const CONFIG_DEFAULTS = Object.freeze({
   effect_comets: true,
   shooting_star_rate: 1,
   comet_rate: 1,
+  rain_density: 1,
+  snow_density: 1,
+  leaf_density: 1,
+  effect_rain_splash: true,
+  effect_snow_edge: true,
+  effect_spill: false,
+  effect_text_scrim: true,
 });
 
 // Performance presets. Every value applies while the config does not set
@@ -102,6 +109,7 @@ export function readNumber(value, fallback, min, max) {
 
 // Read with string methods at runtime. A wrong YAML type falls back to the default.
 const STRING_ONLY_KEYS = Object.freeze([
+  "card_layout",
   "card_color_mode",
   "card_background_style",
   "image_alignment",
@@ -162,4 +170,146 @@ export function migrateConfig(raw) {
     if (key in c && typeof c[key] !== "string") delete c[key];
   }
   return c;
+}
+
+// Card layouts: a finished look in one option. Each value applies while the
+// config does not set that option itself; the layout's chips apply while the
+// card has no chips of its own.
+export const CARD_LAYOUTS = Object.freeze(["standard", "compact", "wide"]);
+
+const bigTemperature = (weather, size, x, y) => ({
+  entity: weather,
+  attribute: "temperature",
+  position: "custom",
+  position_anchor: "top-left",
+  position_x: `${x}px`,
+  position_y: `${y}px`,
+  text_size: `${size}px`,
+  hide_icon: true,
+  hide_label: true,
+  background: false,
+  fancy_unit: true,
+  value_weight: "300",
+});
+const conditionLine = (weather, size, x, y) => ({
+  entity: weather,
+  position: "custom",
+  position_anchor: "top-left",
+  position_x: `${x}px`,
+  position_y: `${y}px`,
+  hide_icon: true,
+  hide_label: true,
+  background: false,
+  text_size: `${size}px`,
+  value_weight: "600",
+});
+// A reading of the weather entity. Its label comes from Home Assistant in
+// the user's language (name is only the fallback), and the chip stays away
+// when the entity does not report the value.
+const reading = (weather, attribute, name, icon) => ({
+  entity: weather,
+  attribute,
+  ...(name ? { _layoutLabel: name } : {}),
+  _layoutOptional: true,
+  icon,
+});
+const tomorrow = (weather) => ({
+  entity: weather,
+  forecast: "daily",
+  forecast_offset: 1,
+  attribute: "temperature",
+  icon: "weather",
+  forecast_precision: 0,
+  sub_value_attribute: "templow",
+  sub_value_position: "beside",
+});
+
+export function layoutDefaults(layout, weather = "") {
+  if (layout === "standard")
+    return {
+      card_height: 200,
+      celestial_size: 56,
+      celestial_position: "dynamic_both",
+      celestial_alignment: "right",
+      celestial_x: 45,
+      chip_area_position: "bottom-left",
+      chip_area_padding: "0px 0px 14px 10px",
+      chip_area_gap: "14px",
+      chip_style: "vertical",
+      chip_padding: "4px 8px",
+      chip_text_size: "15px",
+      chip_label_size: "10px",
+      chip_icon_size: "14px",
+      chips: [
+        bigTemperature(weather, 62, 18, 8),
+        conditionLine(weather, 16, 21, 86),
+        reading(weather, "humidity", "Humidity", "mdi:water-percent"),
+        reading(weather, "wind_speed", "Wind", "mdi:weather-windy"),
+        tomorrow(weather),
+      ],
+    };
+  if (layout === "compact")
+    return {
+      card_height: 96,
+      celestial_size: 40,
+      celestial_position: "fixed",
+      celestial_alignment: "right",
+      celestial_x: 40,
+      chip_area_position: "bottom-left",
+      chip_area_padding: "0px 0px 12px 112px",
+      chip_area_gap: "10px",
+      chip_padding: "0px",
+      chip_text_size: "13px",
+      chip_icon_size: "14px",
+      chips: [
+        bigTemperature(weather, 44, 14, 14),
+        conditionLine(weather, 15, 114, 18),
+        reading(weather, "humidity", null, "mdi:water-percent"),
+        reading(weather, "wind_speed", null, "mdi:weather-windy"),
+      ],
+    };
+  if (layout === "wide")
+    return {
+      card_height: 260,
+      celestial_size: 64,
+      celestial_position: "dynamic_both",
+      celestial_alignment: "center",
+      celestial_x: 0,
+      chip_area_position: "right",
+      chip_area_layout: "grid",
+      chip_area_columns: 2,
+      chip_area_width: "34%",
+      chip_area_padding: "0px 20px 0px 0px",
+      chip_area_gap: "16px",
+      chip_style: "vertical",
+      chip_padding: "4px 8px",
+      chip_text_size: "20px",
+      chip_label_size: "11px",
+      chip_icon_size: "16px",
+      chips: [
+        bigTemperature(weather, 96, 24, 14),
+        conditionLine(weather, 18, 28, 132),
+        reading(weather, "humidity", "Humidity", "mdi:water-percent"),
+        reading(weather, "wind_speed", "Wind", "mdi:weather-windy"),
+        reading(weather, "pressure", "Pressure", "mdi:gauge"),
+        tomorrow(weather),
+      ],
+    };
+  return null;
+}
+
+// Below this card width the wide layout has no room for its two columns and
+// the card uses the standard layout instead.
+export const WIDE_MIN_WIDTH = 600;
+
+// The config the card runs: the layout's values under the card's own.
+export function applyCardLayout(config, width = 0) {
+  let layout = String(config.card_layout ?? "").trim().toLowerCase();
+  if (layout === "wide" && width > 0 && width < WIDE_MIN_WIDTH) layout = "standard";
+  const base = layoutDefaults(layout, config.weather_entity || "");
+  if (!base) return config;
+  const ownChips = Array.isArray(config.chips) && config.chips.length > 0;
+  const out = { ...base, ...config };
+  out.chips = ownChips ? config.chips : base.chips;
+  return out;
 }
