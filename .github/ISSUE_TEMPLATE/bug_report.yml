@@ -1,0 +1,74 @@
+name: Bug report
+description: Something on the card doesn't work, or doesn't look right.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for reporting it. The more of this you fill in, the sooner it's fixed. The [troubleshooting page](https://whyisthisbroken.github.io/atmo-weather-card/docs/troubleshooting.html) covers the usual problems.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected to see.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to see it
+      description: The steps, and the weather state and time of day if they matter.
+      placeholder: |
+        1. Rain at night
+        2. Switch to another tab and back
+        3. The raindrops stop moving
+  - type: input
+    id: card-version
+    attributes:
+      label: Card version
+      description: The Marketplace shows it, and so does the card's line in the browser console.
+      placeholder: 2026.11.6
+    validations:
+      required: true
+  - type: input
+    id: ha-version
+    attributes:
+      label: Home Assistant version
+      description: Settings → About.
+      placeholder: "2026.11.2"
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser or app
+      description: Where you see it, and on what device.
+      placeholder: Chrome on Windows, the Companion app on an iPhone, Fully Kiosk on a Fire tablet
+    validations:
+      required: true
+  - type: dropdown
+    id: perf
+    attributes:
+      label: Performance preset
+      options:
+        - Default
+        - Low
+        - Ultra
+        - Custom
+        - Don't know
+  - type: textarea
+    id: config
+    attributes:
+      label: The card's YAML
+      description: In the card's editor, select Show code editor, and paste it here.
+      render: yaml
+  - type: textarea
+    id: media
+    attributes:
+      label: Screenshot or recording
+      description: Drag it in here. For something that moves, a short recording says the most.
+  - type: textarea
+    id: console
+    attributes:
+      label: Console errors
+      description: In the browser's developer tools, open the Console and copy any lines that mention the card.
+      render: text

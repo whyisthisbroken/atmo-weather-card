@@ -78,3 +78,73 @@ footer.site a { color: var(--muted); }
   .top nav .hide-s { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+/* ── Shared with the landing page, the demo and the documentation ── */
+@font-face { font-family: "Fraunces"; src: url("fonts/fraunces-latin-full-normal.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Fraunces"; src: url("fonts/fraunces-latin-full-italic.woff2") format("woff2"); font-weight: 100 900; font-style: italic; font-display: swap; }
+@property --sky { syntax: "<color>"; inherits: true; initial-value: #4a6d99; }
+:root { --f-display: "Fraunces", Georgia, "Times New Roman", serif; --d-weight: 560; --d-track: -0.02em; --d-var: "SOFT" 100, "opsz" 96; }
+
+/* The logo by the time of day */
+[data-logo="dawn"] .brand .sun { background: radial-gradient(circle at 38% 38%, #ffe2c4, #f08a6c); box-shadow: 0 0 16px rgba(240, 138, 108, 0.5); }
+[data-logo="dusk"] .brand .sun { background: radial-gradient(circle at 38% 38%, #ffd6a0, #e0663e); box-shadow: 0 0 16px rgba(224, 102, 62, 0.5); }
+[data-logo="night"] .brand .sun { background: #e9ecf5; box-shadow: inset -6px -2px 0 0 #a9b2c8, 0 0 14px rgba(200, 210, 240, 0.35); }
+.brand { font-family: var(--f-display); font-weight: var(--d-weight); font-variation-settings: var(--d-var); letter-spacing: var(--d-track); font-size: 19px; }
+
+/* Headlines: one sentence, its ending set in italic and the accent */
+.display { font-family: var(--f-display); font-weight: var(--d-weight); font-variation-settings: var(--d-var); letter-spacing: var(--d-track); line-height: 1.04; margin: 0; text-wrap: balance; }
+.display em { font-style: italic; color: var(--accent); font-weight: inherit; }
+h2.display { font-size: clamp(32px, 4vw, 52px); }
+.readout { font: 500 12.5px/1.5 var(--f-mono); color: var(--muted); margin: 0 0 16px; display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.readout span::before { content: "▸ "; color: var(--accent); }
+.lede { margin: 18px 0 0; max-width: 46ch; font-size: 17.5px; line-height: 1.6; color: var(--muted); text-wrap: pretty; }
+.lede a { color: var(--text); text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
+
+/* Sections take the sky of their card */
+.sky-tint { position: relative; isolation: isolate; transition: --sky 1.4s ease; }
+.sky-tint::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(180deg, color-mix(in oklab, var(--sky) 26%, transparent) 0%, color-mix(in oklab, var(--sky) 8%, transparent) 45%, transparent 85%); }
+:root[data-theme="light"] .sky-tint::before { opacity: 0.7; }
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .sky-tint::before { opacity: 0.7; } }
+
+/* A card window with Live and YAML tabs */
+.window { border: 1px solid var(--line); border-radius: 20px; background: color-mix(in srgb, var(--panel) 80%, transparent); box-shadow: var(--shadow); overflow: hidden; }
+.window-bar { display: flex; align-items: center; gap: 4px; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+.window-bar .tab { border: 0; background: none; color: var(--muted); font: 600 13px var(--f-body); padding: 5px 12px; border-radius: 8px; cursor: pointer; }
+.window-bar .tab[aria-selected="true"] { background: var(--raised); color: var(--text); }
+.window-bar .file { margin-left: auto; font: 500 12px var(--f-mono); color: var(--muted); padding-right: 4px; }
+.window-bar .copy { border: 1px solid var(--line); background: var(--panel); color: var(--text); font: 600 12px var(--f-body); padding: 4px 10px; border-radius: 8px; cursor: pointer; }
+.window-bar .copy[hidden] { display: none; }
+.pane { padding: 12px; position: relative; }
+.pane-live atmo-weather-card { display: block; }
+.pane-live .slot { border-radius: 14px; overflow: hidden; }
+.pane-code { display: none; }
+.window.show-code .pane-live { display: none; }
+.window.show-code .pane-code { display: block; }
+.pane-code pre { margin: 0; font: 12.5px/1.65 var(--f-mono); overflow: auto; max-height: 420px; padding: 6px 8px; }
+.pane-code code { background: none; border: 0; padding: 0; font: inherit; }
+
+
+/* Weather buttons with their icon */
+.weather-icons { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; margin-top: 18px; }
+.wx { --mdc-icon-size: 24px; display: grid; justify-items: center; gap: 4px; min-width: 72px; padding: 10px 8px 8px; border-radius: 14px; border: 1px solid transparent; background: none; color: var(--muted); font: 600 12px var(--f-body); cursor: pointer; transition: background 0.2s, color 0.2s, border-color 0.2s; }
+.wx:hover { color: var(--text); background: var(--panel); }
+.wx[aria-pressed="true"] { color: var(--text); background: var(--panel); border-color: var(--line); }
+.wx[aria-pressed="true"] svg { color: var(--accent); }
+
+/* The day strip: 24 hours of sky, with the sun or the moon as the handle */
+.daystrip { margin: 22px auto 0; max-width: 760px; }
+.strip { position: relative; height: 44px; border-radius: 999px; border: 1px solid var(--line);
+  background: linear-gradient(90deg, #0e1630 0%, #1b2450 18%, #e8925a 27%, #8fb6de 32%, #5b9be0 54%, #8fb6de 75%, #e07a4a 81%, #3a3466 85%, #0e1630 100%); }
+.strip input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: grab; }
+.strip .handle { position: absolute; top: 50%; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; pointer-events: none; background: radial-gradient(circle at 38% 38%, #fff6d8, #f2b84b); box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.9), 0 0 22px rgba(242, 184, 75, 0.8); transition: background 0.4s, box-shadow 0.4s; }
+.strip .handle.moon { background: #e8ecf6; box-shadow: inset -8px -3px 0 0 #a9b2c8, 0 0 0 3px rgba(255, 255, 255, 0.9), 0 0 18px rgba(200, 210, 240, 0.6); }
+.strip input:focus-visible ~ .handle { outline: 2px solid var(--accent); outline-offset: 4px; }
+.strip-marks { position: relative; height: 50px; margin-top: 6px; font: 500 11.5px var(--f-mono); color: var(--muted); }
+.strip-marks button { position: absolute; transform: translateX(-50%); border: 0; background: none; color: inherit; font: inherit; cursor: pointer; padding: 2px 4px; white-space: nowrap; }
+.strip-marks button:hover, .strip-marks button.on { color: var(--text); }
+.strip-marks button.low { top: 16px; }
+.strip-marks button.low::before { height: 22px; }
+.strip-marks button::before { content: ""; display: block; width: 1px; height: 6px; background: var(--line); margin: 0 auto 3px; }
+.strip-head { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+.strip-head output { font: 600 14px var(--f-mono); color: var(--text); }

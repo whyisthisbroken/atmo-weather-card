@@ -5,38 +5,39 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Cdefs%3E%3CradialGradient id=%27g%27 cx=%270.38%27 cy=%270.38%27%3E%3Cstop offset=%270%27 stop-color=%27%23fff1c7%27/%3E%3Cstop offset=%271%27 stop-color=%27%23f2b84b%27/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2713%27 fill=%27url(%23g)%27/%3E%3C/svg%3E">
 <title>Live demo · Atmo Weather Card</title>
-<script>try { const t = localStorage.getItem("atmo-theme"); if (t && t !== "auto") document.documentElement.dataset.theme = t; } catch {}</script>
+<script>try { const t = localStorage.getItem("atmo-theme"); if (t && t !== "auto") document.documentElement.dataset.theme = t; } catch {}
+  (function (h) { document.documentElement.dataset.logo = h >= 5.5 && h < 8 ? "dawn" : h >= 8 && h < 18 ? "day" : h >= 18 && h < 20.5 ? "dusk" : "night"; })(new Date().getHours() + new Date().getMinutes() / 60);</script>
 <link rel="stylesheet" href="site.css">
 <style>
-  .intro { padding: 36px 0 22px; }
-  .kicker { font-size: 12.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin: 0 0 8px; }
-  .intro h1 { font-size: clamp(30px, 3.6vw, 44px); line-height: 1.08; letter-spacing: -0.03em; margin: 0 0 8px; }
-  .intro p { color: var(--muted); font-size: 16.5px; margin: 0; max-width: 46em; }
-  .layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 28px; align-items: start; padding-bottom: 72px; }
-  .stage { position: sticky; top: calc(var(--top-h) + 20px); display: grid; gap: 12px; }
-  /* Must come after the .stage rule above. On phones only the card itself stays on top (status and note scroll away),
-     so the sky stays in view while moving the controls. display: contents makes the card a child of the tall grid. */
-  @media (max-width: 900px) {
-    .layout { grid-template-columns: minmax(0, 1fr); gap: 14px; }
-    .stage { position: static; display: contents; }
-    #card-slot { position: sticky; top: 0; z-index: 10; padding: 8px 0; margin: -8px 0; background: var(--bg);
-      box-shadow: 0 12px 14px -12px rgba(0, 0, 0, 0.6); }
-  }
-  #card-slot atmo-weather-card { display: block; width: 100%; border-radius: 16px; box-shadow: var(--shadow); }
-  .status { padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); color: var(--muted); font-size: 13px; }
+  .intro { padding: 56px 0 8px; text-align: center; }
+  .intro .display { font-size: clamp(38px, 5vw, 64px); max-width: 16ch; margin: 0 auto; }
+  .intro .lede { margin: 18px auto 0; max-width: 60ch; }
+  .stage { max-width: 1040px; margin: 36px auto 0; }
+  /* The card stays in view while the settings below scroll. */
+  .stage .window { position: sticky; top: calc(var(--top-h) + 12px); z-index: 10; background: var(--panel); box-shadow: 0 -14px 0 0 var(--bg), var(--shadow); }
+  #card-slot atmo-weather-card { display: block; }
+  /* Rain and snow may fall out of the card (effect_spill), so nothing clips it. */
+  .stage .window, .stage #card-slot { overflow: visible; }
+  .status { max-width: 760px; margin: 14px auto 0; padding: 10px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--muted); font: 12.5px/1.6 var(--f-mono); }
   .status b { color: var(--text); font-weight: 650; }
-  .status .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .status .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; font-family: var(--f-body); }
   .tag { padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); font-size: 12px; }
   .tag.on { border-color: var(--accent); color: var(--text); background: color-mix(in srgb, var(--accent) 16%, transparent); }
-  .note { color: var(--muted); font-size: 13px; margin: 0; }
-
+  .note { color: var(--muted); font-size: 13px; margin: 8px auto 0; max-width: 760px; text-align: center; }
+  .settings { max-width: 1040px; margin: 48px auto 0; padding-bottom: 96px; }
+  .settings > h2 { font-size: clamp(28px, 3vw, 40px); margin: 0 0 18px; }
+  @media (max-width: 760px) {
+    .stage .window { top: 8px; }
+    .stage .window .window-bar { display: none; }
+  }
   .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
   .tabs { display: flex; gap: 2px; padding: 6px; border-bottom: 1px solid var(--line); overflow-x: auto; background: var(--raised); }
+  section.tab { max-width: 760px; }
   .tabs button { flex: none; border: 0; background: none; color: var(--muted); font: 650 13.5px var(--f-body); padding: 8px 12px; border-radius: 9px; cursor: pointer; }
   .tabs button:hover { color: var(--text); }
   .tabs button[aria-selected="true"] { background: var(--panel); color: var(--text); box-shadow: 0 1px 0 var(--line), 0 0 0 1px var(--line); }
   section.tab { padding: 18px 18px 20px; }
-  section.tab h2 { font-size: 17px; margin: 0 0 2px; letter-spacing: -0.01em; }
+  section.tab h2 { font-family: var(--f-display); font-weight: var(--d-weight); font-variation-settings: var(--d-var); font-size: 24px; margin: 0 0 4px; letter-spacing: var(--d-track); }
   section.tab .desc { color: var(--muted); font-size: 14px; margin: 0 0 12px; }
   section.tab h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin: 18px 0 8px; }
   .label { font-size: 12px; font-weight: 650; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin: 16px 0 8px; }
@@ -69,35 +70,46 @@
 </head>
 <body>
 <header class="top">
-  <div class="top-in">
+  <div class="top-in narrow">
     <a class="brand" href="index.html"><span class="sun"></span>Atmo Weather Card</a>
     <nav>
+      <a href="index.html#station" class="hide-s">Your station</a>
+      <a href="index.html#tune" class="hide-s">Tune</a>
+      <a href="index.html#gallery">Examples</a>
+      <a href="index.html#install">Install</a>
       <a href="docs/index.html">Docs</a>
-      <a class="here" href="demo.html">Live demo</a>
-      <a href="index.html#install" class="hide-s">Install</a>
-      <a href="https://github.com/whyisthisbroken/atmo-weather-card">GitHub</a>
+      <a class="here" href="demo.html">Demo</a>
+      <a href="https://github.com/whyisthisbroken/atmo-weather-card" class="hide-s">GitHub</a>
       <span class="theme" role="group" aria-label="Color theme"><button type="button" data-t="auto">Auto</button><button type="button" data-t="light">Light</button><button type="button" data-t="dark">Dark</button></span>
     </nav>
   </div>
 </header>
 
-<main class="top-in" style="display:block">
-  <div class="intro">
-    <p class="kicker">Live demo</p>
-    <h1>Play with the weather.</h1>
-    <p>The real card, running in your browser. Change the weather, the time of day and the measured data and watch the sky react. Every control matches an option in the editor.</p>
-  </div>
+<main class="wrap">
+  <section class="intro">
+    <h1 class="display">Play with the weather, <em>every option live.</em></h1>
+    <p class="lede">The real card, running in your browser. Pick the weather, drag the sun through the day and change the measured data below. Every control matches an option in the editor, and the YAML tab shows the card you built.</p>
+  </section>
 
-  <div class="layout">
-    <div class="stage">
-      <div id="card-slot"></div>
-      <div class="status" id="status">Loading…</div>
-      <p class="note">Clouds fade in about a second after a change, on purpose, to keep the card light on slower devices.</p>
+  <section class="stage">
+    <div class="window" id="demo-window">
+      <div class="window-bar" role="tablist"><button type="button" class="tab" role="tab" aria-selected="true" data-pane="live">Live</button><button type="button" class="tab" role="tab" aria-selected="false" data-pane="code">YAML</button><span class="file">card.yaml</span><button type="button" class="copy" hidden>Copy</button></div>
+      <div class="pane pane-live"><div class="slot" id="card-slot"></div></div>
+      <div class="pane pane-code"><pre><code id="yaml"></code></pre></div>
     </div>
+    <div class="weather-icons" id="conditions" role="group" aria-label="Weather"></div>
+    <div class="daystrip">
+      <div class="strip-head"><span>Drag the sun through the day</span><output id="strip-time">13:00</output></div>
+      <div class="strip"><input type="range" id="strip-input" min="0" max="1435" step="5" value="780" aria-label="Time of day"><span class="handle" id="strip-handle"></span></div>
+      <div class="strip-marks" id="strip-marks"></div>
+    </div>
+    <div class="status" id="status">Loading…</div>
+    <p class="note">Clouds fade in about a second after a change, on purpose, to keep the card light on slower devices.</p>
 
+  <section class="settings">
+    <h2 class="display">Settings, <em>one group at a time.</em></h2>
     <div class="panel">
       <div class="tabs" role="tablist" aria-label="Controls">
-        <button type="button" role="tab" data-tab="scene" aria-selected="true">Weather</button>
         <button type="button" role="tab" data-tab="data">Data</button>
         <button type="button" role="tab" data-tab="wind">Wind</button>
         <button type="button" role="tab" data-tab="sky">Sky &amp; night</button>
@@ -105,28 +117,13 @@
         <button type="button" role="tab" data-tab="display">Display</button>
       </div>
 
-      <section class="tab" data-tab="scene" role="tabpanel">
-        <h2>Weather and time of day</h2>
-        <p class="desc">The weather state and the sun, as Home Assistant reports them.</p>
-        <div class="label">Weather</div>
-        <div class="buttons" id="conditions"></div>
-        <div class="label">Time of day</div>
-        <div class="buttons" id="sun-presets">
-          <button data-v="390">Sunrise</button>
-          <button data-v="780">Noon</button>
-          <button data-v="1095">Low sun</button>
-          <button data-v="1140">Golden hour</button>
-          <button data-v="1170">Sunset</button>
-          <button data-v="1195">Blue hour</button>
-          <button data-v="1380">Night</button>
-        </div>
-        <div id="sun-slider"></div>
-      </section>
-
       <section class="tab" data-tab="data" role="tabpanel" hidden>
         <h2>Measured weather data</h2>
         <p class="desc">Optional values from your weather integration. Switch one off to see the card without it.</p>
         <div id="data"></div>
+        <h3>Rain &amp; snow</h3>
+        <p class="desc">How much rain and snow falls on top of the weather state or the rain sensor, splashes on the bottom edge and a thin edge of snow.</p>
+        <div id="precip-controls"></div>
       </section>
 
       <section class="tab" data-tab="wind" role="tabpanel" hidden>
@@ -136,8 +133,10 @@
         <div class="buttons" id="wind-style">
           <button data-v="lines">Wind lines</button>
           <button data-v="flow">Flow field</button>
+          <button data-v="leaves">Leaves</button>
           <button data-v="off">Off</button>
         </div>
+        <div id="leaf-controls"></div>
         <div id="wind-speed"></div>
         <div class="label">Wind from</div>
         <div class="buttons" id="wind-from">
@@ -209,6 +208,15 @@
 
       <section class="tab" data-tab="display" role="tabpanel" hidden>
         <h2>Display</h2>
+        <div class="label">Layout</div>
+        <div class="buttons" id="layout">
+          <button data-v="">Free</button>
+          <button data-v="standard">Standard</button>
+          <button data-v="compact">Compact</button>
+          <button data-v="wide">Wide</button>
+        </div>
+        <p class="desc">A layout brings its own height and chips. A card height you pick below wins, like in the card.</p>
+        <div id="display-controls"></div>
         <div class="label">Card height</div>
         <div class="buttons" id="height">
           <button data-v="140">Small</button>
@@ -223,10 +231,10 @@
         </div>
         <div class="label">Reset</div>
         <div class="buttons"><button id="reset">Back to the start</button></div>
-        <details class="yaml"><summary>Show the YAML of this card</summary><pre id="yaml"></pre></details>
       </section>
     </div>
-  </div>
+  </section>
+  </section>
 </main>
 
 <footer class="site">
@@ -237,10 +245,26 @@
 </footer>
 <script type="module" src="site.js"></script>
 <script type="module">
-  import './atmo-weather-card.js';
+  // Stand-ins for Home Assistant's icon elements, with the icons the layouts use.
+  const ICONS = {"water-percent":"M12,3.25C12,3.25 6,10 6,14C6,17.32 8.69,20 12,20A6,6 0 0,0 18,14C18,10 12,3.25 12,3.25M14.47,9.97L15.53,11.03L9.53,17.03L8.47,15.97M9.75,10A1.25,1.25 0 0,1 11,11.25A1.25,1.25 0 0,1 9.75,12.5A1.25,1.25 0 0,1 8.5,11.25A1.25,1.25 0 0,1 9.75,10M14.25,14.5A1.25,1.25 0 0,1 15.5,15.75A1.25,1.25 0 0,1 14.25,17A1.25,1.25 0 0,1 13,15.75A1.25,1.25 0 0,1 14.25,14.5Z","weather-windy":"M4,10A1,1 0 0,1 3,9A1,1 0 0,1 4,8H12A2,2 0 0,0 14,6A2,2 0 0,0 12,4C11.45,4 10.95,4.22 10.59,4.59C10.2,5 9.56,5 9.17,4.59C8.78,4.2 8.78,3.56 9.17,3.17C9.9,2.45 10.9,2 12,2A4,4 0 0,1 16,6A4,4 0 0,1 12,10H4M19,12A1,1 0 0,0 20,11A1,1 0 0,0 19,10C18.72,10 18.47,10.11 18.29,10.29C17.9,10.68 17.27,10.68 16.88,10.29C16.5,9.9 16.5,9.27 16.88,8.88C17.42,8.34 18.17,8 19,8A3,3 0 0,1 22,11A3,3 0 0,1 19,14H5A1,1 0 0,1 4,13A1,1 0 0,1 5,12H19M18,18H4A1,1 0 0,1 3,17A1,1 0 0,1 4,16H18A3,3 0 0,1 21,19A3,3 0 0,1 18,22C17.17,22 16.42,21.66 15.88,21.12C15.5,20.73 15.5,20.1 15.88,19.71C16.27,19.32 16.9,19.32 17.29,19.71C17.47,19.89 17.72,20 18,20A1,1 0 0,0 19,19A1,1 0 0,0 18,18Z","gauge":"M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12C20,14.4 19,16.5 17.3,18C15.9,16.7 14,16 12,16C10,16 8.2,16.7 6.7,18C5,16.5 4,14.4 4,12A8,8 0 0,1 12,4M14,5.89C13.62,5.9 13.26,6.15 13.1,6.54L11.81,9.77L11.71,10C11,10.13 10.41,10.6 10.14,11.26C9.73,12.29 10.23,13.45 11.26,13.86C12.29,14.27 13.45,13.77 13.86,12.74C14.12,12.08 14,11.32 13.57,10.76L13.67,10.5L14.96,7.29L14.97,7.26C15.17,6.75 14.92,6.17 14.41,5.96C14.28,5.91 14.15,5.89 14,5.89M10,6A1,1 0 0,0 9,7A1,1 0 0,0 10,8A1,1 0 0,0 11,7A1,1 0 0,0 10,6M7,9A1,1 0 0,0 6,10A1,1 0 0,0 7,11A1,1 0 0,0 8,10A1,1 0 0,0 7,9M17,9A1,1 0 0,0 16,10A1,1 0 0,0 17,11A1,1 0 0,0 18,10A1,1 0 0,0 17,9Z","weather-sunny":"M12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,2L14.39,5.42C13.65,5.15 12.84,5 12,5C11.16,5 10.35,5.15 9.61,5.42L12,2M3.34,7L7.5,6.65C6.9,7.16 6.36,7.78 5.94,8.5C5.5,9.24 5.25,10 5.11,10.79L3.34,7M3.36,17L5.12,13.23C5.26,14 5.53,14.78 5.95,15.5C6.37,16.24 6.91,16.86 7.5,17.37L3.36,17M20.65,7L18.88,10.79C18.74,10 18.47,9.23 18.05,8.5C17.63,7.78 17.1,7.15 16.5,6.64L20.65,7M20.64,17L16.5,17.36C17.09,16.85 17.62,16.22 18.04,15.5C18.46,14.77 18.73,14 18.87,13.21L20.64,17M12,22L9.59,18.56C10.33,18.83 11.14,19 12,19C12.82,19 13.63,18.83 14.37,18.56L12,22Z","weather-night":"M17.75,4.09L15.22,6.03L16.13,9.09L13.5,7.28L10.87,9.09L11.78,6.03L9.25,4.09L12.44,4L13.5,1L14.56,4L17.75,4.09M21.25,11L19.61,12.25L20.2,14.23L18.5,13.06L16.8,14.23L17.39,12.25L15.75,11L17.81,10.95L18.5,9L19.19,10.95L21.25,11M18.97,15.95C19.8,15.87 20.69,17.05 20.16,17.8C19.84,18.25 19.5,18.67 19.08,19.07C15.17,23 8.84,23 4.94,19.07C1.03,15.17 1.03,8.83 4.94,4.93C5.34,4.53 5.76,4.17 6.21,3.85C6.96,3.32 8.14,4.21 8.06,5.04C7.79,7.9 8.75,10.87 10.95,13.06C13.14,15.26 16.1,16.22 18.97,15.95M17.33,17.97C14.5,17.81 11.7,16.64 9.53,14.5C7.36,12.31 6.2,9.5 6.04,6.68C3.23,9.82 3.34,14.64 6.35,17.66C9.37,20.67 14.19,20.78 17.33,17.97Z","weather-partly-cloudy":"M12.74,5.47C15.1,6.5 16.35,9.03 15.92,11.46C17.19,12.56 18,14.19 18,16V16.17C18.31,16.06 18.65,16 19,16A3,3 0 0,1 22,19A3,3 0 0,1 19,22H6A4,4 0 0,1 2,18A4,4 0 0,1 6,14H6.27C5,12.45 4.6,10.24 5.5,8.26C6.72,5.5 9.97,4.24 12.74,5.47M11.93,7.3C10.16,6.5 8.09,7.31 7.31,9.07C6.85,10.09 6.93,11.22 7.41,12.13C8.5,10.83 10.16,10 12,10C12.7,10 13.38,10.12 14,10.34C13.94,9.06 13.18,7.86 11.93,7.3M13.55,3.64C13,3.4 12.45,3.23 11.88,3.12L14.37,1.82L15.27,4.71C14.76,4.29 14.19,3.93 13.55,3.64M6.09,4.44C5.6,4.79 5.17,5.19 4.8,5.63L4.91,2.82L7.87,3.5C7.25,3.71 6.65,4.03 6.09,4.44M18,9.71C17.91,9.12 17.78,8.55 17.59,8L19.97,9.5L17.92,11.73C18.03,11.08 18.05,10.4 18,9.71M3.04,11.3C3.11,11.9 3.24,12.47 3.43,13L1.06,11.5L3.1,9.28C3,9.93 2.97,10.61 3.04,11.3M19,18H16V16A4,4 0 0,0 12,12A4,4 0 0,0 8,16H6A2,2 0 0,0 4,18A2,2 0 0,0 6,20H19A1,1 0 0,0 20,19A1,1 0 0,0 19,18Z","weather-cloudy":"M6,19A5,5 0 0,1 1,14A5,5 0 0,1 6,9C7,6.65 9.3,5 12,5C15.43,5 18.24,7.66 18.5,11.03L19,11A4,4 0 0,1 23,15A4,4 0 0,1 19,19H6M19,13H17V12A5,5 0 0,0 12,7C9.5,7 7.45,8.82 7.06,11.19C6.73,11.07 6.37,11 6,11A3,3 0 0,0 3,14A3,3 0 0,0 6,17H19A2,2 0 0,0 21,15A2,2 0 0,0 19,13Z","weather-rainy":"M6,14.03A1,1 0 0,1 7,15.03C7,15.58 6.55,16.03 6,16.03C3.24,16.03 1,13.79 1,11.03C1,8.27 3.24,6.03 6,6.03C7,3.68 9.3,2.03 12,2.03C15.43,2.03 18.24,4.69 18.5,8.06L19,8.03A4,4 0 0,1 23,12.03C23,14.23 21.21,16.03 19,16.03H18C17.45,16.03 17,15.58 17,15.03C17,14.47 17.45,14.03 18,14.03H19A2,2 0 0,0 21,12.03A2,2 0 0,0 19,10.03H17V9.03C17,6.27 14.76,4.03 12,4.03C9.5,4.03 7.45,5.84 7.06,8.21C6.73,8.09 6.37,8.03 6,8.03A3,3 0 0,0 3,11.03A3,3 0 0,0 6,14.03M12,14.15C12.18,14.39 12.37,14.66 12.56,14.94C13,15.56 14,17.03 14,18C14,19.11 13.1,20 12,20A2,2 0 0,1 10,18C10,17.03 11,15.56 11.44,14.94C11.63,14.66 11.82,14.4 12,14.15M12,11.03L11.5,11.59C11.5,11.59 10.65,12.55 9.79,13.81C8.93,15.06 8,16.56 8,18A4,4 0 0,0 12,22A4,4 0 0,0 16,18C16,16.56 15.07,15.06 14.21,13.81C13.35,12.55 12.5,11.59 12.5,11.59","weather-pouring":"M9,12C9.53,12.14 9.85,12.69 9.71,13.22L8.41,18.05C8.27,18.59 7.72,18.9 7.19,18.76C6.65,18.62 6.34,18.07 6.5,17.54L7.78,12.71C7.92,12.17 8.47,11.86 9,12M13,12C13.53,12.14 13.85,12.69 13.71,13.22L11.64,20.95C11.5,21.5 10.95,21.8 10.41,21.66C9.88,21.5 9.56,20.97 9.7,20.43L11.78,12.71C11.92,12.17 12.47,11.86 13,12M17,12C17.53,12.14 17.85,12.69 17.71,13.22L16.41,18.05C16.27,18.59 15.72,18.9 15.19,18.76C14.65,18.62 14.34,18.07 14.5,17.54L15.78,12.71C15.92,12.17 16.47,11.86 17,12M17,10V9A5,5 0 0,0 12,4C9.5,4 7.45,5.82 7.06,8.19C6.73,8.07 6.37,8 6,8A3,3 0 0,0 3,11C3,12.11 3.6,13.08 4.5,13.6V13.59C5,13.87 5.14,14.5 4.87,14.96C4.59,15.43 4,15.6 3.5,15.32V15.33C2,14.47 1,12.85 1,11A5,5 0 0,1 6,6C7,3.65 9.3,2 12,2C15.43,2 18.24,4.66 18.5,8.03L19,8A4,4 0 0,1 23,12C23,13.5 22.2,14.77 21,15.46V15.46C20.5,15.73 19.91,15.57 19.63,15.09C19.36,14.61 19.5,14 20,13.72V13.73C20.6,13.39 21,12.74 21,12A2,2 0 0,0 19,10H17Z","weather-lightning-rainy":"M4.5,13.59C5,13.87 5.14,14.5 4.87,14.96C4.59,15.44 4,15.6 3.5,15.33V15.33C2,14.47 1,12.85 1,11A5,5 0 0,1 6,6C7,3.65 9.3,2 12,2C15.43,2 18.24,4.66 18.5,8.03L19,8A4,4 0 0,1 23,12A4,4 0 0,1 19,16A1,1 0 0,1 18,15A1,1 0 0,1 19,14A2,2 0 0,0 21,12A2,2 0 0,0 19,10H17V9A5,5 0 0,0 12,4C9.5,4 7.45,5.82 7.06,8.19C6.73,8.07 6.37,8 6,8A3,3 0 0,0 3,11C3,12.11 3.6,13.08 4.5,13.6V13.59M9.5,11H12.5L10.5,15H12.5L8.75,22L9.5,17H7L9.5,11M17.5,18.67C17.5,19.96 16.5,21 15.25,21C14,21 13,19.96 13,18.67C13,17.12 15.25,14.5 15.25,14.5C15.25,14.5 17.5,17.12 17.5,18.67Z","weather-lightning":"M6,16A5,5 0 0,1 1,11A5,5 0 0,1 6,6C7,3.65 9.3,2 12,2C15.43,2 18.24,4.66 18.5,8.03L19,8A4,4 0 0,1 23,12A4,4 0 0,1 19,16H18A1,1 0 0,1 17,15A1,1 0 0,1 18,14H19A2,2 0 0,0 21,12A2,2 0 0,0 19,10H17V9A5,5 0 0,0 12,4C9.5,4 7.45,5.82 7.06,8.19C6.73,8.07 6.37,8 6,8A3,3 0 0,0 3,11A3,3 0 0,0 6,14H7A1,1 0 0,1 8,15A1,1 0 0,1 7,16H6M12,11H15L13,15H15L11.25,22L12,17H9.5L12,11Z","weather-snowy":"M6,14A1,1 0 0,1 7,15A1,1 0 0,1 6,16A5,5 0 0,1 1,11A5,5 0 0,1 6,6C7,3.65 9.3,2 12,2C15.43,2 18.24,4.66 18.5,8.03L19,8A4,4 0 0,1 23,12A4,4 0 0,1 19,16H18A1,1 0 0,1 17,15A1,1 0 0,1 18,14H19A2,2 0 0,0 21,12A2,2 0 0,0 19,10H17V9A5,5 0 0,0 12,4C9.5,4 7.45,5.82 7.06,8.19C6.73,8.07 6.37,8 6,8A3,3 0 0,0 3,11A3,3 0 0,0 6,14M7.88,18.07L10.07,17.5L8.46,15.88C8.07,15.5 8.07,14.86 8.46,14.46C8.85,14.07 9.5,14.07 9.88,14.46L11.5,16.07L12.07,13.88C12.21,13.34 12.76,13.03 13.29,13.17C13.83,13.31 14.14,13.86 14,14.4L13.41,16.59L15.6,16C16.14,15.86 16.69,16.17 16.83,16.71C16.97,17.24 16.66,17.79 16.12,17.93L13.93,18.5L15.54,20.12C15.93,20.5 15.93,21.15 15.54,21.54C15.15,21.93 14.5,21.93 14.12,21.54L12.5,19.93L11.93,22.12C11.79,22.66 11.24,22.97 10.71,22.83C10.17,22.69 9.86,22.14 10,21.6L10.59,19.41L8.4,20C7.86,20.14 7.31,19.83 7.17,19.29C7.03,18.76 7.34,18.21 7.88,18.07Z","weather-snowy-rainy":"M18.5,18.67C18.5,19.96 17.5,21 16.25,21C15,21 14,19.96 14,18.67C14,17.12 16.25,14.5 16.25,14.5C16.25,14.5 18.5,17.12 18.5,18.67M4,17.36C3.86,16.82 4.18,16.25 4.73,16.11L7,15.5L5.33,13.86C4.93,13.46 4.93,12.81 5.33,12.4C5.73,12 6.4,12 6.79,12.4L8.45,14.05L9.04,11.8C9.18,11.24 9.75,10.92 10.29,11.07C10.85,11.21 11.17,11.78 11,12.33L10.42,14.58L12.67,14C13.22,13.83 13.79,14.15 13.93,14.71C14.08,15.25 13.76,15.82 13.2,15.96L10.95,16.55L12.6,18.21C13,18.6 13,19.27 12.6,19.67C12.2,20.07 11.54,20.07 11.15,19.67L9.5,18L8.89,20.27C8.75,20.83 8.18,21.14 7.64,21C7.08,20.86 6.77,20.29 6.91,19.74L7.5,17.5L5.26,18.09C4.71,18.23 4.14,17.92 4,17.36M1,11A5,5 0 0,1 6,6C7,3.65 9.3,2 12,2C15.43,2 18.24,4.66 18.5,8.03L19,8A4,4 0 0,1 23,12A4,4 0 0,1 19,16A1,1 0 0,1 18,15A1,1 0 0,1 19,14A2,2 0 0,0 21,12A2,2 0 0,0 19,10H17V9A5,5 0 0,0 12,4C9.5,4 7.45,5.82 7.06,8.19C6.73,8.07 6.37,8 6,8A3,3 0 0,0 3,11C3,11.85 3.35,12.61 3.91,13.16C4.27,13.55 4.26,14.16 3.88,14.54C3.5,14.93 2.85,14.93 2.47,14.54C1.56,13.63 1,12.38 1,11Z","weather-hail":"M6,14A1,1 0 0,1 7,15A1,1 0 0,1 6,16A5,5 0 0,1 1,11A5,5 0 0,1 6,6C7,3.65 9.3,2 12,2C15.43,2 18.24,4.66 18.5,8.03L19,8A4,4 0 0,1 23,12A4,4 0 0,1 19,16H18A1,1 0 0,1 17,15A1,1 0 0,1 18,14H19A2,2 0 0,0 21,12A2,2 0 0,0 19,10H17V9A5,5 0 0,0 12,4C9.5,4 7.45,5.82 7.06,8.19C6.73,8.07 6.37,8 6,8A3,3 0 0,0 3,11A3,3 0 0,0 6,14M10,18A2,2 0 0,1 12,20A2,2 0 0,1 10,22A2,2 0 0,1 8,20A2,2 0 0,1 10,18M14.5,16A1.5,1.5 0 0,1 16,17.5A1.5,1.5 0 0,1 14.5,19A1.5,1.5 0 0,1 13,17.5A1.5,1.5 0 0,1 14.5,16M10.5,12A1.5,1.5 0 0,1 12,13.5A1.5,1.5 0 0,1 10.5,15A1.5,1.5 0 0,1 9,13.5A1.5,1.5 0 0,1 10.5,12Z","weather-fog":"M3,15H13A1,1 0 0,1 14,16A1,1 0 0,1 13,17H3A1,1 0 0,1 2,16A1,1 0 0,1 3,15M16,15H21A1,1 0 0,1 22,16A1,1 0 0,1 21,17H16A1,1 0 0,1 15,16A1,1 0 0,1 16,15M1,12A5,5 0 0,1 6,7C7,4.65 9.3,3 12,3C15.43,3 18.24,5.66 18.5,9.03L19,9C21.19,9 22.97,10.76 23,13H21A2,2 0 0,0 19,11H17V10A5,5 0 0,0 12,5C9.5,5 7.45,6.82 7.06,9.19C6.73,9.07 6.37,9 6,9A3,3 0 0,0 3,12C3,12.35 3.06,12.69 3.17,13H1.1L1,12M3,19H5A1,1 0 0,1 6,20A1,1 0 0,1 5,21H3A1,1 0 0,1 2,20A1,1 0 0,1 3,19M8,19H21A1,1 0 0,1 22,20A1,1 0 0,1 21,21H8A1,1 0 0,1 7,20A1,1 0 0,1 8,19Z","help-circle-outline":"M11,18H13V16H11V18M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,6A4,4 0 0,0 8,10H10A2,2 0 0,1 12,8A2,2 0 0,1 14,10C14,12 11,11.75 11,15H13C13,12.75 16,12.5 16,10A4,4 0 0,0 12,6Z"};
+  const COND_ICON = { sunny: "weather-sunny", "clear-night": "weather-night", partlycloudy: "weather-partly-cloudy", cloudy: "weather-cloudy", rainy: "weather-rainy", pouring: "weather-pouring", "lightning-rainy": "weather-lightning-rainy", lightning: "weather-lightning", snowy: "weather-snowy", "snowy-rainy": "weather-snowy-rainy", hail: "weather-hail", fog: "weather-fog", windy: "weather-windy" };
+  const svgOf = (d) => `<svg viewBox="0 0 24 24" style="width:var(--mdc-icon-size,20px);height:var(--mdc-icon-size,20px);display:block;fill:currentColor"><path d="${d}"/></svg>`;
+  const iconFor = (name) => ICONS[String(name || "").replace(/^mdi:/, "")] || ICONS["help-circle-outline"];
+  if (!customElements.get("ha-icon")) customElements.define("ha-icon", class extends HTMLElement {
+    static get observedAttributes() { return ["icon"]; }
+    set icon(v) { this.setAttribute("icon", v); }
+    attributeChangedCallback() { this.innerHTML = svgOf(iconFor(this.getAttribute("icon"))); }
+    connectedCallback() { this.style.display = "inline-flex"; this.attributeChangedCallback(); }
+  });
+  if (!customElements.get("ha-state-icon")) customElements.define("ha-state-icon", class extends HTMLElement {
+    set stateObj(o) { this._s = o; this.render(); } get stateObj() { return this._s; }
+    set hass(h) {} set icon(v) { this._i = v; this.render(); }
+    render() { const st = this._s; this.innerHTML = svgOf(iconFor(this._i || (st && COND_ICON[st.state]) || "help-circle-outline")); this.style.display = "inline-flex"; }
+  });
+  await import('./atmo-weather-card.js');
 
   const CONDITIONS = [
-    ['sunny', 'Sunny / Clear'], ['partlycloudy', 'Partly cloudy'], ['cloudy', 'Cloudy'], ['fog', 'Fog'],
+    ['sunny', 'Clear'], ['partlycloudy', 'Partly cloudy'], ['cloudy', 'Cloudy'], ['fog', 'Fog'],
     ['windy', 'Windy'], ['rainy', 'Rain'], ['pouring', 'Pouring'], ['lightning-rainy', 'Thunderstorm'],
     ['lightning', 'Lightning'], ['hail', 'Hail'], ['snowy', 'Snow'], ['snowy-rainy', 'Sleet'],
   ];
@@ -258,6 +282,7 @@
     compass: 'off', compassPos: 'auto', windChip: 'off', windChipIcon: 'arrow', windChipSpeed: true, compassCardinal: true, compassDegrees: false, compassSpeed: false, compassBackground: false,
     fx: { effect_blue_hour: true, effect_golden_hour: true, effect_sun_rays: true, effect_haze: true, effect_ground_mist: true, effect_cloud_coverage: true, effect_shooting_stars: true, effect_comets: true },
     shootingStarRate: 1, cometRate: 1,
+    rainDensity: 1, snowDensity: 1, leafDensity: 1, rainSplash: true, snowEdge: true, spill: false, scrim: true, layout: 'standard', ownHeight: false,
     birds: true, planes: true, birdDensity: 1.3, planeDensity: 1, planeSpeed: 1,
     on: { cloud_coverage: false, precipitation: false, visibility: false, humidity: true, temperature: true, dew_point: false },
     values: Object.fromEntries(Object.entries(DATA).map(([k, d]) => [k, d.v])),
@@ -279,9 +304,16 @@
   // The demo clock: today at the slider time.
   const virtualNow = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime() + state.minutes * 60e3; };
   const isNight = () => elevation() < -0.833;
-  const fmt = (v, unit) => `${Number(v).toLocaleString('en-US', { maximumFractionDigits: 1 })}${unit ? ' ' + unit : ''}`;
+  const fmt = (v, unit) => `${Number(v).toLocaleString('en-US', { maximumFractionDigits: 1 })}${unit ? (unit === '°' ? '' : ' ') + unit : ''}`;
 
   function buildConfig() {
+    const cfg = buildBaseConfig();
+    if (!state.layout) return cfg;
+    const { chips, card_height, celestial_alignment, celestial_x, celestial_size, ...rest } = cfg;
+    // Like in the card: the layout's height, unless you picked one yourself.
+    return { ...rest, card_layout: state.layout, ...(state.ownHeight ? { card_height } : {}) };
+  }
+  function buildBaseConfig() {
     return {
       type: 'custom:atmo-weather-card', weather_entity: 'weather.demo', sun_entity: 'sun.sun',
       moon_phase_entity: 'sensor.moon_phase', theme_entity: 'sun.sun',
@@ -297,6 +329,9 @@
       fauna_bird_density: state.birdDensity, fauna_plane_density: state.planeDensity, fauna_plane_speed: state.planeSpeed,
       fauna_bird_flock_size: 8, fauna_birds_at_night: false,
       ...state.fx, shooting_star_rate: state.shootingStarRate, comet_rate: state.cometRate,
+      rain_density: state.rainDensity, snow_density: state.snowDensity, leaf_density: state.leafDensity,
+      effect_rain_splash: state.rainSplash, effect_snow_edge: state.snowEdge,
+      effect_spill: state.spill, effect_text_scrim: state.scrim,
       chips: [{
         position: 'custom', position_anchor: 'center', position_x: '16px', position_y: '16px',
         text_size: state.height < 180 ? '34px' : '48px', padding: '0px 4px', hide_icon: true, fancy_unit: true,
@@ -318,11 +353,18 @@
     const next = (min) => (min > m ? at(min) : at(min + 1440));
     return { next_rising: new Date(next(DAY.rise)).toISOString(), next_setting: new Date(next(DAY.set)).toISOString(), rising: m < 780 };
   }
+  const UNITS = { temperature: '°C', templow: '°C', humidity: '%', wind_speed: 'km/h', pressure: 'hPa', visibility: 'km', dew_point: '°C' };
+  const CONDITION_NAMES = { sunny: 'Sunny', 'clear-night': 'Clear night', partlycloudy: 'Partly cloudy', cloudy: 'Cloudy', fog: 'Fog', windy: 'Windy', rainy: 'Rainy', pouring: 'Pouring', 'lightning-rainy': 'Thunderstorm', lightning: 'Lightning', hail: 'Hail', snowy: 'Snowy', 'snowy-rainy': 'Sleet' };
+  function demoForecast(type) {
+    const n = type === 'hourly' ? 24 : 7, step = type === 'hourly' ? 3600e3 : 86400e3;
+    const conds = ['partlycloudy', 'rainy', 'sunny', 'cloudy', 'snowy', 'sunny', 'lightning-rainy'];
+    return Array.from({ length: n }, (_, i) => ({ datetime: new Date(Date.now() + i * step).toISOString(), condition: conds[i % conds.length], temperature: 14 + ((i * 3) % 7), templow: 6 + (i % 4), precipitation_probability: [20, 70, 5, 40, 80, 10, 60][i % 7] }));
+  }
   function buildHass() {
     const night = isNight();
     const attrs = {
       temperature_unit: '°C', wind_speed: state.windSpeed, wind_bearing: state.windFrom,
-      wind_speed_unit: 'km/h', visibility_unit: 'km', friendly_name: 'Demo',
+      wind_speed_unit: 'km/h', visibility_unit: 'km', friendly_name: 'Demo', pressure: 1016, pressure_unit: 'hPa',
     };
     for (const k of Object.keys(DATA)) if (k !== 'precipitation' && state.on[k]) attrs[k] = state.values[k];
     if (attrs.temperature == null) attrs.temperature = 12;
@@ -336,8 +378,11 @@
       },
       themes: { darkMode: night }, locale: { language: 'en', time_format: '24' },
       config: { latitude: 52.15, longitude: 7.32, unit_system: { temperature: '°C' } },
-      formatEntityState: (s) => s.state,
-      formatEntityAttributeValue: (s, a) => String(s.attributes[a]),
+      formatEntityState: (s) => (s.entity_id.startsWith('weather.') ? CONDITION_NAMES[s.state] || s.state : s.state),
+      formatEntityAttributeValue: (s, a) => { const v = s.attributes[a]; const u = UNITS[a]; return v == null ? '' : String(v) + (u ? (u === '%' ? ' %' : ' ' + u) : ''); },
+      // Forecasts for the layouts' "tomorrow" chip.
+      connection: { subscribeMessage: async (cb, msg) => { setTimeout(() => cb({ type: msg.forecast_type, forecast: demoForecast(msg.forecast_type) }), 0); return () => {}; } },
+      callWS: async () => ({}), callApi: async () => [],
     };
   }
 
@@ -429,6 +474,19 @@
     (on) => { state.fx.effect_comets = on; reconfigure(); update(); }));
   refreshers.push(configSlider(nightBox, { name: 'Frequency', unit: '×', min: 0.25, max: 3, step: 0.25, hint: '1× is about one a minute on Ultra.' }, 'cometRate'));
 
+  const precipBox = document.getElementById('precip-controls');
+  refreshers.push(configSlider(precipBox, { name: 'Amount of rain', unit: '×', min: 0.25, max: 3, step: 0.25, hint: 'On top of the weather state, or of the rain sensor when it is on.' }, 'rainDensity'));
+  refreshers.push(toggle(precipBox, { name: 'Splashes', hint: 'Part of the drops splash on the bottom edge.' }, () => state.rainSplash,
+    (on) => { state.rainSplash = on; reconfigure(); update(); }));
+  refreshers.push(configSlider(precipBox, { name: 'Amount of snow', unit: '×', min: 0.25, max: 3, step: 0.25, hint: "Snow has no sensor of its own. A precipitation sensor that measures melted snow, like a weather service's or a heated gauge, sets it too; this slider scales it on top." }, 'snowDensity'));
+  refreshers.push(toggle(precipBox, { name: 'Snow edge', hint: 'A thin edge of snow along the bottom.' }, () => state.snowEdge,
+    (on) => { state.snowEdge = on; reconfigure(); update(); }));
+  const displayBox = document.getElementById('display-controls');
+  refreshers.push(toggle(displayBox, { name: 'Veil behind the text', hint: 'Keeps the chips readable on a bright or busy sky.' }, () => state.scrim,
+    (on) => { state.scrim = on; reconfigure(); update(); }));
+  refreshers.push(toggle(precipBox, { name: 'Fall out of the card', hint: 'Rain and snow fall on below the card and fade out.' }, () => state.spill,
+    (on) => { state.spill = on; reconfigure(); update(); }));
+  refreshers.push(configSlider(document.getElementById('leaf-controls'), { name: 'Amount of leaves', unit: '×', min: 0.25, max: 3, step: 0.25, hint: 'With Leaves: green in spring and summer, autumn colours in autumn and winter.' }, 'leafDensity'));
   const compassBox = document.getElementById('compass-controls');
   for (const [key, name] of [['compassCardinal', 'Compass point'], ['compassDegrees', 'Degrees'], ['compassSpeed', 'Wind speed'], ['compassBackground', 'Background']])
     refreshers.push(toggle(compassBox, { name }, () => state[key], (on) => { state[key] = on; reconfigure(); update(); }));
@@ -441,10 +499,25 @@
   refreshers.push(configSlider(faunaBox, { name: 'Plane frequency', unit: '×', min: 0.5, max: 2, step: 0.1 }, 'planeDensity'));
   refreshers.push(configSlider(faunaBox, { name: 'Plane speed', unit: '×', min: 0.25, max: 3, step: 0.05 }, 'planeSpeed'));
 
-  refreshers.push(slider(document.getElementById('sun-slider'), { name: 'Time of day', min: 0, max: 1435, step: 5,
-    hint: 'A standard day: sunrise 06:30, sunset 19:30. The moon rises at sunset.',
-    format: (m) => `${clock(m)} · sun ${fmt(Math.round(elevationAt(m) * 10) / 10, '°')}` },
-    () => state.minutes, (v) => { state.minutes = v; update(); syncButtons(); }));
+  // The day strip: 24 hours of sky, the sun or the moon as the handle.
+  const stripInput = document.getElementById('strip-input'), stripHandle = document.getElementById('strip-handle');
+  const stripTime = document.getElementById('strip-time'), stripMarks = document.getElementById('strip-marks');
+  for (const [m, l, low] of [[390, 'Sunrise'], [780, 'Noon'], [1140, 'Golden hour'], [1195, 'Blue hour', true], [1380, 'Night']]) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = l; b.dataset.m = m; if (low) b.className = 'low';
+    b.style.left = (m / 1440) * 100 + '%';
+    b.onclick = () => { state.minutes = m; update(); };
+    stripMarks.append(b);
+  }
+  stripInput.addEventListener('input', () => { state.minutes = Number(stripInput.value); update(); });
+  function syncStrip() {
+    stripInput.value = state.minutes;
+    stripHandle.style.left = (state.minutes / 1440) * 100 + '%';
+    stripHandle.classList.toggle('moon', isNight());
+    stripTime.textContent = `${clock(state.minutes)} · sun ${fmt(Math.round(elevationAt(state.minutes) * 10) / 10, '°')}`;
+    stripInput.setAttribute('aria-valuetext', clock(state.minutes));
+    stripMarks.querySelectorAll('button').forEach((b) => b.classList.toggle('on', Number(b.dataset.m) === state.minutes));
+  }
   refreshers.push(slider(document.getElementById('wind-speed'), { name: 'Wind speed', unit: 'km/h', min: 0, max: 100, step: 1 },
     () => state.windSpeed, (v) => { state.windSpeed = v; update(); }));
   const COMPASS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
@@ -456,7 +529,8 @@
   const conditionBox = document.getElementById('conditions');
   for (const [value, label] of CONDITIONS) {
     const b = document.createElement('button');
-    b.textContent = label; b.dataset.v = value;
+    b.type = 'button'; b.className = 'wx'; b.dataset.v = value;
+    b.innerHTML = `${svgOf(iconFor(COND_ICON[value]))}<span>${label}</span>`;
     conditionBox.appendChild(b);
   }
   const group = (id, key, cast, needsConfig) =>
@@ -467,7 +541,6 @@
       refreshers.forEach((r) => r());
     }));
   group('conditions', 'condition', String);
-  group('sun-presets', 'minutes', Number);
   group('wind-style', 'windStyle', String, true);
   group('wind-from', 'windFrom', Number);
   group('compass', 'compass', String, true);
@@ -475,22 +548,27 @@
   group('wind-chip', 'windChip', String, true);
   group('wind-chip-icon', 'windChipIcon', String, true);
   refreshers.push(toggle(document.getElementById('wind-chip-controls'), { name: 'Wind speed in the chip' }, () => state.windChipSpeed, (on) => { state.windChipSpeed = on; reconfigure(); update(); }));
+  // Picking a height makes it your own; a new layout brings its own height again.
+  document.getElementById('height').addEventListener('click', () => { state.ownHeight = true; }, true);
+  document.getElementById('layout').addEventListener('click', () => { state.ownHeight = false; }, true);
   group('height', 'height', Number, true);
+  group('layout', 'layout', String, true);
   group('perf', 'perf', String, true);
 
   const mark = (id, current) => document.querySelectorAll(`#${id} button`).forEach((b) => b.classList.toggle('active', b.dataset.v === String(current)));
   const faunaMessage = document.getElementById('fauna-message');
   function syncButtons() {
     faunaMessage.textContent = state.perf === 'low' ? 'Low performance mode has no birds or planes.' : '';
-    mark('conditions', state.condition);
-    mark('sun-presets', state.minutes);
+    document.querySelectorAll('#conditions .wx').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.v === state.condition)));
+    syncStrip();
     mark('wind-style', state.windStyle);
     mark('wind-from', state.windFrom);
     mark('compass', state.compass);
     mark('compass-pos', state.compassPos);
     mark('wind-chip', state.windChip);
     mark('wind-chip-icon', state.windChipIcon);
-    mark('height', state.height);
+    mark('height', state.layout && !state.ownHeight ? '' : state.height);
+    mark('layout', state.layout);
     mark('perf', state.perf);
   }
 
@@ -538,7 +616,7 @@
   const tabs = [...document.querySelectorAll('.tabs button')];
   const panels = [...document.querySelectorAll('section.tab')];
   const openTab = (name) => {
-    if (!tabs.some((t) => t.dataset.tab === name)) name = 'scene';
+    if (!tabs.some((t) => t.dataset.tab === name)) name = 'data';
     tabs.forEach((t) => t.setAttribute('aria-selected', String(t.dataset.tab === name)));
     panels.forEach((p) => (p.hidden = p.dataset.tab !== name));
   };
@@ -550,8 +628,17 @@
   const toYaml = (o, ind = '') => Object.entries(o).map(([k, v]) => Array.isArray(v)
     ? `${ind}${k}:\n` + v.map((it) => { const l = toYaml(it, ind + '    ').split('\n'); return `${ind}  - ${l[0].trim()}\n${l.slice(1).join('\n')}`; }).join('\n').replace(/\n+$/, '')
     : v && typeof v === 'object' ? `${ind}${k}:\n${toYaml(v, ind + '  ')}` : `${ind}${k}: ${v}`).join('\n');
+  const demoWindow = document.getElementById('demo-window');
+  const copyBtn = demoWindow.querySelector('.copy');
+  demoWindow.querySelectorAll('.window-bar .tab').forEach((t) => t.addEventListener('click', () => {
+    const code = t.dataset.pane === 'code';
+    demoWindow.classList.toggle('show-code', code);
+    demoWindow.querySelectorAll('.window-bar .tab').forEach((x) => x.setAttribute('aria-selected', String(x === t)));
+    copyBtn.hidden = !code;
+  }));
+  copyBtn.addEventListener('click', () => navigator.clipboard?.writeText(yamlBox.textContent).then(() => { copyBtn.textContent = 'Copied'; setTimeout(() => (copyBtn.textContent = 'Copy'), 1200); }, () => {}));
   setInterval(() => {
-    if (!yamlBox.closest('details').open) return;
+    if (!demoWindow.classList.contains('show-code')) return;
     const cfg = buildConfig();
     yamlBox.textContent = toYaml({ ...cfg, weather_entity: 'weather.home' });
   }, 500);

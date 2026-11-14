@@ -6,12 +6,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Cdefs%3E%3CradialGradient id=%27g%27 cx=%270.38%27 cy=%270.38%27%3E%3Cstop offset=%270%27 stop-color=%27%23fff1c7%27/%3E%3Cstop offset=%271%27 stop-color=%27%23f2b84b%27/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2713%27 fill=%27url(%23g)%27/%3E%3C/svg%3E">
 <title>Documentation · Atmo Weather Card</title>
-<script>try { const t = localStorage.getItem("atmo-theme"); if (t && t !== "auto") document.documentElement.dataset.theme = t; } catch {}</script>
+<script>try { const t = localStorage.getItem("atmo-theme"); if (t && t !== "auto") document.documentElement.dataset.theme = t; } catch {}
+  (function (h) { document.documentElement.dataset.logo = h >= 5.5 && h < 8 ? "dawn" : h >= 8 && h < 18 ? "day" : h >= 18 && h < 20.5 ? "dusk" : "night"; })(new Date().getHours() + new Date().getMinutes() / 60);</script>
 <link rel="stylesheet" href="../site.css">
 <style>
   .hero { padding: 56px 0 28px; }
   .kicker { font-size: 12.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin: 0 0 10px; }
-  h1 { font-size: clamp(34px, 4.4vw, 52px); line-height: 1.05; letter-spacing: -0.03em; margin: 0 0 14px; }
+  h1.display { font-size: clamp(38px, 5vw, 64px); margin: 0 0 16px; max-width: 18ch; }
   .lead { font-size: 18px; color: var(--muted); max-width: 40em; margin: 0 0 26px; }
   .search { position: relative; max-width: 560px; }
   .search input { width: 100%; padding: 13px 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); color: var(--text); font: inherit; font-size: 16px; box-shadow: var(--shadow); }
@@ -24,7 +25,7 @@
   .cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; padding: 28px 0 80px; }
   .doc-card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 20px; color: var(--text); display: grid; gap: 6px; align-content: start; transition: border-color 0.2s, transform 0.2s; }
   .doc-card:hover { text-decoration: none; border-color: var(--accent); transform: translateY(-2px); }
-  .doc-card b { font-size: 17px; }
+  .doc-card b { font-family: var(--f-display); font-weight: var(--d-weight); font-variation-settings: var(--d-var); font-size: 21px; letter-spacing: var(--d-track); }
   .doc-card span:last-child { color: var(--muted); font-size: 14.5px; }
   .doc-group { font-size: 11.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
   .more { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 22px; }
@@ -37,12 +38,14 @@
 <header class="top">
   <div class="top-in narrow">
     <a class="brand" href="../index.html"><span class="sun"></span>Atmo Weather Card</a>
-    <span class="ver">{{VERSION}}</span>
     <nav>
+      <a href="../index.html#station" class="hide-s">Your station</a>
+      <a href="../index.html#tune" class="hide-s">Tune</a>
+      <a href="../index.html#gallery">Examples</a>
+      <a href="../index.html#install">Install</a>
       <a class="here" href="index.html">Docs</a>
-      <a href="../demo.html">Live demo</a>
-      <a href="../index.html#install" class="hide-s">Install</a>
-      <a href="{{README}}">GitHub</a>
+      <a href="../demo.html">Demo</a>
+      <a href="{{README}}" class="hide-s">GitHub</a>
       <span class="theme" role="group" aria-label="Color theme"><button type="button" data-t="auto">Auto</button><button type="button" data-t="light">Light</button><button type="button" data-t="dark">Dark</button></span>
     </nav>
   </div>
@@ -50,8 +53,7 @@
 
 <main class="wrap">
   <section class="hero">
-    <p class="kicker">Documentation</p>
-    <h1>Everything the card can do.</h1>
+    <h1 class="display">Everything the card can do, <em>with a live preview.</em></h1>
     <p class="lead">Every option with examples that run live on the page. Pick a topic, or search for an option or a problem.</p>
     <div class="search">
       <input id="search" type="search" placeholder="Search options, e.g. wind_compass" autocomplete="off" aria-label="Search the documentation">

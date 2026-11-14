@@ -6,6 +6,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Cdefs%3E%3CradialGradient id=%27g%27 cx=%270.38%27 cy=%270.38%27%3E%3Cstop offset=%270%27 stop-color=%27%23fff1c7%27/%3E%3Cstop offset=%271%27 stop-color=%27%23f2b84b%27/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2713%27 fill=%27url(%23g)%27/%3E%3C/svg%3E">
 <title>Atmo Weather Card · The sky over your dashboard</title>
+<meta name="description" content="An animated weather card for Home Assistant. The sky is built from your real weather data: cloud cover, rain, wind, visibility and the sun. Try it live in your browser.">
+<meta name="theme-color" content="#0d1117">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Atmo Weather Card">
+<meta property="og:description" content="The sky over your dashboard, built from your real weather data. A live demo of the Home Assistant card.">
+<meta property="og:url" content="https://whyisthisbroken.github.io/atmo-weather-card/">
+<meta property="og:image" content="https://whyisthisbroken.github.io/atmo-weather-card/images/share.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 <script>
   // Links into the old single documentation page (index.html#wind) open the page that holds the section now.
   (() => {
@@ -14,33 +24,80 @@
     if (to[id]) location.replace(`docs/${to[id]}.html#${id}`);
   })();
   try { const t = localStorage.getItem("atmo-theme"); if (t && t !== "auto") document.documentElement.dataset.theme = t; } catch {}
+  // The logo's sky follows the clock, set before the first paint.
+  (function (h) { document.documentElement.dataset.logo = h >= 5.5 && h < 8 ? "dawn" : h >= 8 && h < 18 ? "day" : h >= 18 && h < 20.5 ? "dusk" : "night"; })(new Date().getHours() + new Date().getMinutes() / 60);
 </script>
 <link rel="stylesheet" href="site.css">
 <style>
   html { scroll-behavior: smooth; }
+
   /* Hero */
-  .hero { position: relative; overflow: hidden; padding: 72px 0 56px; }
-  .hero::before { content: ""; position: absolute; inset: -40% -10% auto auto; width: 70vw; height: 70vw; max-width: 900px; max-height: 900px; background: radial-gradient(circle, var(--glow), transparent 62%); pointer-events: none; }
-  .hero .wrap { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 56px; align-items: center; }
-  .eyebrow { font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin: 0 0 14px; }
-  .hero h1 { font-size: clamp(38px, 5.4vw, 64px); line-height: 1.02; letter-spacing: -0.035em; margin: 0 0 18px; text-wrap: balance; }
-  .hero p.lead { font-size: 19px; color: var(--muted); max-width: 34em; margin: 0 0 28px; text-wrap: pretty; }
-  .cta { display: flex; gap: 12px; flex-wrap: wrap; }
-  .facts { display: flex; gap: 8px 20px; flex-wrap: wrap; margin-top: 26px; font-size: 13.5px; color: var(--muted); }
+  .hero { padding: 72px 0 72px; text-align: center; }
+  .hero .display { font-size: clamp(42px, 6.2vw, 84px); max-width: 15ch; margin: 0 auto; }
+  .hero .lede { margin: 22px auto 0; max-width: 60ch; }
+  .cta { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 28px; }
+  .facts { display: flex; gap: 8px 22px; flex-wrap: wrap; justify-content: center; margin-top: 20px; font-size: 13.5px; color: var(--muted); }
   .facts span::before { content: "✓"; color: var(--accent); font-weight: 800; margin-right: 6px; }
-  .stage { display: grid; gap: 14px; }
-  .stage-card { border-radius: 18px; box-shadow: var(--shadow); }
-  .stage-card atmo-weather-card { display: block; }
-  .stage .pills { justify-content: center; }
-  .stage-hint { text-align: center; font-size: 13px; color: var(--muted); margin: 0; }
+  .hero-stage { max-width: 1040px; margin: 48px auto 0; text-align: left; }
 
   /* Sections */
-  section.band { padding: 84px 0; border-top: 1px solid var(--line); }
-  section.band.alt { background: var(--bg2); }
-  .head { max-width: 640px; margin: 0 0 40px; }
-  .kicker { font-size: 12.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin: 0 0 10px; }
-  h2 { font-size: clamp(28px, 3.4vw, 40px); line-height: 1.1; letter-spacing: -0.025em; margin: 0 0 12px; text-wrap: balance; }
-  .head p:not(.kicker), .sub { color: var(--muted); font-size: 17px; margin: 0; text-wrap: pretty; }
+  section.band { padding: 112px 0; border-top: 1px solid var(--line); }
+  .head { max-width: 760px; margin: 0 0 40px; }
+
+  /* Station: the card on top, the instruments below */
+  .station-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin: 26px 0 16px; }
+  .toggle { display: inline-flex; align-items: center; gap: 12px; cursor: pointer; font-weight: 650; user-select: none; }
+  .toggle input { position: absolute; opacity: 0; pointer-events: none; }
+  .toggle .track { width: 42px; height: 24px; flex: none; border-radius: 999px; background: var(--raised); border: 1px solid var(--line); position: relative; transition: background 0.2s, border-color 0.2s; }
+  .toggle .track::after { content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: var(--text); transition: transform 0.25s cubic-bezier(0.3, 1.4, 0.5, 1); }
+  .toggle input:checked + .track { background: var(--accent); border-color: var(--accent); }
+  .toggle input:checked + .track::after { transform: translateX(18px); background: var(--accent-ink); }
+  .toggle input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .forecast-pick { display: inline-flex; align-items: center; gap: 10px; font-size: 13.5px; color: var(--muted); flex-wrap: wrap; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; padding: 3px; background: var(--panel); gap: 2px; flex-wrap: wrap; }
+  .seg button { border: 0; background: none; color: var(--muted); font: 600 13px var(--f-body); padding: 5px 11px; border-radius: 7px; cursor: pointer; }
+  .seg button.on { background: var(--raised); color: var(--text); box-shadow: inset 0 0 0 1px var(--line); }
+  .instruments { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+  .instrument { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 14px 12px; display: grid; gap: 4px; transition: border-color 0.25s; }
+  .instrument::before { content: ""; position: absolute; left: 14px; right: 14px; top: -1px; height: 2px; border-radius: 2px; background: var(--accent); transform: scaleX(0); transition: transform 0.4s ease; }
+  .instrument.linked::before { transform: scaleX(1); }
+  .instrument:hover, .instrument:focus-within { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+  .instrument .label { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 650; }
+  .instrument .num { font: 600 26px/1.15 var(--f-mono); font-variant-numeric: tabular-nums; }
+  .instrument .num small { font-size: 13px; color: var(--muted); font-weight: 500; margin-left: 3px; }
+  .instrument code { background: none; border: 0; padding: 0; font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .instrument .lands { font-size: 12.5px; color: var(--muted); }
+  .instrument .steps { position: absolute; top: 10px; right: 10px; display: flex; gap: 4px; }
+  .step-btn { width: 26px; height: 26px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text); font: 600 15px var(--f-body); line-height: 1; cursor: pointer; display: grid; place-items: center; }
+  .step-btn:hover { border-color: var(--muted); }
+  .marks { position: absolute; inset: 0; pointer-events: none; z-index: 3; }
+  .mark { position: absolute; border: 2px dashed var(--accent); border-radius: 12px; opacity: 0; transition: opacity 0.2s, left 0.25s, top 0.25s, width 0.25s, height 0.25s; }
+  .mark.on { opacity: 1; }
+  .mark span { position: absolute; left: 6px; top: -12px; background: var(--bg); color: var(--accent); border: 1px solid var(--accent); font: 600 11px var(--f-mono); padding: 1px 7px; border-radius: 6px; white-space: nowrap; }
+  .flight { position: fixed; z-index: 50; pointer-events: none; font: 700 14px var(--f-mono); color: var(--accent-ink); background: var(--accent); padding: 3px 9px; border-radius: 8px; box-shadow: 0 6px 20px -6px rgba(0, 0, 0, 0.5); }
+
+  /* Tune */
+  .tune-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: 48px; align-items: start; }
+  .tune-stage { position: sticky; top: calc(var(--top-h) + 28px); display: grid; gap: 10px; }
+  .scene-label { font: 500 12.5px var(--f-mono); color: var(--muted); margin: 0; }
+  .scene-label::before { content: "● "; color: var(--accent); }
+  .groups { display: grid; gap: 22px; }
+  fieldset.group { border: 0; padding: 0; margin: 0; display: grid; gap: 2px; min-width: 0; }
+  fieldset.group legend { padding: 0; margin-bottom: 8px; font-family: var(--f-display); font-weight: var(--d-weight); font-variation-settings: var(--d-var); font-size: 22px; letter-spacing: var(--d-track); }
+  .instruments.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .instrument.changed::before { transform: scaleX(1); }
+  .knob-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 0 12px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .knob-row label { font-weight: 650; font-size: 15px; }
+  .knob-row label code { margin-left: 6px; font-size: 11px; color: var(--muted); background: none; border: 0; padding: 0; }
+  .knob-row output { font: 600 13.5px var(--f-mono); }
+  .knob-row input { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); margin: 6px 0 2px; }
+  .calm { display: flex; flex-wrap: wrap; gap: 8px; }
+  .calm label { cursor: pointer; }
+  .calm input { position: absolute; opacity: 0; pointer-events: none; }
+  .calm span { display: inline-block; border: 1px dashed var(--line); border-radius: 999px; padding: 7px 13px; font: 600 13px var(--f-body); color: var(--muted); transition: all 0.2s; }
+  .calm input:checked + span { border-style: solid; border-color: var(--accent); color: var(--text); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+  .calm input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .reset { border: 0; background: none; color: var(--link); font: 600 13px var(--f-body); cursor: pointer; padding: 0; justify-self: start; }
 
   /* Features */
   .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
@@ -54,33 +111,38 @@
 
   /* Gallery */
   .gallery { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
-  .shot { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; }
-  .shot .frame { padding: 14px 14px 0; }
-  .shot atmo-weather-card { display: block; }
-  .shot .body { padding: 14px 18px 18px; display: grid; gap: 6px; flex: 1; align-content: start; }
-  .shot h3 { margin: 0; font-size: 16.5px; }
-  .shot p { margin: 0; color: var(--muted); font-size: 14px; }
-  .shot .actions { display: flex; gap: 14px; margin-top: 6px; font-size: 14px; font-weight: 600; }
-  .shot .actions button { background: none; border: 0; padding: 0; color: var(--link); font: inherit; cursor: pointer; }
-  .shot details { border-top: 1px solid var(--line); }
-  .shot summary { cursor: pointer; padding: 10px 18px; font-size: 13.5px; color: var(--muted); font-weight: 600; list-style: none; }
-  .shot summary::-webkit-details-marker { display: none; }
-  .shot summary::before { content: "▸ "; } .shot details[open] summary::before { content: "▾ "; }
-  .shot pre { margin: 0; padding: 0 18px 16px; font: 12.5px/1.55 var(--f-mono); overflow: auto; max-height: 260px; }
+  .shot { display: grid; gap: 12px; align-content: start; }
+  .shot .window { border-radius: 16px; }
+  .shot .pane { padding: 8px; }
+  .shot .pane-code pre { max-height: 220px; }
+  .shot h3 { margin: 4px 0 0; font-size: 17px; }
+  .shot p { margin: 0; color: var(--muted); font-size: 14.5px; }
 
   /* Editor */
-  .split { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 48px; align-items: center; }
-  .checks { list-style: none; padding: 0; margin: 22px 0 0; display: grid; gap: 12px; }
+  .split { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 56px; align-items: center; }
+  .checks { list-style: none; padding: 0; margin: 24px 0 0; display: grid; gap: 12px; }
   .checks li { display: grid; grid-template-columns: 26px 1fr; gap: 8px; color: var(--muted); }
   .checks li b { color: var(--text); }
   .checks li::before { content: "✓"; display: grid; place-items: center; width: 20px; height: 20px; margin-top: 3px; border-radius: 6px; background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); font-weight: 800; font-size: 13px; }
   .screen { border-radius: 14px; border: 1px solid var(--line); box-shadow: var(--shadow); overflow: hidden; background: var(--panel); }
-  .screen img { width: 100%; height: auto; }
+  .screen img { width: 100%; height: auto; display: block; }
+
+  /* Before you start */
+  .checklist { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+  .checklist > div { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 22px 24px; }
+  .checklist h3 { margin: 0 0 4px; font-family: var(--f-display); font-weight: var(--d-weight); font-variation-settings: var(--d-var); font-size: 22px; letter-spacing: var(--d-track); }
+  .checklist .sub { margin: 0 0 14px; color: var(--muted); font-size: 14px; }
+  .checklist ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+  .checklist li { display: grid; grid-template-columns: 22px 1fr; gap: 10px; }
+  .checklist li::before { content: ""; width: 14px; height: 14px; margin-top: 5px; border-radius: 4px; border: 2px solid var(--accent); }
+  .checklist .opt li::before { border-style: dashed; border-color: var(--muted); }
+  .checklist b { display: block; }
+  .checklist span { color: var(--muted); font-size: 14.5px; }
 
   /* Install */
   .steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; counter-reset: step; }
   .step { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 22px; }
-  .step::before { counter-increment: step; content: counter(step); display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-weight: 800; margin-bottom: 12px; }
+  .step::before { counter-increment: step; content: counter(step); display: block; font-family: var(--f-display); font-weight: var(--d-weight); font-variation-settings: var(--d-var); font-size: 34px; line-height: 1; color: var(--accent); margin-bottom: 10px; }
   .step h3 { margin: 0 0 6px; font-size: 17.5px; }
   .step p { margin: 0; color: var(--muted); font-size: 15px; }
   .step pre { margin: 12px 0 0; background: var(--code); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font: 12.5px/1.5 var(--f-mono); overflow: auto; }
@@ -101,15 +163,19 @@
   .faq p { margin: 6px 0 0; color: var(--muted); font-size: 15px; }
 
   @media (max-width: 980px) {
-    .hero .wrap, .split { grid-template-columns: minmax(0, 1fr); gap: 36px; }
+    .tune-grid, .split { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+    .tune-stage { position: static; }
+    .instruments { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .grid3, .gallery, .steps, .docs-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
   @media (max-width: 640px) {
-    .hero { padding: 36px 0 32px; }
-    section.band { padding: 56px 0; }
-    .grid3, .gallery, .steps, .faq, .docs-cards { grid-template-columns: minmax(0, 1fr); }
+    .hero { padding: 44px 0 48px; }
+    section.band { padding: 72px 0; }
+    .wx { min-width: 60px; padding-inline: 4px; }
+    .grid3, .gallery, .steps, .faq, .docs-cards, .checklist { grid-template-columns: minmax(0, 1fr); }
+    .instrument .num { font-size: 22px; }
   }
-  @media (prefers-reduced-motion: reduce) { .feature { transition: none; } }
+  @media (prefers-reduced-motion: reduce) { .feature, .sky-tint, .mark, .instrument::before { transition: none; } }
 </style>
 </head>
 <body>
@@ -117,7 +183,8 @@
   <div class="top-in narrow">
     <a class="brand" href="#top"><span class="sun"></span>Atmo Weather Card</a>
     <nav>
-      <a href="#features" class="hide-s">Features</a>
+      <a href="#station" class="hide-s">Your station</a>
+      <a href="#tune" class="hide-s">Tune</a>
       <a href="#gallery">Examples</a>
       <a href="#install">Install</a>
       <a href="docs/index.html">Docs</a>
@@ -128,23 +195,69 @@
   </div>
 </header>
 
-<section class="hero" id="top">
+<section class="hero sky-tint" id="top">
   <div class="wrap">
-    <div>
-      <p class="eyebrow">Weather card for Home Assistant</p>
-      <h1>The sky over your dashboard.</h1>
-      <p class="lead">An animated sky built from your real weather data. As many clouds as your cloud cover, rain as heavy as your rain gauge, and rain and snow that blow with your wind.</p>
-      <div class="cta">
-        <a class="btn primary" href="#install">Install</a>
-        <a class="btn" href="demo.html">Open the live demo</a>
-      </div>
-      <div class="facts"><span>Free and open source</span><span>Visual editor, EN and DE</span><span>No cloud, no tracking</span></div>
+    <h1 class="display">The sky over your dashboard, <em>built from your weather.</em></h1>
+    <p class="lede">An animated weather card for Home Assistant. As many clouds as your cloud cover, rain as heavy as your rain gauge, and rain, snow and leaves that blow with your wind.</p>
+    <div class="cta">
+      <a class="btn primary" href="#install">Install</a>
+      <a class="btn" href="demo.html">Open the full demo</a>
     </div>
-    <div class="stage">
-      <div class="stage-card" id="hero-slot"></div>
-      <div class="pills" id="hero-weather"></div>
-      <div class="pills" id="hero-time"></div>
-      <p class="stage-hint">This is the real card, version {{VERSION}}, running in your browser with demo data.</p>
+    <div class="facts"><span>Free and open source</span><span>Visual editor, EN and DE</span><span>No cloud, no tracking</span></div>
+
+    <div class="hero-stage">
+      <div class="window" id="hero-window">
+        <div class="window-bar" role="tablist"><button type="button" class="tab" role="tab" aria-selected="true" data-pane="live">Live</button><button type="button" class="tab" role="tab" aria-selected="false" data-pane="code">YAML</button><span class="file">card.yaml · v{{VERSION}}</span><button type="button" class="copy" hidden>Copy</button></div>
+        <div class="pane pane-live"><div class="slot" id="hero-slot"></div></div>
+        <div class="pane pane-code"><pre><code></code></pre></div>
+      </div>
+      <div class="weather-icons" id="hero-weather" role="group" aria-label="Weather"></div>
+      <div class="daystrip">
+        <div class="strip-head"><span>Drag the sun through the day</span><output id="strip-time">13:00</output></div>
+        <div class="strip"><input type="range" id="strip-input" min="0" max="1435" step="5" value="780" aria-label="Time of day"><span class="handle" id="strip-handle"></span></div>
+        <div class="strip-marks" id="strip-marks"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band sky-tint" id="station">
+  <div class="wrap">
+    <div class="head">
+      <p class="readout"><span>temperature_entity</span><span>cloud_coverage_entity</span><span>precipitation_entity</span><span>wind_bearing_entity</span></p>
+      <h2 class="display">Your station sets the numbers, <em>and the sky follows.</em></h2>
+      <p class="lede">Connect your own sensors and the card shows what they measure. It goes further than the numbers: your cloud cover sets the clouds, your rain gauge how hard it rains, your visibility the haze and your wind where it all drifts. Whether it rains or snows still comes from the weather entity.</p>
+    </div>
+    <div class="window" id="station-window">
+      <div class="window-bar" role="tablist"><button type="button" class="tab" role="tab" aria-selected="true" data-pane="live">Live</button><button type="button" class="tab" role="tab" aria-selected="false" data-pane="code">YAML</button><span class="file">card.yaml</span><button type="button" class="copy" hidden>Copy</button></div>
+      <div class="pane pane-live"><div class="slot" id="station-slot"></div><div class="marks" id="marks" aria-hidden="true"></div></div>
+      <div class="pane pane-code"><pre><code></code></pre></div>
+    </div>
+    <div class="station-bar">
+      <label class="toggle"><input type="checkbox" id="use-sensors" role="switch"><span class="track" aria-hidden="true"></span><span>Use my sensors</span></label>
+      <span class="forecast-pick">Weather entity says <span class="seg" id="forecasts"></span></span>
+    </div>
+    <div class="instruments" id="instruments"></div>
+  </div>
+</section>
+
+<section class="band sky-tint" id="tune">
+  <div class="wrap">
+    <div class="head">
+      <p class="readout"><span>rain_density</span><span>snow_density</span><span>leaf_density</span><span>shooting_star_rate</span></p>
+      <h2 class="display">Tune the weather, <em>then let it settle.</em></h2>
+      <p class="lede">Touch a setting and the card switches to the weather it changes. Every control is a real option from the editor, and the YAML tab holds only what you changed.</p>
+    </div>
+    <div class="tune-grid">
+      <div class="tune-stage">
+        <div class="window" id="tune-window">
+          <div class="window-bar" role="tablist"><button type="button" class="tab" role="tab" aria-selected="true" data-pane="live">Live</button><button type="button" class="tab" role="tab" aria-selected="false" data-pane="code">YAML</button><span class="file">effects.yaml</span><button type="button" class="copy" hidden>Copy</button></div>
+          <div class="pane pane-live"><div class="slot" id="tune-slot"></div></div>
+          <div class="pane pane-code"><pre><code></code></pre></div>
+        </div>
+        <p class="scene-label" id="tune-scene"></p>
+      </div>
+      <div class="groups" id="groups"></div>
     </div>
   </div>
 </section>
@@ -152,20 +265,18 @@
 <section class="band" id="features">
   <div class="wrap">
     <div class="head">
-      <p class="kicker">Features</p>
-      <h2>Real weather, not a weather icon.</h2>
-      <p>The card does not play a fixed animation per weather state. It reads your entities and sensors and builds the sky from them, by day and by night. Each tile below shows its feature in the card at the top.</p>
+      <h2 class="display">Real weather, <em>not a weather icon.</em></h2>
+      <p class="lede">Each tile shows its feature in the card at the top of the page.</p>
     </div>
     <div class="grid3" id="feature-grid"></div>
   </div>
 </section>
 
-<section class="band alt" id="gallery">
+<section class="band" id="gallery">
   <div class="wrap">
     <div class="head">
-      <p class="kicker">Examples</p>
-      <h2>Start from a ready-made card.</h2>
-      <p>Every example runs live. Copy the YAML, paste it into a card in Home Assistant and replace the entities with your own.</p>
+      <h2 class="display">Start from a ready-made card, <em>live and ready to copy.</em></h2>
+      <p class="lede">Switch a card to YAML, copy it into Home Assistant and swap in your own entities. The documentation has <a href="docs/examples.html">many more</a>.</p>
     </div>
     <div class="gallery" id="gallery-grid"></div>
   </div>
@@ -174,11 +285,10 @@
 <section class="band" id="editor">
   <div class="wrap split">
     <div>
-      <p class="kicker">Visual editor</p>
-      <h2>Set it up without writing YAML.</h2>
-      <p class="sub">Every option has a switch, a slider or a picker, grouped the way you think about the card, with a short help text and a link to the docs.</p>
+      <h2 class="display">Set it up <em>without writing YAML.</em></h2>
       <ul class="checks">
         <li><span><b>Chips</b> for any entity, attribute or forecast, as text, ring or bar.</span></li>
+        <li><span><b>Layouts</b>: Standard, Compact and Wide, each a finished look in one click.</span></li>
         <li><span><b>Presets</b> from Low for old tablets to Ultra for wall displays.</span></li>
         <li><span><b>Every effect</b> can be switched off on its own.</span></li>
         <li><span><b>English or German</b>, following your Home Assistant language.</span></li>
@@ -191,12 +301,37 @@
   </div>
 </section>
 
-<section class="band alt" id="install">
+<section class="band" id="before">
   <div class="wrap">
     <div class="head">
-      <p class="kicker">Install</p>
-      <h2>Up and running in three steps.</h2>
-      <p>Requires Home Assistant 2026.11 or newer.</p>
+      <h2 class="display">Before you start, <em>check two things.</em></h2>
+    </div>
+    <div class="checklist">
+      <div>
+        <h3>Required</h3>
+        <p class="sub">Most installs have both already.</p>
+        <ul>
+          <li><div><b>A <code>weather.*</code> entity</b><span>From any weather integration. When it reports cloud cover, wind, visibility, humidity or dew point, the sky uses them.</span></div></li>
+          <li><div><b>Home Assistant 2026.11 or newer</b><span>The card installs from the Marketplace. <code>sun.sun</code>, on by default, moves the sun and brings the golden and the blue hour.</span></div></li>
+        </ul>
+      </div>
+      <div class="opt">
+        <h3>Nice to have</h3>
+        <p class="sub">Each one adds to the sky, none is needed.</p>
+        <ul>
+          <li><div><b>Moon phase</b><span>The <a href="https://www.home-assistant.io/integrations/moon/">Moon integration</a> gives the moon its real phase.</span></div></li>
+          <li><div><b>A rain sensor in mm/h</b><span>Rain, snow and sleet then follow the measured amount.</span></div></li>
+          <li><div><b>Your weather station</b><span>Temperature, humidity, wind, cloud cover or visibility from your own sensors.</span></div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="install">
+  <div class="wrap">
+    <div class="head">
+      <h2 class="display">Running in three steps, <em>from the Marketplace.</em></h2>
     </div>
     <div class="steps">
       <div class="step">
@@ -221,21 +356,20 @@ weather_entity: weather.home</pre>
 <section class="band" id="documentation">
   <div class="wrap">
     <div class="head">
-      <p class="kicker">Documentation</p>
-      <h2>Every option, with a live preview.</h2>
+      <h2 class="display">Every option, <em>with a live preview.</em></h2>
     </div>
     <div class="docs-cards">
       <a href="docs/appearance.html"><b>Appearance</b><span>Card style, colors, sun and moon</span></a>
       <a href="docs/chips.html"><b>Chips &amp; forecasts</b><span>Values, rings, bars, layouts</span></a>
-      <a href="docs/effects.html#wind"><b>Wind &amp; compass</b><span>Lines, flow field, five compass styles</span></a>
+      <a href="docs/effects.html#rain--snow"><b>Rain, snow &amp; wind</b><span>Amounts, splashes, leaves, compass</span></a>
       <a href="docs/troubleshooting.html"><b>Troubleshooting</b><span>When something looks wrong</span></a>
     </div>
   </div>
 </section>
 
-<section class="band alt" id="faq">
+<section class="band" id="faq">
   <div class="wrap">
-    <div class="head"><p class="kicker">Questions</p><h2>Good to know.</h2></div>
+    <div class="head"><h2 class="display">Good to know.</h2></div>
     <div class="faq">
       <details><summary>Does it work with my weather integration?</summary><p>Yes, with any <code>weather.*</code> entity. Cloud cover, wind, visibility and dew point are used when your integration provides them, and skipped when it does not.</p></details>
       <details><summary>Will it slow down my wall tablet?</summary><p>Pick the Low preset for older tablets. The card also pauses when it is off screen or the tab is hidden.</p></details>
@@ -257,6 +391,7 @@ weather_entity: weather.home</pre>
 <script type="module" src="site.js"></script>
 <script type="module">
   const ICONS = {{ICONS}};
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const svgOf = (d, size = "var(--mdc-icon-size,20px)") => `<svg viewBox="0 0 24 24" style="width:${size};height:${size};display:block;fill:currentColor"><path d="${d}"/></svg>`;
   const iconFor = (name) => ICONS[String(name || "").replace(/^mdi:/, "")] || ICONS["help-circle-outline"];
   const COND_ICON = { sunny: "weather-sunny", "clear-night": "weather-night", partlycloudy: "weather-partly-cloudy", cloudy: "weather-cloudy", rainy: "weather-rainy", pouring: "weather-pouring", "lightning-rainy": "weather-lightning-rainy", lightning: "weather-lightning", snowy: "weather-snowy", "snowy-rainy": "weather-snowy-rainy", hail: "weather-hail", fog: "weather-fog", windy: "weather-windy" };
@@ -274,39 +409,77 @@ weather_entity: weather.home</pre>
   customElements.define("ha-card", class extends HTMLElement { connectedCallback() { this.style.display = "block"; } });
   await import("./atmo-weather-card.js");
 
-  // Demo Home Assistant: one hass per card, so every card keeps its own weather.
-  const UNITS = { temperature: "°C", templow: "°C", humidity: "%", wind_speed: "km/h", precipitation_probability: "%", uv_index: "" };
+  // ── A standard day: sunrise 06:30, noon 13:00, sunset 19:30 ──
+  const DAY = { rise: 390, set: 1170, peak: 55, depth: 35 };
+  const elevationAt = (m) => {
+    if (m >= DAY.rise && m <= DAY.set) return DAY.peak * Math.sin(Math.PI * (m - DAY.rise) / (DAY.set - DAY.rise));
+    const night = 1440 - (DAY.set - DAY.rise);
+    return -DAY.depth * Math.sin(Math.PI * ((m - DAY.set + 1440) % 1440) / night);
+  };
+  // The card places sun and moon on their arcs from the next sunrise and sunset,
+  // compared with the real clock, so they are shifted by the slider's offset from now.
+  function sunTimes(m) {
+    const now = Date.now(), at = (min) => now + (min - m) * 60e3;
+    const next = (min) => (min > m ? at(min) : at(min + 1440));
+    return { next_rising: new Date(next(DAY.rise)).toISOString(), next_setting: new Date(next(DAY.set)).toISOString(), rising: m < 780 };
+  }
+  const clock = (m) => `${String(Math.floor(m / 60) % 24).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+
+  // ── Demo Home Assistant: one hass per card, so every card keeps its own weather ──
+  const UNITS = { temperature: "°C", templow: "°C", humidity: "%", pressure: "hPa", wind_speed: "km/h", precipitation_probability: "%", uv_index: "" };
   const forecast = (type) => {
     const conds = ["sunny", "partlycloudy", "rainy", "cloudy", "sunny", "lightning-rainy", "partlycloudy"];
     const n = type === "hourly" ? 24 : 7, step = type === "hourly" ? 3600e3 : 86400e3;
     return Array.from({ length: n }, (_, i) => ({ datetime: new Date(Date.now() + i * step).toISOString(), condition: conds[i % conds.length], temperature: 14 + ((i * 3) % 7), templow: 6 + (i % 4), precipitation_probability: [20, 10, 70, 40, 5, 80, 30][i % 7], humidity: 60 + (i % 5) * 4, uv_index: [3, 5, 2, 4, 6, 1, 3][i % 7], wind_bearing: 250 }));
   };
+  const sensor = (id, state, unit, name, cls) => ({ entity_id: id, state: String(state), attributes: { ...(unit ? { unit_of_measurement: unit } : {}), ...(cls ? { device_class: cls } : {}), friendly_name: name } });
   function hassFor(s) {
-    const night = !!s.night;
+    const elevation = s.minutes != null ? elevationAt(s.minutes) : s.elevation ?? (s.night ? -14 : 32);
+    const night = elevation < -0.833;
     const cond = night && s.condition === "sunny" ? "clear-night" : s.condition;
+    const st = s.station || {};
     return {
       states: {
-        "weather.home": { entity_id: "weather.home", state: cond, attributes: { temperature: s.temp ?? 14, humidity: 64, uv_index: 3, wind_speed: s.wind ?? 12, wind_bearing: s.bearing ?? 250, wind_speed_unit: "km/h", temperature_unit: "°C", friendly_name: "Home", ...(s.cover != null ? { cloud_coverage: s.cover } : {}) } },
-        "sensor.rain_rate": { entity_id: "sensor.rain_rate", state: String(s.rain ?? 0), attributes: { unit_of_measurement: "mm/h", device_class: "precipitation_intensity", friendly_name: "Rain" } },
-        "sensor.station_wind_speed": { entity_id: "sensor.station_wind_speed", state: String(s.stationWind ?? 12), attributes: { unit_of_measurement: "km/h", device_class: "wind_speed", friendly_name: "Station wind" } },
-        "sensor.station_wind_direction": { entity_id: "sensor.station_wind_direction", state: s.stationFrom || "NW", attributes: { friendly_name: "Station wind direction" } },
-        "sun.sun": { entity_id: "sun.sun", state: night ? "below_horizon" : "above_horizon", attributes: { elevation: s.elevation ?? (night ? -14 : 32), azimuth: 200, rising: false } },
+        "weather.home": { entity_id: "weather.home", state: cond, attributes: { temperature: s.temp ?? 14, humidity: 64, pressure: 1016, uv_index: 3, wind_speed: s.wind ?? 12, wind_bearing: s.bearing ?? 250, wind_speed_unit: "km/h", temperature_unit: "°C", visibility_unit: "km", friendly_name: "Home", ...(s.cover != null ? { cloud_coverage: s.cover } : {}) } },
+        "sensor.rain_rate": sensor("sensor.rain_rate", s.rain ?? 0, "mm/h", "Rain", "precipitation_intensity"),
+        "sensor.station_wind_speed": sensor("sensor.station_wind_speed", s.stationWind ?? 12, "km/h", "Station wind", "wind_speed"),
+        "sensor.station_wind_direction": sensor("sensor.station_wind_direction", s.stationFrom || "NW", null, "Station wind direction"),
+        "sensor.garden_temperature": sensor("sensor.garden_temperature", st.temperature ?? 0, "°C", "Garden", "temperature"),
+        "sensor.garden_humidity": sensor("sensor.garden_humidity", st.humidity ?? 0, "%", "Humidity", "humidity"),
+        "sensor.garden_wind_speed": sensor("sensor.garden_wind_speed", st.windSpeed ?? 0, "km/h", "Wind", "wind_speed"),
+        "sensor.garden_wind_direction": sensor("sensor.garden_wind_direction", st.windFrom ?? 0, "°", "Wind direction"),
+        "sensor.garden_cloud_cover": sensor("sensor.garden_cloud_cover", st.cover ?? 0, "%", "Cloud cover"),
+        "sensor.garden_visibility": sensor("sensor.garden_visibility", st.visibility ?? 0, "km", "Visibility", "distance"),
+        "sensor.garden_rain_rate": sensor("sensor.garden_rain_rate", st.rain ?? 0, "mm/h", "Rain rate", "precipitation_intensity"),
+        "sun.sun": { entity_id: "sun.sun", state: night ? "below_horizon" : "above_horizon", attributes: { elevation, azimuth: 200, ...sunTimes(s.minutes ?? 780) } },
         "sensor.moon_phase": { entity_id: "sensor.moon_phase", state: s.moon || "waxing_gibbous", attributes: {} },
         "sensor.time": { entity_id: "sensor.time", state: new Date().toISOString(), attributes: {} },
-        "sensor.indoor_temperature": { entity_id: "sensor.indoor_temperature", state: "21.4", attributes: { unit_of_measurement: "°C", friendly_name: "Living room" } },
-        "sensor.indoor_humidity": { entity_id: "sensor.indoor_humidity", state: "48", attributes: { unit_of_measurement: "%", friendly_name: "Humidity" } },
-        "sensor.solar_power": { entity_id: "sensor.solar_power", state: "3.2", attributes: { unit_of_measurement: "kW", friendly_name: "Solar" } },
-        "sensor.battery": { entity_id: "sensor.battery", state: "76", attributes: { unit_of_measurement: "%", friendly_name: "Battery" } },
+        "sensor.indoor_temperature": sensor("sensor.indoor_temperature", "21.4", "°C", "Living room"),
+        "sensor.indoor_humidity": sensor("sensor.indoor_humidity", "48", "%", "Humidity"),
+        "sensor.solar_power": sensor("sensor.solar_power", "3.2", "kW", "Solar"),
+        "sensor.battery": sensor("sensor.battery", "76", "%", "Battery"),
       },
       themes: { darkMode: night }, locale: { language: "en" }, language: "en", user: { name: "Demo" },
       config: { latitude: 52.15, longitude: 7.32, unit_system: { temperature: "°C" } },
       connection: { subscribeMessage: async (cb, msg) => { setTimeout(() => cb({ type: msg.forecast_type, forecast: forecast(msg.forecast_type) }), 0); return () => {}; } },
       callWS: async () => ({}), callService: async () => ({}), callApi: async () => [], localize: (k) => k,
-      formatEntityState: (st) => (st.entity_id.startsWith("weather.") ? ({ partlycloudy: "Partly cloudy", "clear-night": "Clear night", "lightning-rainy": "Thunderstorm" })[st.state] || st.state[0].toUpperCase() + st.state.slice(1) : st.state + (st.attributes.unit_of_measurement ? " " + st.attributes.unit_of_measurement : "")),
-      formatEntityAttributeValue: (st, a) => { const v = st.attributes[a]; const u = UNITS[a]; return v == null ? "" : String(v) + (u ? (u === "%" ? " %" : " " + u) : ""); },
+      formatEntityState: (o) => (o.entity_id.startsWith("weather.") ? ({ partlycloudy: "Partly cloudy", "clear-night": "Clear night", "lightning-rainy": "Thunderstorm" })[o.state] || o.state[0].toUpperCase() + o.state.slice(1) : o.state + (o.attributes.unit_of_measurement ? " " + o.attributes.unit_of_measurement : "")),
+      formatEntityAttributeValue: (o, a) => { const v = o.attributes[a]; const u = UNITS[a]; return v == null ? "" : String(v) + (u ? (u === "%" ? " %" : " " + u) : ""); },
     };
   }
-  // Sun and moon on the right, where a new card puts them, away from the big temperature.
+
+  // ── The section takes the sky of its card ──
+  const SKY = { sunny: "#3f7fc7", partlycloudy: "#5a83b4", cloudy: "#6d7787", fog: "#8b939b", windy: "#3c86c4", rainy: "#4e5f74", pouring: "#43515f", "lightning-rainy": "#3b4256", lightning: "#3b4256", snowy: "#8597ad", "snowy-rainy": "#6d7d90", hail: "#64707f" };
+  const mix = (a, b, t) => { const p = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)); const x = p(a), y = p(b); return "#" + x.map((v, i) => Math.round(v + (y[i] - v) * t).toString(16).padStart(2, "0")).join(""); };
+  function skyTone(condition, elevation) {
+    const day = SKY[condition] || SKY.partlycloudy;
+    if (elevation < -8) return mix(day, "#141c33", 0.8);
+    if (elevation < 0) return mix(mix(day, "#2a3460", 0.5), "#8a5a8f", 0.25);
+    if (elevation < 10) return mix(day, "#e8925a", 0.45 * (1 - elevation / 10));
+    return day;
+  }
+  const tint = (section, s) => section.style.setProperty("--sky", skyTone(s.condition, s.minutes != null ? elevationAt(s.minutes) : s.night ? -14 : s.elevation ?? 32));
+
   const BASE = { type: "custom:atmo-weather-card", weather_entity: "weather.home", sun_entity: "sun.sun", moon_phase_entity: "sensor.moon_phase", theme_entity: "sun.sun", celestial_alignment: "right", celestial_x: 45 };
   function mountCard(slot, cfg, s) {
     slot.replaceChildren();
@@ -316,52 +489,298 @@ weather_entity: weather.home</pre>
     card.hass = hassFor(s);
     return card;
   }
+  const yaml = (o, ind = "") => Object.entries(o).map(([k, v]) => Array.isArray(v)
+    ? `${ind}${k}:\n` + v.map((it) => typeof it !== "object" ? `${ind}  - ${it}` : (() => { const lines = yaml(it, ind + "    ").split("\n"); return `${ind}  - ${lines[0].trim()}\n${lines.slice(1).join("\n")}`; })()).join("\n").replace(/\n$/, "")
+    : `${ind}${k}: ${typeof v === "string" && /^[#*{}[\]&!|>%@`:]|: |^\s|\s$/.test(v) ? JSON.stringify(v) : v}`).join("\n");
 
-  // Hero: a big card and weather buttons.
+  // Card windows: Live and YAML tabs, and a copy button on the YAML side.
+  function windowOf(el) {
+    const tabs = el.querySelectorAll(".tab"), copy = el.querySelector(".copy"), code = el.querySelector(".pane-code code");
+    tabs.forEach((t) => t.addEventListener("click", () => {
+      const showCode = t.dataset.pane === "code";
+      el.classList.toggle("show-code", showCode);
+      tabs.forEach((x) => x.setAttribute("aria-selected", String(x === t)));
+      copy.hidden = !showCode;
+    }));
+    copy.addEventListener("click", () => navigator.clipboard?.writeText(code.textContent).then(() => { copy.textContent = "Copied"; setTimeout(() => (copy.textContent = "Copy"), 1200); }, () => {}));
+    return (text) => (code.textContent = text);
+  }
+
+  // ── Hero ──
   const TEMP = { entity: "weather.home", attribute: "temperature", position: "custom", position_anchor: "top-left", position_x: "22px", position_y: "18px", text_size: "56px", hide_icon: true, hide_label: true, background: false, fancy_unit: true, value_weight: "700" };
   const COND = { entity: "weather.home", hide_label: true, position: "custom", position_anchor: "top-left", position_x: "24px", position_y: "92px", background: false, hide_icon: true, text_size: "16px" };
-  const HERO_CFG = { card_height: 300, perf_mode: "ultra", wind_compass: "arrow", chips: [TEMP, COND,
-    { entity: "weather.home", attribute: "humidity", icon: "mdi:water-percent" },
-    { entity: "weather.home", attribute: "wind_speed", icon: "mdi:weather-windy" },
-    { entity: "weather.home", forecast: "daily", forecast_offset: 1, attribute: "temperature", icon: "weather", sub_value_attribute: "templow", sub_value_position: "beside", forecast_precision: 0 },
-  ] };
-  // Ring chips styled like the Forecast & Ring Chip example of the docs.
+  // The hero is wide enough for the wide layout; the layout brings its chips.
+  const HERO_CFG = { card_layout: "wide", card_height: 320, perf_mode: "ultra", wind_compass: "arrow", celestial_size: 60 };
   const RING = { type: "ring", style: "vertical", align: "center", padding: "12px", height: "78px", icon_size: "16px", text_size: "12px", label_size: "9px", text_gap: "2px", ring_width: 6, ring_gap: 6, ring_threshold_mode: "gradient", background: true };
   const SOLAR = { ...RING, entity: "sensor.solar_power", name: "Solar", icon: "mdi:solar-power", ring_min: 0, ring_max: 5, ring_thresholds: [{ value: 0, color: "rgba(242, 184, 75, 0.55)" }, { value: 5, color: "rgba(242, 184, 75, 1)" }] };
   const BATTERY = { ...RING, entity: "sensor.battery", name: "Battery", icon: "mdi:battery-high", ring_thresholds: [{ value: 0, color: "rgba(229, 83, 75, 0.9)" }, { value: 40, color: "rgba(242, 184, 75, 0.9)" }, { value: 80, color: "rgba(63, 185, 80, 0.9)" }] };
   const HUMID = { ...RING, entity: "sensor.indoor_humidity", name: "Humidity", icon: "mdi:water-percent", ring_thresholds: [{ value: 0, color: "rgba(140, 200, 255, 0.85)" }, { value: 100, color: "rgba(40, 110, 230, 1)" }] };
-  // The chips tile: ring chips instead of the usual row.
-  const GAUGE_CFG = { ...HERO_CFG, chip_area_gap: "8px", chips: [TEMP, COND, SOLAR, BATTERY, HUMID] };
-  const hero = { condition: "partlycloudy", night: false, wind: 18 };
+  const GAUGE_CFG = { ...HERO_CFG, card_layout: "", celestial_position: "dynamic_both", chip_area_gap: "8px", chips: [TEMP, COND, SOLAR, BATTERY, HUMID] };
+  const hero = { condition: "partlycloudy", minutes: 780, wind: 18 };
   let heroCfg = HERO_CFG;
-  const heroSlot = document.getElementById("hero-slot");
+  const heroSlot = document.getElementById("hero-slot"), heroSection = document.getElementById("top");
+  const heroCode = windowOf(document.getElementById("hero-window"));
   let heroCard = mountCard(heroSlot, heroCfg, hero);
-  const WEATHERS = [["sunny", "Sunny"], ["partlycloudy", "Partly cloudy"], ["rainy", "Rain"], ["lightning-rainy", "Storm"], ["snowy", "Snow"], ["fog", "Fog"], ["windy", "Windy"]];
-  const wBox = document.getElementById("hero-weather"), tBox = document.getElementById("hero-time");
-  const pill = (box, label, on, act) => { const b = document.createElement("button"); b.type = "button"; b.className = "pill"; b.textContent = label; b.onclick = act; b._on = on; box.append(b); return b; };
-  const sync = () => { for (const b of [...wBox.children, ...tBox.children]) b.classList.toggle("on", b._on()); };
-  const setHero = (patch, cfg) => {
+  const WEATHERS = [["sunny", "Clear"], ["partlycloudy", "Partly cloudy"], ["cloudy", "Cloudy"], ["rainy", "Rain"], ["lightning-rainy", "Thunderstorm"], ["snowy", "Snow"], ["fog", "Fog"], ["windy", "Windy"]];
+  const wBox = document.getElementById("hero-weather");
+  for (const [v, l] of WEATHERS) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "wx"; b.dataset.v = v;
+    b.innerHTML = `${svgOf(iconFor(COND_ICON[v]), "24px")}<span>${l}</span>`;
+    b.onclick = () => setHero({ condition: v, wind: v === "windy" ? 48 : 18 }, v === "windy" ? { ...heroCfg, wind_style: "leaves" } : undefined);
+    wBox.append(b);
+  }
+  const stripInput = document.getElementById("strip-input"), handle = document.getElementById("strip-handle"), stripTime = document.getElementById("strip-time"), marks = document.getElementById("strip-marks");
+  const MARKS = [[390, "Sunrise"], [780, "Noon"], [1140, "Golden hour"], [1195, "Blue hour", true], [1380, "Night"]];
+  for (const [m, l, low] of MARKS) {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = l; b.dataset.m = m;
+    if (low) b.className = "low";
+    b.style.left = (m / 1440) * 100 + "%";
+    b.onclick = () => setHero({ minutes: m });
+    marks.append(b);
+  }
+  let wasNight = false;
+  function setHero(patch, cfg) {
     Object.assign(hero, patch);
-    if (cfg || "night" in patch) { heroCfg = cfg || heroCfg; heroCard = mountCard(heroSlot, heroCfg, hero); } else heroCard.hass = hassFor(hero);
-    sync();
-  };
-  for (const [v, l] of WEATHERS) pill(wBox, l, () => hero.condition === v, () => setHero({ condition: v, wind: v === "windy" ? 48 : 18 }));
-  pill(tBox, "Day", () => !hero.night, () => setHero({ night: false }));
-  pill(tBox, "Night", () => hero.night, () => setHero({ night: true }));
-  sync();
+    const night = elevationAt(hero.minutes) < -0.833;
+    // Day and night use other skies and palettes, so the card starts afresh.
+    if (cfg || night !== wasNight) { heroCfg = cfg || heroCfg; heroCard = mountCard(heroSlot, heroCfg, hero); } else heroCard.hass = hassFor(hero);
+    wasNight = night;
+    tint(heroSection, hero);
+    stripInput.value = hero.minutes;
+    handle.style.left = (hero.minutes / 1440) * 100 + "%";
+    handle.classList.toggle("moon", night);
+    stripTime.textContent = clock(hero.minutes);
+    stripInput.setAttribute("aria-valuetext", clock(hero.minutes));
+    marks.querySelectorAll("button").forEach((b) => b.classList.toggle("on", Number(b.dataset.m) === hero.minutes));
+    wBox.querySelectorAll(".wx").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === hero.condition)));
+    heroCode(yaml({ ...BASE, ...heroCfg }));
+  }
+  stripInput.addEventListener("input", () => setHero({ minutes: Number(stripInput.value) }));
+  setHero({});
 
-  // Features: each one shows itself in the hero card.
-  // The sample house of the docs guide, by day and lit up at night.
-  const HOUSE_CFG = { ...HERO_CFG, image_day: "images/house-day.webp", image_night: "images/house-night.webp", image_alignment: "bottom-right", image_scale: 92, image_x: "10", image_y: "4", celestial_alignment: "top-center", celestial_x: -110, celestial_y: 24, wind_compass: "off",
+  // ── Your station ──
+  const STATION = [
+    { id: "temperature", label: "Temperature", entity: "sensor.garden_temperature", option: "temperature_entity", value: 18.4, unit: "°C", decimals: 1, step: 1, min: -20, max: 40, chip: 0, lands: "The big number" },
+    { id: "humidity", label: "Humidity", entity: "sensor.garden_humidity", option: "humidity_entity", value: 61, unit: "%", decimals: 0, step: 5, min: 10, max: 100, chip: 2, lands: "Its chip, and the haze" },
+    { id: "windSpeed", label: "Wind speed", entity: "sensor.garden_wind_speed", option: "wind_speed_entity", value: 22, unit: "km/h", decimals: 0, step: 5, min: 0, max: 90, chip: 3, lands: "Its chip, and how fast the sky moves" },
+    { id: "windFrom", label: "Wind direction", entity: "sensor.garden_wind_direction", option: "wind_bearing_entity", value: 300, unit: "°", decimals: 0, step: 45, min: 0, max: 359, wrap: 360, compass: true, lands: "The compass, and where it all drifts" },
+    { id: "cover", label: "Cloud cover", entity: "sensor.garden_cloud_cover", option: "cloud_coverage_entity", value: 70, unit: "%", decimals: 0, step: 10, min: 0, max: 100, sky: true, lands: "The number of clouds" },
+    { id: "visibility", label: "Visibility", entity: "sensor.garden_visibility", option: "visibility_entity", value: 6, unit: "km", decimals: 0, step: 2, min: 1, max: 30, sky: true, lands: "The haze" },
+    { id: "rain", label: "Rain rate", entity: "sensor.garden_rain_rate", option: "precipitation_entity", value: 1.5, unit: "mm/h", decimals: 1, step: 1, min: 0, max: 10, sky: true, lands: "How hard it rains or snows" },
+  ];
+  const FORECASTS = [["partlycloudy", "Partly cloudy"], ["cloudy", "Cloudy"], ["rainy", "Rain"], ["snowy", "Snow"]];
+  const station = { on: false, touched: false, condition: "partlycloudy", readings: Object.fromEntries(STATION.map((r) => [r.id, r.value])) };
+  const stationSlot = document.getElementById("station-slot"), stationSection = document.getElementById("station");
+  const stationCode = windowOf(document.getElementById("station-window"));
+  const instrumentsEl = document.getElementById("instruments"), marksEl = document.getElementById("marks"), sensorsSwitch = document.getElementById("use-sensors");
+  const stationChips = (on) => [
+    on ? { ...TEMP, entity: "sensor.garden_temperature", attribute: undefined } : TEMP,
+    COND,
+    on ? { entity: "sensor.garden_humidity", icon: "mdi:water-percent" } : { entity: "weather.home", attribute: "humidity", icon: "mdi:water-percent" },
+    on ? { entity: "sensor.garden_wind_speed", icon: "mdi:weather-windy" } : { entity: "weather.home", attribute: "wind_speed", icon: "mdi:weather-windy" },
+  ].map((c) => Object.fromEntries(Object.entries(c).filter(([, v]) => v !== undefined)));
+  const stationCfg = () => ({ card_height: 300, perf_mode: "ultra", wind_compass: "arrow", wind_compass_degrees: true,
+    ...(station.on ? Object.fromEntries(STATION.map((r) => [r.option, r.entity])) : {}), chips: stationChips(station.on) });
+  const stationScene = () => ({ condition: station.condition, minutes: 780, station: station.readings, cover: station.on ? undefined : 40, wind: 12, bearing: 250, temp: 14 });
+  let stationCard = mountCard(stationSlot, stationCfg(), stationScene());
+  const fmt = (r, v = station.readings[r.id]) => Number(v).toFixed(r.decimals);
+  document.getElementById("forecasts").innerHTML = FORECASTS.map(([v, l]) => `<button type="button" data-v="${v}" class="${v === station.condition ? "on" : ""}">${l}</button>`).join("");
+  document.getElementById("forecasts").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    station.touched = true; station.condition = b.dataset.v;
+    document.querySelectorAll("#forecasts button").forEach((x) => x.classList.toggle("on", x === b));
+    pushStation();
+  });
+  instrumentsEl.innerHTML = STATION.map((r) => `<div class="instrument" data-id="${r.id}">
+      <span class="label">${r.label}</span>
+      <span class="num"><span class="n">${fmt(r)}</span><small>${r.unit}</small></span>
+      <code>${r.entity}</code>
+      <span class="lands">→ ${r.lands}</span>
+      <span class="steps"><button type="button" class="step-btn" data-dir="-1" aria-label="Lower ${r.label}">−</button><button type="button" class="step-btn" data-dir="1" aria-label="Raise ${r.label}">+</button></span>
+    </div>`).join("");
+  const tileOf = (id) => instrumentsEl.querySelector(`.instrument[data-id="${id}"]`);
+  function pushStation(remount) {
+    if (remount) stationCard = mountCard(stationSlot, stationCfg(), stationScene());
+    else stationCard.hass = hassFor(stationScene());
+    tint(stationSection, stationScene());
+    stationCode(yaml({ ...BASE, ...stationCfg() }));
+  }
+  // Where a reading shows on the card: its chip, the compass, or the whole sky.
+  function targetOf(r) {
+    const root = stationCard.shadowRoot;
+    let el = null;
+    if (r.chip != null) el = root && root.querySelector(`.chip[data-idx="${r.chip}"]`);
+    else if (r.compass) el = root && root.querySelector("#wind-compass .cmp");
+    return el ? el.getBoundingClientRect() : null;
+  }
+  function showMark(id) {
+    const r = STATION.find((x) => x.id === id);
+    let mark = marksEl.querySelector(".mark");
+    if (!mark) { mark = document.createElement("div"); mark.className = "mark"; mark.innerHTML = "<span></span>"; marksEl.append(mark); }
+    if (!r) { mark.classList.remove("on"); return; }
+    const pane = marksEl.getBoundingClientRect(), slot = stationSlot.getBoundingClientRect();
+    const t = targetOf(r);
+    const box = t ? { left: t.left - 6, top: t.top - 6, width: t.width + 12, height: t.height + 12 } : { left: slot.left + 8, top: slot.top + 8, width: slot.width - 16, height: slot.height - 16 };
+    Object.assign(mark.style, { left: box.left - pane.left + "px", top: box.top - pane.top + "px", width: box.width + "px", height: box.height + "px" });
+    mark.querySelector("span").textContent = r.option;
+    mark.classList.add("on");
+  }
+  instrumentsEl.addEventListener("pointerover", (e) => showMark(e.target.closest(".instrument")?.dataset.id));
+  instrumentsEl.addEventListener("pointerleave", () => showMark(null));
+  instrumentsEl.addEventListener("focusin", (e) => showMark(e.target.closest(".instrument")?.dataset.id));
+  instrumentsEl.addEventListener("click", (e) => {
+    const b = e.target.closest(".step-btn"); if (!b) return;
+    station.touched = true;
+    const r = STATION.find((x) => x.id === b.closest(".instrument").dataset.id);
+    let v = station.readings[r.id] + r.step * Number(b.dataset.dir);
+    v = r.wrap ? (v + r.wrap) % r.wrap : Math.max(r.min, Math.min(r.max, v));
+    station.readings[r.id] = Number(v.toFixed(r.decimals));
+    tileOf(r.id).querySelector(".n").textContent = fmt(r);
+    if (!station.on) link(); else pushStation();
+  });
+  // A value rises from its tile into the card.
+  function fly(r) {
+    const from = tileOf(r.id).querySelector(".num").getBoundingClientRect();
+    const t = targetOf(r) || stationSlot.getBoundingClientRect();
+    const el = document.createElement("span");
+    el.className = "flight";
+    el.textContent = `${fmt(r)} ${r.unit}`;
+    el.style.left = from.left + "px"; el.style.top = from.top + "px";
+    document.body.append(el);
+    const tx = r.sky ? t.left + t.width * (0.3 + 0.12 * (STATION.indexOf(r) - 4)) : t.left + t.width / 2;
+    const ty = r.sky ? t.top + t.height * 0.3 : t.top + t.height / 2;
+    const dx = tx - from.left - el.offsetWidth / 2, dy = ty - from.top - el.offsetHeight / 2;
+    el.animate([{ transform: "translate(0,0)", opacity: 0 }, { transform: "translate(0,-6px)", opacity: 1, offset: 0.15 }, { transform: `translate(${dx}px,${dy}px)`, opacity: 1, offset: 0.85 }, { transform: `translate(${dx}px,${dy - 10}px)`, opacity: 0 }],
+      { duration: 900, easing: "cubic-bezier(0.65, 0, 0.35, 1)", fill: "forwards" }).finished.then(() => el.remove(), () => el.remove());
+  }
+  let timers = [];
+  function link() {
+    if (station.on) return;
+    station.on = true;
+    sensorsSwitch.checked = true;
+    if (reduceMotion) { instrumentsEl.querySelectorAll(".instrument").forEach((t) => t.classList.add("linked")); pushStation(true); return; }
+    STATION.forEach((r, i) => timers.push(setTimeout(() => { tileOf(r.id).classList.add("linked"); fly(r); }, 40 + i * 110)));
+    timers.push(setTimeout(() => pushStation(true), 700));
+  }
+  function unlink() {
+    timers.forEach(clearTimeout); timers = [];
+    station.on = false;
+    sensorsSwitch.checked = false;
+    instrumentsEl.querySelectorAll(".instrument").forEach((t) => t.classList.remove("linked"));
+    pushStation(true);
+  }
+  sensorsSwitch.addEventListener("change", () => { station.touched = true; const on = sensorsSwitch.checked; sensorsSwitch.checked = !on; on ? link() : unlink(); });
+  new IntersectionObserver((entries, obs) => {
+    if (!entries[0].isIntersecting) return;
+    obs.disconnect();
+    setTimeout(() => { if (!station.touched && !station.on) link(); }, 900);
+  }, { threshold: 0.5 }).observe(instrumentsEl);
+  pushStation();
+
+  // ── Tune the weather ──
+  const GROUPS = [
+    ["What falls", [
+      { id: "rain_density", label: "Rain", min: 0.25, max: 3, step: 0.25, value: 1, scene: { condition: "rainy", minutes: 780 } },
+      { id: "snow_density", label: "Snow", min: 0.25, max: 3, step: 0.25, value: 1, scene: { condition: "snowy", minutes: 780 } },
+      { id: "leaf_density", label: "Leaves", min: 0.25, max: 3, step: 0.25, value: 1, scene: { condition: "windy", minutes: 780, wind: 45 }, extra: { wind_style: "leaves" } },
+    ]],
+    ["After dark", [
+      { id: "shooting_star_rate", label: "Shooting stars", min: 0.25, max: 3, step: 0.25, value: 1, scene: { condition: "sunny", minutes: 1380 }, spawn: "_forceShootingStar" },
+      { id: "comet_rate", label: "Comets", min: 0.25, max: 3, step: 0.25, value: 1, scene: { condition: "sunny", minutes: 1380 }, spawn: "_forceComet" },
+    ]],
+    ["In the air", [
+      { id: "fauna_bird_density", label: "Birds", min: 0.5, max: 2, step: 0.1, value: 1, scene: { condition: "sunny", minutes: 900 } },
+      { id: "fauna_plane_density", label: "Planes", min: 0.5, max: 2, step: 0.1, value: 1, scene: { condition: "partlycloudy", minutes: 840 } },
+    ]],
+  ];
+  const ENGINE = GROUPS.flatMap(([, rows]) => rows);
+  const CALM = [
+    { id: "splash", label: "No splashes", options: { effect_rain_splash: false }, scene: { condition: "rainy", minutes: 780 } },
+    { id: "edge", label: "No snow edge", options: { effect_snow_edge: false }, scene: { condition: "snowy", minutes: 780 } },
+    { id: "wind", label: "Invisible wind", options: { wind_style: "off" }, scene: { condition: "windy", minutes: 780, wind: 45 } },
+    { id: "low", label: "Older tablet", options: { perf_mode: "low" }, scene: { condition: "partlycloudy", minutes: 780 } },
+  ];
+  const tune = { values: Object.fromEntries(ENGINE.map((r) => [r.id, r.value])), calm: {}, scene: { condition: "rainy", minutes: 780, wind: 18 }, extra: {} };
+  const tuneSlot = document.getElementById("tune-slot"), tuneSection = document.getElementById("tune"), sceneLabel = document.getElementById("tune-scene");
+  const tuneCode = windowOf(document.getElementById("tune-window"));
+  const changed = () => {
+    const out = {};
+    for (const r of ENGINE) if (Math.abs(tune.values[r.id] - r.value) > 1e-9) out[r.id] = tune.values[r.id];
+    for (const q of CALM) if (tune.calm[q.id]) Object.assign(out, q.options);
+    return out;
+  };
+  const tuneCfg = () => ({ card_layout: "standard", card_height: 260, perf_mode: "ultra", ...tune.extra, ...changed() });
+  let tuneCard = mountCard(tuneSlot, tuneCfg(), tune.scene);
+  const sceneName = (s) => `${(WEATHERS.find(([v]) => v === s.condition) || [, s.condition])[1]} · ${clock(s.minutes)}`;
+  function showScene(scene, extra = {}) {
+    const same = scene.condition === tune.scene.condition && scene.minutes === tune.scene.minutes && JSON.stringify(extra) === JSON.stringify(tune.extra);
+    tune.scene = { wind: 18, ...scene };
+    tune.extra = extra;
+    if (!same) tuneCard = mountCard(tuneSlot, tuneCfg(), tune.scene);
+    tint(tuneSection, tune.scene);
+    sceneLabel.textContent = sceneName(tune.scene);
+  }
+  function applyTune() {
+    tuneCard.setConfig({ ...BASE, ...tuneCfg() });
+    tuneCard.hass = hassFor(tune.scene);
+    const c = changed();
+    tuneCode(Object.keys(c).length ? yaml({ ...BASE, ...c }) : yaml(BASE) + "\n# Only what you change shows up here.");
+    document.getElementById("tune-reset").hidden = !Object.keys(c).length;
+  }
+  const groupsEl = document.getElementById("groups");
+  const times = (v) => `${Number(v.toFixed(2))}×`;
+  groupsEl.innerHTML = GROUPS.map(([title, rows]) => `<fieldset class="group"><legend>${title}</legend><div class="instruments two">${rows.map((r) =>
+    `<div class="instrument" data-id="${r.id}"><span class="label">${r.label}</span><span class="num" id="o-${r.id}">${times(r.value)}</span><code>${r.id}</code><span class="steps"><button type="button" class="step-btn" data-dir="-1" aria-label="Less ${r.label}">−</button><button type="button" class="step-btn" data-dir="1" aria-label="More ${r.label}">+</button></span></div>`).join("")}</div></fieldset>`).join("")
+    + `<fieldset class="group"><legend>Calmer</legend><div class="calm">${CALM.map((q) => `<label><input type="checkbox" data-id="${q.id}"><span>${q.label}</span></label>`).join("")}</div></fieldset>`
+    + `<button type="button" class="reset" id="tune-reset" hidden>Reset all</button>`;
+  const rowFor = (el) => ENGINE.find((r) => r.id === el.closest(".instrument")?.dataset.id);
+  // Touching a tile shows the weather it changes; − and + change the value.
+  const show = (r) => {
+    showScene(r.scene, r.extra || {});
+    if (r.spawn) setTimeout(() => { tuneCard[r.spawn] = true; }, 600);
+  };
+  groupsEl.addEventListener("pointerover", (e) => { const r = rowFor(e.target); if (r && e.target.closest(".step-btn")) show(r); });
+  groupsEl.addEventListener("focusin", (e) => { const r = rowFor(e.target); if (r) show(r); });
+  const paintTile = (r) => {
+    document.getElementById("o-" + r.id).textContent = times(tune.values[r.id]);
+    groupsEl.querySelector(`.instrument[data-id="${r.id}"]`).classList.toggle("changed", Math.abs(tune.values[r.id] - r.value) > 1e-9);
+  };
+  groupsEl.addEventListener("click", (e) => {
+    const b = e.target.closest(".step-btn"); const r = b && rowFor(b); if (!r) return;
+    show(r);
+    tune.values[r.id] = Math.max(r.min, Math.min(r.max, Number((tune.values[r.id] + r.step * Number(b.dataset.dir)).toFixed(2))));
+    paintTile(r);
+    applyTune();
+  });
+  groupsEl.addEventListener("change", (e) => {
+    const q = CALM.find((x) => x.id === e.target.dataset.id); if (!q) return;
+    tune.calm[q.id] = e.target.checked;
+    showScene(q.scene);
+    applyTune();
+  });
+  groupsEl.addEventListener("click", (e) => {
+    if (e.target.id !== "tune-reset") return;
+    for (const r of ENGINE) { tune.values[r.id] = r.value; paintTile(r); }
+    tune.calm = {}; groupsEl.querySelectorAll(".calm input").forEach((i) => (i.checked = false));
+    applyTune();
+  });
+  tint(tuneSection, tune.scene);
+  sceneLabel.textContent = sceneName(tune.scene);
+  applyTune();
+
+  // ── Features ──
+  const HOUSE_CFG = { ...HERO_CFG, card_layout: "", image_day: "images/house-day.webp", image_night: "images/house-night.webp", image_alignment: "bottom-right", image_scale: 92, image_x: "10", image_y: "4", celestial_alignment: "top-center", celestial_x: -110, celestial_y: 24, wind_compass: "off",
     chips: [TEMP, COND, { entity: "sensor.indoor_temperature", name: "Inside", icon: "mdi:sofa" }] };
   const FEATURES = [
     ["tune-variant", "Driven by your data", "No fixed scenes: cloud cover sets the number of clouds, a rain sensor sets how hard it rains, low visibility adds haze and the dew point brings ground mist.", { condition: "rainy", cover: 95, rain: 9 }, { ...HERO_CFG, precipitation_entity: "sensor.rain_rate" }],
-    ["weather-snowy-heavy", "Rain and snow in the wind", "Rain, snow and hail fly with the real wind direction and speed, and slant harder the stronger it blows. Clouds and wind lines drift the same way, and a compass shows where it comes from.", { condition: "snowy", wind: 45, bearing: 90, temp: -2 }],
-    ["home-thermometer-outline", "Your own weather station", "Wind, temperature, humidity and more can come from your own sensors instead of a weather service. If one goes offline, the card falls back on its own.", { condition: "partlycloudy", stationWind: 38, stationFrom: "NW" }, { ...HERO_CFG, wind_speed_entity: "sensor.station_wind_speed", wind_bearing_entity: "sensor.station_wind_direction", chips: [TEMP, COND, { entity: "sensor.station_wind_speed", name: "Station", icon: "mdi:weather-windy" }, { entity: "sensor.station_wind_direction", icon: "mdi:compass-outline", bearing_icon: "arrow" }] }],
-    ["weather-sunset", "Real sun and moon", "The sun follows its real elevation, with a golden hour before sunset and a blue hour after. The moon shows its live phase.", { condition: "sunny", elevation: 5 }],
-    ["weather-night", "A night full of stars", "Stars come out one by one after sunset, with shooting stars and the odd comet.", { condition: "sunny", night: true }],
+    ["weather-snowy-heavy", "Rain and snow in the wind", "Rain, snow and hail fly with the real wind direction and speed. Drops splash on the bottom edge, and a thin edge of snow builds up there.", { condition: "snowy", wind: 45, bearing: 90, temp: -2 }],
+    ["leaf", "Leaves on windy days", "Leaves cross the card the way the wind blows: green in spring and summer, yellow, orange and brown in autumn and winter.", { condition: "windy", wind: 48 }, { ...HERO_CFG, wind_style: "leaves" }],
+    ["weather-sunset", "Real sun and moon", "The sun follows its real elevation, with a golden hour before sunset and a blue hour after. The moon shows its live phase.", { condition: "sunny", minutes: 1140 }],
+    ["weather-night", "A night full of stars", "Stars come out one by one after sunset, with shooting stars and the odd comet.", { condition: "sunny", minutes: 1380 }],
     ["weather-lightning-rainy", "Every weather, live", "Thunderstorms with lightning, fog that thickens towards the ground, a closed sky when it is overcast. Every Home Assistant condition has its own scene.", { condition: "lightning-rainy" }],
-    ["home-variant-outline", "Your home in the sky", "Put a drawing of your own house into the card, in daylight by day and with lit windows at night.", { condition: "sunny", night: true }, HOUSE_CFG],
+    ["home-variant-outline", "Your home in the sky", "Put a drawing of your own house into the card, in daylight by day and with lit windows at night.", { condition: "sunny", minutes: 1380 }, HOUSE_CFG],
     ["chart-donut", "Chips, rings and bars", "Show any sensor or forecast as text, ring or bar, in a row, a grid or anywhere on the card.", { condition: "sunny" }, GAUGE_CFG],
     ["tablet-dashboard", "Light on wall tablets", "Three performance presets from old tablets to smooth 60 fps. The card pauses when it is off screen and sends nothing to other servers.", { condition: "partlycloudy" }, { ...HERO_CFG, perf_mode: "low" }],
   ];
@@ -370,21 +789,16 @@ weather_entity: weather.home</pre>
     const el = document.createElement("article");
     el.className = "feature";
     el.innerHTML = `<div class="ico">${svgOf(iconFor(icon), "22px")}</div><h3>${title}</h3><p>${text}</p><button type="button">Show it above ↑</button>`;
-    // Every tile starts from the plain scene, so nothing of the tile before carries over.
-    el.querySelector("button").onclick = () => { setHero({ night: false, wind: 18, bearing: 250, temp: undefined, cover: undefined, rain: undefined, elevation: undefined, stationWind: undefined, stationFrom: undefined, ...scene }, cfg || HERO_CFG); document.getElementById("top").scrollIntoView({ behavior: "smooth" }); };
+    el.querySelector("button").onclick = () => { setHero({ minutes: 780, wind: 18, bearing: 250, temp: undefined, cover: undefined, rain: undefined, ...scene }, cfg || HERO_CFG); document.getElementById("top").scrollIntoView({ behavior: "smooth" }); };
     grid.append(el);
   }
 
-  // Gallery of ready-made cards.
-  const yaml = (o, ind = "") => Object.entries(o).map(([k, v]) => Array.isArray(v)
-    ? `${ind}${k}:\n` + v.map((it) => typeof it !== "object" ? `${ind}  - ${it}` : (() => { const lines = yaml(it, ind + "    ").split("\n"); return `${ind}  - ${lines[0].trim()}\n${lines.slice(1).join("\n")}`; })()).join("\n").replace(/\n$/, "")
-    : `${ind}${k}: ${typeof v === "string" && /^[#*{}[\]&!|>%@`:]|: |^\s|\s$/.test(v) ? JSON.stringify(v) : v}`).join("\n");
+  // ── Gallery ──
   const EXAMPLES = [
-    { title: "Simple", text: "Temperature, condition and tomorrow. A good first card.", scene: { condition: "partlycloudy" },
-      cfg: { card_height: 180, chips: [
-        { entity: "weather.home", attribute: "temperature", position: "custom", position_anchor: "top-left", position_x: "16px", position_y: "14px", text_size: "40px", hide_icon: true, hide_label: true, background: false, fancy_unit: true, value_weight: "700" },
-        { entity: "weather.home", icon: "weather" },
-        { entity: "weather.home", forecast: "daily", forecast_offset: 1, attribute: "temperature", icon: "weather", forecast_precision: 0 } ] } },
+    { title: "Standard layout", text: "What a new card starts with: a big temperature, the condition and a quiet row of readings. One option.", scene: { condition: "partlycloudy" },
+      cfg: { card_layout: "standard" } },
+    { title: "Compact layout", text: "One slim strip for the top of a dashboard: temperature, condition, humidity and wind.", scene: { condition: "rainy" },
+      cfg: { card_layout: "compact" } },
     { title: "Forecast row", text: "Three days in a grouped row with icons above the values.", scene: { condition: "rainy" },
       cfg: { card_height: 180, chip_style: "vertical", chip_area_grouped: true, chip_area_separator: true, chip_area_background: true, chip_area_position: "bottom-center", chips: [
         { entity: "weather.home", forecast: "daily", forecast_offset: 1, attribute: "temperature", icon: "weather", forecast_precision: 0 },
@@ -398,25 +812,18 @@ weather_entity: weather.home</pre>
         { entity: "weather.home", attribute: "wind_bearing", name: "Wind", bearing_format: "cardinal", bearing_icon: "needle", bearing_speed: true } ] } },
     { title: "Gauges", text: "Ring chips for any sensor, with colors that follow the value.", scene: { condition: "sunny" },
       cfg: { card_height: 180, chip_area_gap: "8px", chips: [SOLAR, BATTERY, HUMID] } },
-    { title: "Indoor and outdoor", text: "Outside from the weather entity, inside from your sensors.", scene: { condition: "snowy", temp: -2 },
-      cfg: { card_height: 180, chip_style: "stacked", chips: [
-        { entity: "weather.home", attribute: "temperature", name: "Outside", icon: "weather" },
-        { entity: "sensor.indoor_temperature", name: "Inside", icon: "mdi:sofa" },
-        { entity: "sensor.indoor_humidity", name: "Humidity", icon: "mdi:water-percent" } ] } },
   ];
   const gallery = document.getElementById("gallery-grid");
   for (const ex of EXAMPLES) {
     const el = document.createElement("article");
     el.className = "shot";
-    // The same config the preview runs, so the copy looks the same in Home Assistant.
-    const code = yaml({ ...BASE, ...ex.cfg });
-    el.innerHTML = `<div class="frame"></div><div class="body"><h3>${ex.title}</h3><p>${ex.text}</p><div class="actions"><button type="button" class="copy">Copy YAML</button><a href="docs/examples.html">More examples →</a></div></div><details><summary>Show YAML</summary><pre></pre></details>`;
-    el.querySelector("pre").textContent = code;
-    el.querySelector(".copy").onclick = (e) => navigator.clipboard?.writeText(code).then(() => { e.target.textContent = "Copied"; setTimeout(() => (e.target.textContent = "Copy YAML"), 1200); }, () => {});
+    el.innerHTML = `<div class="window"><div class="window-bar" role="tablist"><button type="button" class="tab" role="tab" aria-selected="true" data-pane="live">Live</button><button type="button" class="tab" role="tab" aria-selected="false" data-pane="code">YAML</button><span class="file"></span><button type="button" class="copy" hidden>Copy</button></div>
+      <div class="pane pane-live"><div class="slot"></div></div><div class="pane pane-code"><pre><code></code></pre></div></div>
+      <div><h3>${ex.title}</h3><p>${ex.text}</p></div>`;
+    windowOf(el.querySelector(".window"))(yaml({ ...BASE, ...ex.cfg }));
     gallery.append(el);
-    mountCard(el.querySelector(".frame"), { perf_mode: "default", ...ex.cfg }, ex.scene);
+    mountCard(el.querySelector(".slot"), { perf_mode: "default", ...ex.cfg }, ex.scene);
   }
-  // Keep clocks and values fresh.
   setInterval(() => { heroCard.hass = hassFor(hero); }, 1000);
 </script>
 </body>

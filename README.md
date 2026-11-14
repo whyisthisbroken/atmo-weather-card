@@ -1,34 +1,52 @@
 <div align="center">
-<img width="700" height="394" alt="atmo-min1" src="https://github.com/user-attachments/assets/6a7884e9-9fff-4ded-a9e1-ebf9217998d6" />
+<img width="700" height="394" alt="Atmo Weather Card" src="https://github.com/user-attachments/assets/6a7884e9-9fff-4ded-a9e1-ebf9217998d6" />
 
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Lovelace%20Card-41BDF5.svg)](https://www.home-assistant.io/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/whyisthisbroken/atmo-weather-card/blob/main/LICENSE)
 [![GitHub last commit](https://img.shields.io/github/last-commit/whyisthisbroken/atmo-weather-card)](https://github.com/whyisthisbroken/atmo-weather-card/commits/main)
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-View%20in%20Browser-2ea44f.svg)](https://whyisthisbroken.github.io/atmo-weather-card/)
 
-<h2>Animated weather card for Home Assistant Lovelace dashboards</h2>
+<h2>The sky over your dashboard, built from your weather.</h2>
+
 <img width="560" alt="Atmo Weather Card cycling through sunny, cloudy, rain, thunderstorm, snow, fog, wind and night scenes" src="https://github.com/user-attachments/assets/83dbed24-03a5-411c-a9ae-c470280d7208" />
 
-*Sun, clouds, rain, thunderstorms, snow, fog, wind and starry nights — all drawn live from your weather entity.
-A GIF can only hint at it: in the dashboard every scene runs smoothly and keeps changing.*
+An animated weather card for Home Assistant. It reads your weather entity and your sensors and builds a live sky from them, by day and by night.
 
-### 👉 [**See it live in your browser — no video, real-time animation**](https://whyisthisbroken.github.io/atmo-weather-card/)
-The documentation runs every example live, and the [demo](https://whyisthisbroken.github.io/atmo-weather-card/demo.html) lets you switch the weather, the time of day and every effect.
+**[Try it live in your browser](https://whyisthisbroken.github.io/atmo-weather-card/)** · [Full demo](https://whyisthisbroken.github.io/atmo-weather-card/demo.html) · [Documentation](https://whyisthisbroken.github.io/atmo-weather-card/docs/)
 
 </div>
 
-### Features
+## Built from your weather.
 
-- **Live weather scenes** for every Home Assistant condition, by day and by night — layered clouds, rain, hail, snow, fog, thunderstorms with lightning, and overcast skies
-- **Wind you can see** — direction and strength from your weather entity, drawn as wind lines or a flow field; clouds, rain and snow drift the same way, and an optional compass on the card or a chip with a turning arrow shows where it comes from
-- **Sun and moon** that follow the real sun position, with sunrise and sunset colors, live moon phases and a moon tilted for your latitude
-- **Night sky** with stars, shooting stars and comets, and **birds and planes** passing by; near planes fly faster than distant ones
-- **Real weather data** shapes the sky: the measured cloud cover sets the clouds, low visibility or humid air adds haze, ground mist forms near the dew point, and an optional precipitation sensor sets how hard it rains; every reading can come from your own weather station instead
-- **Sky light** with a golden hour that turns the sky and clouds gold, orange and violet at sunset, a blue hour after sunset and before sunrise, stars that come out one by one, and soft sun rays through broken clouds
-- **Every effect can be switched off** on its own, and shooting stars, comets, birds and planes have their own frequency
-- **Chips** for any entity or attribute, weather forecasts, ring and bar gauges, free positioning and many styles
-- **Visual editor** for everything, with built-in help, in English or German following your Home Assistant language, plus full YAML control
-- **Performance presets** from Low (older tablets) to Ultra (smooth 60 fps, sharp on large wall displays)
+The card does not play a fixed animation per weather state. Cloud cover sets the number of clouds, a rain sensor sets how hard it rains, low visibility adds haze and the dew point brings ground mist. Every reading can come from your own weather station.
+
+<p align="center"><img src="https://whyisthisbroken.github.io/atmo-weather-card/images/example-rain.webp" alt="Rain driven by a rain sensor" width="480" /></p>
+
+## Rain that lands, snow that settles.
+
+Rain falls at a steady pace and splashes on the bottom edge of the card. Snow swings softly on its way down and builds a thin edge of snow. In a thunderstorm the sky turns dark, by day too. On request, rain and snow fall out of the card onto the dashboard below.
+
+## Wind you can see.
+
+Clouds, rain and snow drift with the real wind direction and speed. Show the wind as long lines, as a flow field or as leaves blowing across the card, green in spring and summer and in autumn colours in autumn and winter. A compass on the card shows where it comes from.
+
+<p align="center"><img src="https://whyisthisbroken.github.io/atmo-weather-card/images/wind-compass-styles.webp" alt="Wind compass styles" width="480" /></p>
+
+## The sun, the moon and the stars.
+
+The sun follows its real path, with a golden hour before sunset and a blue hour after it. The moon shows its live phase, tilted for your latitude. At night the stars come out one by one, with shooting stars and the odd comet. Birds and planes cross the sky by day.
+
+<p align="center"><img src="https://whyisthisbroken.github.io/atmo-weather-card/images/example-stars.webp" alt="A clear night with stars and the moon" width="480" /></p>
+
+## Ready in one option, yours in every detail.
+
+New cards start with a finished layout: `standard`, a slim `compact` strip or `wide` for wall tablets. From there, chips show any entity, attribute or forecast as text, ring or bar, anywhere on the card. Put your own house in the sky, by day and with lit windows at night.
+
+<p align="center"><img src="https://whyisthisbroken.github.io/atmo-weather-card/images/example-layouts.webp" alt="card_layout standard, compact and wide" width="480" /></p>
+
+## Light on old tablets, smooth on new ones.
+
+Three presets run from Low for older tablets to Ultra for smooth 60 fps on large wall displays, and every effect can be switched off on its own. The card pauses when it is off screen and sends nothing to other servers. Everything is set in the visual editor, in English or German, with full YAML control.
 
 <details>
 <summary><b>Gallery: every weather condition</b></summary>
@@ -126,23 +144,17 @@ For manual installation without the Marketplace. [Download the latest files from
 
 ## Quick Start
 
-Add this card to a dashboard after installation, then replace the example entity IDs with your own:
+Add a card from the card picker and pick your weather entity, or paste this and replace the entity IDs with your own:
 
 ```yaml
 type: custom:atmo-weather-card
 weather_entity: weather.home
 sun_entity: sun.sun
 moon_phase_entity: sensor.moon_phase
-chips:
-  - entity: weather.home
-    attribute: temperature
-    icon: weather
-  - entity: weather.home
-    attribute: humidity
-    icon: mdi:water-percent
+card_layout: standard
 ```
 
-Use the visual editor to add or rearrange chips. Browse the [examples](https://whyisthisbroken.github.io/atmo-weather-card/docs/examples.html) for complete layouts, or the [documentation](https://whyisthisbroken.github.io/atmo-weather-card/docs/) for every option.
+`card_layout` can also be `compact` or `wide`. Add chips in the visual editor to make the card your own, browse the [examples](https://whyisthisbroken.github.io/atmo-weather-card/docs/examples.html) for complete cards, or the [documentation](https://whyisthisbroken.github.io/atmo-weather-card/docs/) for every option.
 
 ## Maintenance
 

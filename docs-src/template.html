@@ -6,7 +6,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Cdefs%3E%3CradialGradient id=%27g%27 cx=%270.38%27 cy=%270.38%27%3E%3Cstop offset=%270%27 stop-color=%27%23fff1c7%27/%3E%3Cstop offset=%271%27 stop-color=%27%23f2b84b%27/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx=%2716%27 cy=%2716%27 r=%2713%27 fill=%27url(%23g)%27/%3E%3C/svg%3E">
 <title>{{TITLE}} · Atmo Weather Card</title>
-<script>try { const t = localStorage.getItem("atmo-theme"); if (t && t !== "auto") document.documentElement.dataset.theme = t; } catch {}</script>
+<script>try { const t = localStorage.getItem("atmo-theme"); if (t && t !== "auto") document.documentElement.dataset.theme = t; } catch {}
+  (function (h) { document.documentElement.dataset.logo = h >= 5.5 && h < 8 ? "dawn" : h >= 8 && h < 18 ? "day" : h >= 18 && h < 20.5 ? "dusk" : "night"; })(new Date().getHours() + new Date().getMinutes() / 60);</script>
 <link rel="stylesheet" href="../site.css">
 <style>
   /* Three columns: pages and sections, the reading column, the sticky live card. Below 1180px the live card sits on top. */
@@ -22,7 +23,7 @@
   .results a:hover, .results a.sel { background: var(--raised); text-decoration: none; }
   .results .none { padding: 8px 12px; color: var(--muted); }
   .nav-group { display: grid; gap: 1px; margin-bottom: 20px; }
-  .nav-title { font-size: 11.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .nav-title { font-family: var(--f-display); font-weight: var(--d-weight); font-variation-settings: var(--d-var); font-size: 16px; letter-spacing: var(--d-track); color: var(--text); margin-bottom: 6px; }
   .nav-page { color: var(--text); padding: 5px 10px; border-radius: 8px; }
   .nav-page:hover { background: var(--raised); text-decoration: none; }
   .nav-page.here { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--text); font-weight: 650; }
@@ -34,11 +35,12 @@
   main { min-width: 0; }
   .crumb { font-size: 13px; color: var(--muted); margin: 0 0 4px; }
   .crumb a { color: var(--muted); }
-  .doc-section > h2:first-child { font-size: clamp(30px, 3.4vw, 40px); line-height: 1.1; letter-spacing: -0.025em; margin: 0 0 12px; border: 0; padding: 0; }
+  .doc-section h2, .doc-section h3 { font-family: var(--f-display); font-weight: var(--d-weight); font-variation-settings: var(--d-var); letter-spacing: var(--d-track); }
+  .doc-section > h2:first-child { font-size: clamp(34px, 4vw, 52px); line-height: 1.04; margin: 0 0 14px; border: 0; padding: 0; }
   .doc-section > h2:first-child .anchor { display: none; }
   .doc-section > h2:first-child + p { font-size: 17.5px; color: var(--muted); }
-  .doc-section h2 { font-size: 26px; letter-spacing: -0.015em; margin: 48px 0 12px; }
-  .doc-section h3 { font-size: 22px; letter-spacing: -0.01em; margin: 48px 0 12px; padding-top: 22px; border-top: 1px solid var(--line); text-wrap: balance; }
+  .doc-section h2 { font-size: 30px; margin: 48px 0 12px; }
+  .doc-section h3 { font-size: 25px; margin: 48px 0 12px; padding-top: 22px; border-top: 1px solid var(--line); text-wrap: balance; }
   .doc-section h4 { font-size: 17px; margin: 30px 0 8px; }
   .doc-section p, .doc-section li { max-width: 74ch; }
   .doc-section .anchor { color: var(--muted); opacity: 0; margin-left: -0.9em; padding-right: 0.25em; font-weight: 400; }
@@ -73,16 +75,16 @@
   details { border: 1px solid var(--line); border-radius: 12px; padding: 0 16px; margin: 14px 0; background: var(--panel); }
   details > summary { cursor: pointer; padding: 12px 0; font-weight: 650; }
   .pager { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 56px; }
-  .pager a { border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; color: var(--text); font-weight: 650; display: grid; gap: 2px; background: var(--panel); }
+  .pager a { border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; color: var(--text); font-family: var(--f-display); font-weight: var(--d-weight); font-variation-settings: var(--d-var); font-size: 19px; display: grid; gap: 2px; background: var(--panel); }
   .pager a:hover { border-color: var(--accent); text-decoration: none; }
-  .pager a span { font-size: 12.5px; font-weight: 500; color: var(--muted); }
+  .pager a span { font-family: var(--f-body); font-size: 12.5px; font-weight: 500; color: var(--muted); }
   .pager .next { text-align: right; }
 
   .live { position: sticky; top: calc(var(--top-h) + 20px); align-self: start; display: grid; gap: 12px; }
   .live-box { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 14px; display: grid; gap: 12px; }
   .live-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
   .live-label { font-size: 11.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
-  .live-title { font-weight: 700; font-size: 15px; }
+  .live-title { font-family: var(--f-display); font-weight: var(--d-weight); font-variation-settings: var(--d-var); font-size: 18px; }
   #card-slot atmo-weather-card { display: block; }
   /* A small dashboard behind immersive examples. */
   .dash { display: grid; gap: 8px; isolation: isolate; padding: 10px; border-radius: 12px; background: #f2f4f7; color: #1f2328; }
@@ -128,12 +130,14 @@
 <header class="top">
   <div class="top-in">
     <a class="brand" href="../index.html"><span class="sun"></span>Atmo Weather Card</a>
-    <span class="ver">{{VERSION}}</span>
     <nav>
+      <a href="../index.html#station" class="hide-s">Your station</a>
+      <a href="../index.html#tune" class="hide-s">Tune</a>
+      <a href="../index.html#gallery">Examples</a>
+      <a href="../index.html#install">Install</a>
       <a class="here" href="index.html">Docs</a>
-      <a href="../demo.html">Live demo</a>
-      <a href="../index.html#install" class="hide-s">Install</a>
-      <a href="{{README}}">GitHub</a>
+      <a href="../demo.html">Demo</a>
+      <a href="{{README}}" class="hide-s">GitHub</a>
       <span class="theme" role="group" aria-label="Color theme"><button type="button" data-t="auto">Auto</button><button type="button" data-t="light">Light</button><button type="button" data-t="dark">Dark</button></span>
     </nav>
   </div>
@@ -224,7 +228,7 @@
   await import("../atmo-weather-card.js");
 
   const state = { condition: "sunny", night: false };
-  const CONDS = [["sunny", "Sunny"], ["partlycloudy", "Partly cloudy"], ["cloudy", "Cloudy"], ["rainy", "Rain"], ["lightning-rainy", "Storm"], ["snowy", "Snow"], ["fog", "Fog"], ["windy", "Windy"]];
+  const CONDS = [["sunny", "Clear"], ["partlycloudy", "Partly cloudy"], ["cloudy", "Cloudy"], ["rainy", "Rain"], ["lightning-rainy", "Thunderstorm"], ["snowy", "Snow"], ["fog", "Fog"], ["windy", "Windy"]];
   const sensorFor = (id) => {
     const m = (re) => re.test(id);
     if (m(/moon/)) return { state: "waxing_gibbous", attributes: {} };
@@ -239,7 +243,7 @@
     return { state: "42", attributes: { friendly_name: id.split(".")[1].replace(/_/g, " ") } };
   };
   // Like Home Assistant: attribute values come formatted with their unit.
-  const UNITS = { temperature: "°C", templow: "°C", humidity: "%", wind_speed: "km/h", precipitation_probability: "%", uv_index: "" };
+  const UNITS = { temperature: "°C", templow: "°C", humidity: "%", wind_speed: "km/h", precipitation_probability: "%", uv_index: "", pressure: "hPa" };
   const forecast = (type) => {
     const conds = ["sunny", "partlycloudy", "rainy", "cloudy", "sunny", "lightning-rainy", "partlycloudy"];
     const n = type === "hourly" ? 24 : 7, step = type === "hourly" ? 3600e3 : 86400e3;
@@ -250,7 +254,7 @@
   function buildHass() {
     const states = {
       "weather.demo": { entity_id: "weather.demo", state: state.night && state.condition === "sunny" ? "clear-night" : state.condition,
-        attributes: { temperature: 14, humidity: 64, uv_index: 3, precipitation_probability: 20, wind_speed: state.condition === "windy" ? 45 : 12, wind_bearing: 250, wind_speed_unit: "km/h", temperature_unit: "°C", friendly_name: "Home" } },
+        attributes: { temperature: 14, humidity: 64, uv_index: 3, precipitation_probability: 20, wind_speed: state.condition === "windy" ? 45 : 12, wind_bearing: 250, pressure: 1016, pressure_unit: "hPa", wind_speed_unit: "km/h", temperature_unit: "°C", friendly_name: "Home" } },
       "sun.sun": { entity_id: "sun.sun", state: state.night ? "below_horizon" : "above_horizon", attributes: { elevation: state.night ? -12 : 32, azimuth: 200, next_rising: nextAt(6, 12), next_setting: nextAt(19, 41) } },
       "sensor.moon_phase": { entity_id: "sensor.moon_phase", state: "waxing_gibbous", attributes: {} },
       "sensor.time": { entity_id: "sensor.time", state: new Date().toISOString(), attributes: {} },
@@ -266,6 +270,7 @@
     };
   }
   const BASE = { weather_entity: "weather.demo", sun_entity: "sun.sun", moon_phase_entity: "sensor.moon_phase", theme_entity: "sun.sun", card_height: 200, perf_mode: "ultra" };
+  const { card_height: _h, ...BASE_NO_HEIGHT } = BASE;
   const DEFAULT = { ...BASE, chips: [
     { entity: "weather.demo", attribute: "temperature", position: "custom", position_anchor: "top-left", position_x: "16px", position_y: "16px", text_size: "40px", hide_icon: true, hide_label: true, background: false, fancy_unit: true, value_weight: "700" },
     { entity: "weather.demo", attribute: "humidity", icon: "mdi:water-percent" },
@@ -331,7 +336,8 @@
       // Examples without chips of their own keep the chips of the default card;
       // next to embedded cards only the temperature, so nothing overlaps.
       const chips = cfg.chips || (cfg.custom_cards ? DEFAULT.chips.slice(0, 1) : DEFAULT.chips);
-      mount({ ...DEFAULT, ...skyFor(cfg), ...cfg, chips });
+      // A card_layout example shows exactly its own YAML: the layout brings height, chips and sky.
+      mount(cfg.card_layout ? { ...BASE_NO_HEIGHT, ...cfg } : { ...DEFAULT, ...skyFor(cfg), ...cfg, chips });
       syncButtons();
       if (window.innerWidth <= 1180) document.querySelector(".live").scrollIntoView({ behavior: "smooth", block: "start" });
       return;

@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation and troubleshooting
+    url: https://whyisthisbroken.github.io/atmo-weather-card/docs/troubleshooting.html
+    about: Every option with live examples, and fixes for the usual problems.
+  - name: Live demo
+    url: https://whyisthisbroken.github.io/atmo-weather-card/demo.html
+    about: Try every weather, time of day and effect in your browser, without installing anything.
+  - name: Questions and ideas
+    url: https://github.com/whyisthisbroken/atmo-weather-card/discussions
+    about: Ask a question or share your dashboard.

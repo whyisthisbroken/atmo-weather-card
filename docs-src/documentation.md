@@ -13,7 +13,9 @@ These entities connect the card to Home Assistant. Only `weather_entity` is requ
 | **`weather_entity`** | `string` | —       | **Required.** Your weather integration entity (e.g., `weather.your_weather_entity`). The weather state, the forecasts and every reading come from it, unless you set [your own sensors](#your-own-sensors) for single readings. See [Troubleshooting: Weather entity is unavailable or values look wrong](#weather-entity-is-unavailable-or-values-look-wrong).                    |
 | `sun_entity`         | `string` | —       | _Recommended._ Usually `sun.sun`. Switches between day and night and drives the golden hour, sunset colors, the blue hour, sun rays and the moving sun. Without it the card always shows day. How it also sets the card colors is explained in [Color Mode](#color-mode). |
 | `moon_phase_entity`  | `string` | —       | _Recommended._ Displays the correct moon phase (e.g., `sensor.moon_phase`).                                                                                                                                                             |
-| `precipitation_entity` | `string` | —     | _Optional._ A sensor with the current rain intensity in mm/h (or in/h). The editor lists only sensors with one of these units. Rain and snow then follow the measured amount, from drizzle to downpour. Without it the density follows the weather state. See [Weather Data & Sky Light](#weather-data). |
+| `precipitation_entity` | `string` | —     | _Optional._ A sensor with the current rain intensity in mm/h (or in/h). The editor lists only sensors with one of these units. Rain, snow and sleet then follow the measured amount, from drizzle to downpour; hail keeps its own. Without it the density follows the weather state. See [Weather Data & Sky Light](#weather-data). |
+
+A new card added from the card picker starts with `card_layout: standard`: a big temperature, the condition and a quiet row of readings. In Home Assistant's **By entity** tab, a weather entity also suggests the card in its three layouts, see [Card layouts](#card-layouts).
 
 Have a weather station? Wind, temperature, humidity, dew point, cloud cover and visibility can come from your own sensors instead of the weather entity, see [Your own sensors](#your-own-sensors).
 
@@ -1065,7 +1067,8 @@ Card editor
 │                       celestial_x, celestial_y, celestial_size
 ├─ Appearance
 │  ├─ Color mode ▸ card_color_mode, theme_entity
-│  ├─ Card style ▸ card_style, card_height, card_padding
+│  ├─ Layout ▸ card_layout
+│  ├─ Card style ▸ card_style, card_height, card_padding, effect_text_scrim
 │  ├─ Frame & layers ▸ card_hide_text, card_square, card_full_width,
 │  │                   card_mask_vertical, card_mask_horizontal,
 │  │                   card_stack_order, card_offset
@@ -1089,9 +1092,11 @@ Card editor
 │  ├─ Graphics ▸ perf_fps, perf_cloud_quality, perf_effects, perf_dpr
 │  ├─ Sky & light ▸ effect_blue_hour, effect_golden_hour, effect_sun_rays,
 │  │                effect_haze, effect_ground_mist, effect_cloud_coverage
-│  ├─ Wind ▸ wind_style, wind_compass, wind_compass_position,
+│  ├─ Wind ▸ wind_style, leaf_density, wind_compass, wind_compass_position,
 │  │         wind_compass_cardinal, wind_compass_degrees,
 │  │         wind_compass_speed, wind_compass_background
+│  ├─ Rain & snow ▸ rain_density, effect_rain_splash,
+│  │                snow_density, effect_snow_edge, effect_spill
 │  ├─ Night sky ▸ effect_shooting_stars, shooting_star_rate,
 │  │              effect_comets, comet_rate, star_animation_speed
 │  ├─ Birds & planes ▸ fauna_birds, fauna_bird_density, bird_animation_speed,
@@ -1104,6 +1109,41 @@ Card editor
 
 The sections below document every option, including type, default, and behavior.
 
+### Card layouts
+
+`card_layout` gives the card a finished look with one option. Each layout sets the height, where the sun and moon stand, the chip row and a set of chips. Every value you set yourself wins over the layout, and so do your own chips: the layout's chips only show while the card has none of its own. Their labels come from Home Assistant in your language, and a reading your weather entity does not report, such as the pressure, is left out. In the editor the layouts are under **Appearance ▸ Layout**.
+
+<img width="480" alt="card_layout standard, compact and wide" src="images/example-layouts.webp" />
+
+| Option        | Type     | Default | Description |
+| :------------ | :------- | :------ | :---------- |
+| `card_layout` | `string` | —       | `standard`: a big, light temperature, the condition under it and a quiet row with humidity, wind and tomorrow. `compact`: one slim strip, about 96 px high, with the temperature, the condition and two readings. `wide`: for wall tablets and wide columns from about 700 px, a very big temperature on the left and humidity, wind, pressure and tomorrow in two columns on the right. On a card narrower than 600 px it shows the standard layout instead, so it also works in a phone column. Without a value the card uses only your own settings. |
+
+```yaml scene=partlycloudy
+type: custom:atmo-weather-card
+weather_entity: weather.home
+sun_entity: sun.sun
+card_layout: standard
+```
+
+```yaml scene=rainy
+type: custom:atmo-weather-card
+weather_entity: weather.home
+sun_entity: sun.sun
+card_layout: compact
+```
+
+```yaml scene=sunny
+type: custom:atmo-weather-card
+weather_entity: weather.home
+sun_entity: sun.sun
+card_layout: wide
+```
+
+`card_height` works with every layout: without it the card takes the layout's height, with it your height. Without a layout (**Free** in the editor) the card uses `card_height`, or 200 px.
+
+A layout is a starting point. To change one detail, set that option yourself, for example `card_height: 240` on the standard layout, or add chips to replace the layout's chips with your own.
+
 ### Card Style & Layout
 
 <p align="center"><img src="https://github.com/user-attachments/assets/a56047a4-8617-45d0-afdb-ea1edfda115b" alt="card_style standalone and immersive" width="560" /></p>
@@ -1112,6 +1152,7 @@ The sections below document every option, including type, default, and behavior.
 | :----------------- | :------------------ | :---------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `card_style`       | `string`            | `standalone` | Set to `standalone` for a solid background with dynamic weather visuals, or `immersive` for a transparent background.                                                                                                                                                                                                                                                           |
 | `card_height`      | `number` · `string` | `200`       | Height in pixels. Numbers are automatically treated as px (e.g., `110` becomes `110px`). **Set to `auto`** to dynamically fill the available height (for grid layouts).                                                                                                                                                                                                         |
+| `effect_text_scrim` | `boolean`          | `true`      | A soft veil behind the chip row, light on a light sky and dark on a dark one, so the text stays readable. It sits at the bottom, or at the top when the chip row is at the top. Only with `card_style: standalone`. |
 | `card_padding`     | `string`            | `16px`      | Inner padding around the text. Accepts any CSS padding value (e.g., `8px`, `12px 20px`).                                                                                                                                                                                                                                                                                        |
 | `card_hide_text`   | `boolean`           | `false`     | Hides all text overlays, including chips. The card's weather animations and configured chip settings remain available if you enable it again.                                                                                                                                                                                                                                   |
 | `card_square`      | `boolean`           | `false`     | Forces the card into a perfect square. Highly useful for grid layouts.                                                                                                                                                                                                                                                                                                          |
@@ -1595,7 +1636,7 @@ The card reads optional attributes of your weather entity, or the readings of [y
 | `visibility` (weather attribute, km or mi)     | Below 20 km a thin haze appears that gets denser towards the ground; at 2 km it is at full strength.                                                                                                     |
 | `humidity` (weather attribute, %)              | Above 80 % humidity the air gets slightly hazy as well.                                                                                                                                                |
 | `dew_point` + `temperature` (weather attributes) | When the temperature is within 2.5 °C of the dew point, ground mist drifts along the bottom of the card at night and in the morning (sun below 12°), not during downpours.                            |
-| `precipitation_entity` (sensor, mm/h or in/h)  | Sets the rain and snow density: light drizzle just above 0 mm/h, a downpour from about 8 mm/h. The weather entity has no standard attribute for this, so the value comes from a sensor you choose in the editor.       |
+| `precipitation_entity` (sensor, mm/h or in/h)  | Sets the rain, snow and sleet density: light drizzle just above 0 mm/h, a downpour from about 8 mm/h. Hail keeps its own amount. The weather entity has no standard attribute for this, so the value comes from a sensor you choose in the editor.       |
 | Sun elevation (`sun_entity`)                   | **Golden hour:** below about 12° the light turns warm: the sky glows gold towards the horizon, clouds catch gold light on the side of the sun, and the sun itself turns gold. In the last degrees before sunset (and after sunrise) it deepens to orange and rose, with a touch of violet higher up, and after sunset the afterglow fades over the blue hour. It works in clear, partly cloudy and windy weather, weaker under clouds and in fog, not in rain or snow. Home Assistant updates the sun every two minutes near the horizon; the light glides to each new value. **Blue hour:** from sunset until the sun is 6° below the horizon (and before sunrise) the sky stays deep blue with a warm glow at the horizon, and the stars come out one by one until about 8°.        |
 | Weather state + sun elevation                  | **Sun rays:** soft beams fan out from the sun in `partlycloudy` and `cloudy` weather, strongest with a low sun (below 35°) and not under a closed cloud cover (95 % or more).                         |
 
@@ -1757,7 +1798,17 @@ The wind follows `wind_speed` and `wind_bearing` of the weather entity. `wind_be
 
 | Option       | Type     | Default | Description |
 | :----------- | :------- | :------ | :---------- |
-| `wind_style` | `string` | `lines` | Wind display. `lines` draws long wind lines (left in the image), `flow` a field of short streaks (right), `off` hides it. Shown in windy weather, and in rain, hail or snow from 40 km/h. |
+| `wind_style` | `string` | `lines` | Wind display. `lines` draws long wind lines (left in the image), `flow` a field of short streaks (right), `leaves` blows leaves across the card, `off` hides it. Shown in windy weather, and in rain, hail or snow from 40 km/h. |
+| `leaf_density` | `number` | `1` | With `wind_style: leaves`: how many leaves fly. Range `0.25` to `3`. `1` is up to three at a time on a card of about 420 × 230 px; bigger cards get a few more. |
+
+Leaves fly the way the wind blows, a few at a time. Some catch an updraft and rise, weak gusts let others sink, and each one tumbles as it turns. Their colours follow the season: green in spring and summer, yellow, orange and brown in autumn and winter. South of the equator, taken from the latitude in your Home Assistant settings, the seasons are the other way round. At night the leaves are darker.
+
+```yaml scene=windy
+type: custom:atmo-weather-card
+weather_entity: weather.home
+wind_style: leaves
+leaf_density: 1.5
+```
 
 #### Wind compass
 
@@ -1808,6 +1859,36 @@ chips:
     bearing_format: cardinal
     bearing_icon: arrow
     bearing_speed: true
+```
+
+### Rain & snow
+
+Rain falls at a steady pace in long, soft drops. In a thunderstorm the sky is dark by day too, with heavy slate clouds, light rain and light text. Thin drops are fainter and read as farther away, and heavier weather has longer, faster drops: `pouring` more than `rainy`, thunderstorms in between. Part of the drops splash on the bottom edge of the card: the drop springs back in a small arc and two droplets fly out to the sides.
+
+Snow falls slowly in soft flakes. Small flakes are fainter and slower, so they read as farther away, and every flake swings gently like a pendulum while the wind slants its path. Part of the flakes settle on the bottom edge and melt away, and a thin edge of snow builds up there.
+
+The amount follows the weather state, or the [rain sensor](#weather-data) when you set one (for rain, snow and sleet; hail keeps its own), and grows with the size of the card, so a wall panel is not sparse and a small tile not crowded. The two density options scale it on top.
+
+| Option               | Type      | Default | Description |
+| :------------------- | :-------- | :------ | :---------- |
+| `rain_density`       | `number`  | `1`     | Amount of rain. Range `0.25` to `3`. |
+| `effect_rain_splash` | `boolean` | `true`  | Drops splash on the bottom edge of the card. |
+| `snow_density`       | `number`  | `1`     | Amount of snow. Range `0.25` to `3`. Snow has no sensor of its own; a precipitation sensor that measures melted snow sets it too, and this scales it on top. |
+| `effect_snow_edge`   | `boolean` | `true`  | A thin edge of snow builds up along the bottom of the card. |
+| `effect_spill`       | `boolean` | `false` | Rain and snow fall out of the bottom of the card onto the dashboard and fade out within about 90 px. Below the card the drops take the colours of your dashboard theme. Cards right below get the falling weather drawn over them, so it suits a card with some space underneath. |
+
+```yaml scene=rainy
+type: custom:atmo-weather-card
+weather_entity: weather.home
+rain_density: 2 # twice as much rain
+effect_rain_splash: false
+```
+
+```yaml scene=snowy
+type: custom:atmo-weather-card
+weather_entity: weather.home
+snow_density: 1.5
+effect_snow_edge: true
 ```
 
 ### Night sky
@@ -2168,9 +2249,10 @@ Check the values under **Developer Tools** › **States** on your weather entity
 
 #### Rain looks too light or too heavy
 
-1. Without a precipitation sensor, the amount follows the weather state: `rainy` is moderate rain, `pouring` heavy rain.
+1. Without a precipitation sensor, the amount follows the weather state: `rainy` is moderate rain, `pouring` heavy rain. `rain_density` makes it more or less, see [Rain & snow](#rain--snow).
 2. With `precipitation_entity` the measured amount sets it, from drizzle just above 0 mm/h to a downpour from about 8 mm/h.
 3. The editor lists only sensors in mm/h or in/h. A sensor in mm (the amount of a whole day or hour) does not show up and cannot be used, because it is no rain rate.
+4. Snow uses the same sensor. Weather services measure snow as melted water, so their precipitation rate covers snow too. Most home rain gauges are not heated: snow stays in the funnel and only counts once it melts, so during snowfall they report 0 and the card shows the usual amount for the weather state. Use `snow_density` to set it, or a precipitation sensor from a weather service.
 
 #### No wind lines are visible
 

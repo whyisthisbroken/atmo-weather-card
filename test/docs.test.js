@@ -159,13 +159,11 @@ test("tables and the demo stay readable on phones", () => {
   const cells = [...allDocs.matchAll(/<td(?=[\s>])[^>]*>/g)].map((m) => m[0]);
   assert.ok(cells.length > 100);
   for (const cell of cells) assert.match(cell, /data-label="[^"]+"/);
-  // Phones: only the card stays on top, above the controls. The phone rule must come after the
-  // sticky .stage rule, or the whole stage sticks and the controls paint over the card.
+  // The card window stays in view above the settings, on a solid background so the
+  // settings scrolling under it never show through. Phones drop its tab bar.
   const demo = read("docs/demo.html").replace(/\r\n/g, "\n");
-  const sticky = demo.indexOf(".stage { position: sticky");
-  const phone = demo.search(/@media \(max-width: 900px\) \{[^}]*\}\s*\.stage \{ position: static; display: contents; \}/);
-  assert.ok(sticky > 0 && phone > sticky);
-  assert.match(demo.slice(phone), /#card-slot \{ position: sticky; top: 0; z-index: \d+;[^}]*background:/);
+  assert.match(demo, /\.stage \.window \{ position: sticky; top: [^;]+; z-index: \d+; background: var\(--panel\);[^}]*\}/);
+  assert.match(demo, /@media \(max-width: 760px\) \{\s*\.stage \.window \{ top: 8px; \}\s*\.stage \.window \.window-bar \{ display: none; \}/);
 });
 
 test("every image the site uses exists", () => {

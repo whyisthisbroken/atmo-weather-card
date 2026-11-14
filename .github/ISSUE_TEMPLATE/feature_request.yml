@@ -1,0 +1,22 @@
+name: Idea or feature request
+description: Something the card could do, or do differently.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      description: What you'd like the card to do. A sketch, a photo of the real sky or a screenshot helps.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: What it would change on your dashboard, or what you do today instead.
+  - type: textarea
+    id: data
+    attributes:
+      label: Data it would need
+      description: The entities, attributes or sensors it would read, if any.
+      placeholder: weather.home → cloud_coverage, sensor.rain_rate

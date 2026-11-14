@@ -48,5 +48,15 @@ await copyFile(`${FONT_DIR}/LICENSE`, "dist/figtree-LICENSE.txt");
 // (the documentation) are built from docs-src/; demo.html (the live demo) is
 // written by hand. site.css and site.js are shared by all of them.
 await cp("dist", "docs", { recursive: true });
+// Fraunces sets the headlines of the landing page. The card does not use it,
+// so it goes to docs/ only.
+const FRAUNCES = "node_modules/@fontsource-variable/fraunces";
+await mkdir("docs/fonts", { recursive: true });
+await Promise.all([
+  ...["fraunces-latin-full-normal.woff2", "fraunces-latin-full-italic.woff2"].map((file) =>
+    copyFile(`${FRAUNCES}/files/${file}`, `docs/fonts/${file}`),
+  ),
+  copyFile(`${FRAUNCES}/LICENSE`, "docs/fonts/fraunces-LICENSE.txt"),
+]);
 await Promise.all(["site.css", "site.js"].map((f) => copyFile(`docs-src/${f}`, `docs/${f}`)));
 await writeDocs(version);
