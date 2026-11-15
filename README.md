@@ -8,7 +8,8 @@
 
 <h2>The sky over your dashboard, built from your weather.</h2>
 
-<img width="560" alt="Atmo Weather Card cycling through sunny, cloudy, rain, thunderstorm, snow, fog, wind and night scenes" src="https://github.com/user-attachments/assets/83dbed24-03a5-411c-a9ae-c470280d7208" />
+<img width="640" height="200" alt="atmo-weather-preview" src="https://github.com/user-attachments/assets/d6965c83-7d50-4cd5-a5c6-a4772be923fd" />
+
 
 An animated weather card for Home Assistant. It reads your weather entity and your sensors and builds a live sky from them, by day and by night.
 
