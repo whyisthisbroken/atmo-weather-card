@@ -46,7 +46,6 @@ import {
   readNumber,
 } from "./atmo-weather-config.js";
 import {
-  ACTIVE_STATES,
   ATMOSPHERE_CSS,
   BAD_WEATHER_TYPES,
   CELESTIAL_CLOUD_PALETTES,
@@ -100,6 +99,7 @@ import {
 } from "./atmo-weather-compass.js";
 import { editorLanguage } from "./atmo-weather-i18n.js";
 import {
+  buildImageRules,
   computeGauge,
   escapeHtml,
   escapeHtmlAttr,
@@ -108,6 +108,8 @@ import {
   fcLabel,
   timeFormatOptions,
   forecastUnavailableText,
+  imageRuleMatches,
+  imageRuleValue,
   loadFigtreeFont,
   parseAnchor,
   parseCSSVal,
@@ -447,10 +449,7 @@ class AtmosphericWeatherCard extends HTMLElement {
       config.card_tap_action.action &&
       config.card_tap_action.action !== "none";
     root.classList.toggle("clickable", !!hasTapAction);
-    this._hasStatusFeature = !!(
-      config.status_entity &&
-      (config.status_day || config.status_night)
-    );
+    this._imageRules = buildImageRules(config);
     const csz =
       config.celestial_size != null
         ? parseInt(config.celestial_size, 10)
@@ -729,7 +728,8 @@ class AtmosphericWeatherCard extends HTMLElement {
       ? hass.states[cfg.moon_phase_entity]
       : null;
     const themeObj = cfg.theme_entity ? hass.states[cfg.theme_entity] : null;
-    const statusObj = cfg.status_entity ? hass.states[cfg.status_entity] : null;
+    const imageRules = this._imageRules || [];
+    const ruleObjs = imageRules.map((r) => hass.states[r.entity] || null);
     const precipObj = cfg.precipitation_entity
       ? hass.states[cfg.precipitation_entity]
       : null;
@@ -746,7 +746,8 @@ class AtmosphericWeatherCard extends HTMLElement {
         sunObj !== this._refSun ||
         moonObj !== this._refMoon ||
         themeObj !== this._refTheme ||
-        statusObj !== this._refStatus ||
+        ruleObjs.length !== (this._refImageRules || []).length ||
+        ruleObjs.some((o, i) => o !== this._refImageRules[i]) ||
         precipObj !== this._refPrecip ||
         (hass.themes && hass.themes.darkMode) !== this._refSysDark;
       if (!changed) {
@@ -787,7 +788,7 @@ class AtmosphericWeatherCard extends HTMLElement {
     this._refSun = sunObj;
     this._refMoon = moonObj;
     this._refTheme = themeObj;
-    this._refStatus = statusObj;
+    this._refImageRules = ruleObjs;
     this._refPrecip = precipObj;
     this._refSensors = sensorObjs;
     this._refSysDark = hass.themes && hass.themes.darkMode;
@@ -819,9 +820,6 @@ class AtmosphericWeatherCard extends HTMLElement {
       : null;
     const themeEntity = this._config.theme_entity
       ? hass.states[this._config.theme_entity]
-      : null;
-    const statusEntity = this._config.status_entity
-      ? hass.states[this._config.status_entity]
       : null;
     const precipEntity = this._config.precipitation_entity
       ? hass.states[this._config.precipitation_entity]
@@ -881,7 +879,9 @@ class AtmosphericWeatherCard extends HTMLElement {
           : "",
       moon: (moonEntity && moonEntity.state) || "",
       theme: (themeEntity && themeEntity.state) || "",
-      status: (statusEntity && statusEntity.state) || "",
+      status: imageRules
+        .map((r, i) => imageRuleValue(r, ruleObjs[i]))
+        .join("|"),
       botSig,
       sysDark: !!sysDark,
       lang,
@@ -1094,18 +1094,26 @@ class AtmosphericWeatherCard extends HTMLElement {
               : sunEntity
                 ? sunIsNight
                 : false;
+    // image_night_source: "sun" (default) shows the night images while the
+    // sky is at night; "theme" follows the color mode like the card colors.
+    // Without a sun entity both follow the theme.
+    const imageFollowsSun =
+      String(this._config.image_night_source || "sun").toLowerCase() !==
+      "theme";
     const isImageNight =
-      mode === "dark" || mode === "night"
-        ? true
-        : mode === "light" || mode === "day"
-          ? false
-          : themeValid
-            ? themeIsNight
-            : sysDark !== undefined
-              ? !!sysDark
-              : sunEntity
-                ? sunIsNight
-                : false;
+      imageFollowsSun && sunEntity
+        ? isTimeNight
+        : mode === "dark" || mode === "night"
+          ? true
+          : mode === "light" || mode === "day"
+            ? false
+            : themeValid
+              ? themeIsNight
+              : sysDark !== undefined
+                ? !!sysDark
+                : sunEntity
+                  ? sunIsNight
+                  : false;
     return { isTimeNight, isThemeDark, isImageNight };
   }
   // ENTITY & STATE HELPERS
@@ -1414,15 +1422,9 @@ class AtmosphericWeatherCard extends HTMLElement {
     );
   }
   _calculateStatusImage(hass, isNight) {
-    if (!this._hasStatusFeature) return null;
-    const entityId = this._config.status_entity;
-    const stateObj = this._getEntityState(hass, entityId);
-    if (!stateObj || !stateObj.state) return null;
-    const state = stateObj.state.toLowerCase();
-    if (ACTIVE_STATES.includes(state)) {
-      return isNight
-        ? this._config.status_night || this._config.status_day
-        : this._config.status_day || this._config.status_night;
+    for (const rule of this._imageRules || []) {
+      if (imageRuleMatches(rule, this._getEntityState(hass, rule.entity)))
+        return isNight ? rule.night : rule.day;
     }
     return null;
   }

@@ -81,6 +81,7 @@ const LABELS = Object.freeze({
   celestial_y: "Y Offset",
   image_day: "Day Image URL",
   image_night: "Night Image URL",
+  image_night_source: "Night image shows",
   image_scale: "Image Scale (%)",
   image_alignment: "Image Position",
   image_x: "Horizontal Offset",
@@ -178,6 +179,8 @@ const HELPERS = Object.freeze({
   celestial_y: "Vertical offset from the alignment edge, in pixels.",
   celestial_position: "",
   image_night: "Shown at night. Falls back to the day image if left empty.",
+  image_night_source:
+    "Applies to every image of the card, the state images too. Without a sun entity the color mode decides.",
   image_scale: "Image height as a percentage of the card height.",
   image_alignment: "",
   image_x: "Fine-tune horizontal position. Pixels or CSS, e.g. -20 or 10%.",
@@ -292,6 +295,7 @@ const KEY_ORDER = Object.freeze([
   "celestial_y",
   "image_day",
   "image_night",
+  "image_night_source",
   "image_scale",
   "image_alignment",
   "status_entity",
@@ -514,6 +518,10 @@ const OPT = Object.freeze({
     { value: "bottom-left", label: "Bottom left" },
     { value: "bottom-center", label: "Bottom center" },
     { value: "bottom-right", label: "Bottom right" },
+  ],
+  image_night_source: [
+    { value: "sun", label: "From sunset to sunrise" },
+    { value: "theme", label: "While the card is dark (Color mode)" },
   ],
   card_filter_clouds: [
     { value: "none", label: "None" },
@@ -6356,6 +6364,16 @@ class AtmosphericWeatherCardEditor extends LitElement {
       <div class="image-thumbs">
         ${thumb("image_day")} ${thumb("image_night")}
       </div>
+      ${src
+        ? this._renderForm([
+            {
+              name: "image_night_source",
+              selector: {
+                select: { mode: "dropdown", options: tOpts(OPT.image_night_source) },
+              },
+            },
+          ])
+        : ""}
       ${src
         ? this._renderGroup(
             "Placement",

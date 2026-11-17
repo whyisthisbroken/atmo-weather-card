@@ -160,7 +160,8 @@ export async function renderDocs({ source }) {
       } catch (e) {
         throw new Error(`Invalid YAML example in the documentation: ${e.message}\n${code}`);
       }
-      const cfg = liveConfig(parsed, entities);
+      // "yaml nolive" keeps an example off the live card, for example when its images do not exist here.
+      const cfg = opts.includes("nolive") ? null : liveConfig(parsed, entities);
       if (cfg) {
         examples++;
         live = `<button type="button" class="try"${scene ? ` data-scene="${escapeAttr(scene)}"` : ""} data-example="${escapeAttr(JSON.stringify(cfg))}">Show live</button>`;

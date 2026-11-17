@@ -190,3 +190,11 @@ test("live examples run in the scene they need", () => {
   const cards = decode(button("appearance", "embedded-cards")).custom_cards;
   assert.deepEqual(cards[0], { type: "placeholder", label: "weather-forecast", custom_width: "100%", entity: "weather.demo" });
 });
+
+test("a nolive example shows its code without a Show live button", () => {
+  const html = docPages.appearance;
+  const section = html.slice(html.indexOf('id="image-conditions"'), html.indexOf('id="embedded-cards"'));
+  assert.ok(section.includes("binary_sensor.snow_on_roof"));
+  assert.ok(!section.includes('class="try"'));
+  assert.ok(!section.includes("nolive"));
+});

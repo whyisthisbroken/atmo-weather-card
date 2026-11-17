@@ -1081,9 +1081,10 @@ Card editor
 │  │              chip_style, chip_area_background, card_background_style
 │  └─ Fine tuning ▸ gaps, sizes and colors of all chips
 ├─ Image
-│  ├─ image_day, image_night (with preview)
+│  ├─ image_day, image_night (with preview), image_night_source
 │  ├─ Placement ▸ image_alignment, image_scale, image_x, image_y
 │  └─ Switch image by state ▸ status_entity, status_day, status_night
+│     (image_conditions for more states: YAML only)
 ├─ Embedded cards
 │  └─ custom_cards_position, custom_cards (Home Assistant's card picker
 │     and visual card editors), custom_cards_css_class
@@ -1180,6 +1181,8 @@ A layout is a starting point. To change one detail, set that option yourself, fo
 
 The card's appearance depends on your **`sun_entity`** (sun or moon) and your **`card_color_mode`** (light or dark).
 
+Your own images switch to their night version with the sun, not with the color mode. Set `image_night_source: theme` to tie them to the color mode instead, see [Custom Images](#custom-images).
+
 #### How to set this up
 
 | Mode                     | Config                                                                        | What it does                                                                                                                                                                                                                                                                                                             |
@@ -1209,6 +1212,7 @@ You can add your own images (such as a house image) to the card. This works in b
 | :---------------- | :------- | :---------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `image_day`       | `string` | —           | File path for the daytime image (e.g., `/local/house-day.png`).                                                                                           |
 | `image_night`     | `string` | —           | File path for the nighttime image. Falls back to the day image if left empty.                                                                             |
+| `image_night_source` | `string` | `sun`    | When the night images show. `sun`: from sunset to sunrise, like the sky. `theme`: while the card is dark, following the [Color Mode](#color-mode). Applies to `image_night`, `status_night` and the night images of `image_conditions`. Without a `sun_entity`, `sun` acts like `theme`. |
 | `image_scale`     | `number` | `100`       | Image size as a percentage of the total card height.                                                                                                      |
 | `image_alignment` | `string` | `top-right` | Image placement. Options: `top-left`, `top-center`, `top-right`, `center-left`, `center`, `center-right`, `bottom-left`, `bottom-center`, `bottom-right`. |
 | `image_x`         | `string` | `0`         | Horizontal offset from the selected image alignment. Accepts pixels or CSS values such as `-20` or `10%`.                                                 |
@@ -1216,6 +1220,46 @@ You can add your own images (such as a house image) to the card. This works in b
 | `status_entity`   | `string` | —           | Entity to monitor for a status-specific image (for example a door sensor).                                                                                |
 | `status_day`      | `string` | —           | Day image to show while `status_entity` is active, open, or home.                                                                                         |
 | `status_night`    | `string` | —           | Night image to show while `status_entity` is active, open, or home.                                                                                       |
+| `image_conditions` | `list`  | —           | YAML only. More images that each replace the house image while an entity has a given state, see [Images by state](#image-conditions). |
+
+<a name="image-conditions"></a>
+
+#### Images by state
+
+`image_conditions` swaps the house image for any number of states: snow on the roof, a wet roof, fog, Christmas lights. The card checks the entries from top to bottom and shows the first one that matches. If none matches, `image_day` and `image_night` stay. `status_entity` keeps working and is checked before the list.
+
+| Key           | Type               | Description                                                                                                         |
+| :------------ | :----------------- | :------------------------------------------------------------------------------------------------------------------ |
+| `entity`      | `string`           | Entity to watch. Required.                                                                                          |
+| `state`       | `string` or `list` | State, or list of states, that shows the image. Upper and lower case do not matter. Without it the image shows while the entity is `on`, `true`, `open`, `unlocked`, `home` or `active`. |
+| `attribute`   | `string`           | Compares this attribute of the entity instead of its state.                                                         |
+| `image_day`   | `string`           | Image by day.                                                                                                       |
+| `image_night` | `string`           | Image at night. With only one of the two images set, the entry shows that image day and night. Each entry needs at least one. |
+
+Entries without an entity or without an image are skipped. While an entity is `unavailable` or `unknown`, its entry does not match.
+
+```yaml nolive
+image_day: /local/images/house-day.png
+image_night: /local/images/house-night.png
+image_conditions:
+  - entity: binary_sensor.snow_on_roof
+    image_day: /local/images/house-snow-day.png
+    image_night: /local/images/house-snow-night.png
+  - entity: weather.home
+    state: [rainy, pouring, lightning-rainy]
+    image_day: /local/images/house-wet-day.png
+    image_night: /local/images/house-wet-night.png
+  - entity: weather.home
+    state: fog
+    image_day: /local/images/house-fog.png
+  - entity: input_boolean.christmas
+    image_day: /local/images/house-christmas-day.png
+    image_night: /local/images/house-christmas-night.png
+```
+
+Snow stays on the roof long after it stops snowing, so the weather state alone switches back too early. A template binary sensor that turns on with snowfall and stays on while it is cold fits better here; the card only needs its `on` state.
+
+The order sets the priority: put the entry that should win at the top. In the example, the snow image beats the wet roof, and the Christmas image only shows when no weather image matches.
 
 ### Embedded Cards
 
@@ -2049,6 +2093,7 @@ Put your own home into the sky. A drawing of the house sits in the card, by day 
 3. **Cut out the two houses.** Crop each version to its own file, then remove the background with a background removal tool, so only the area around the house turns transparent and white walls stay. Save both as PNG.
 4. **Upload the files** to `config/www/images/` in Home Assistant, for example as `my-house-day.png` and `my-house-night.png`. They are then at `/local/images/my-house-day.png`.
 5. **Add them to the card.** `image_day` and `image_night` set the pictures, `image_alignment`, `image_scale`, `image_x` and `image_y` place them (see [Custom Images](#custom-images)). Put the sun and moon where the house does not cover them, and the values into the free space next to it.
+6. **Optional: variants.** Let the AI tool draw the same house with snow on the roof, wet, or with Christmas lights, and switch to them with [`image_conditions`](#image-conditions). Ask for the variants from the same picture, so the house stays in exactly the same place.
 
 The card from the picture above: the time of the next sunset at the top, the outside temperature large at the bottom left, and three rooms next to the house. Replace the room sensors with your own.
 

@@ -86,6 +86,20 @@ test("editor color mode switches write the expected keys", () => {
   assert.ok(!("_color_mode" in events.at(-1)));
 });
 
+test("editor keeps image_conditions from YAML when other fields change", () => {
+  const { editor, events } = createLiveEditor();
+  const image_conditions = [{ entity: "binary_sensor.snow", state: ["on"], image_day: "/local/snow.png" }];
+  editor.setConfig({ weather_entity: "weather.home", image_day: "/local/house.png", image_conditions });
+
+  editor._valueChanged({
+    stopPropagation() {},
+    detail: { value: { ...editor._formData, image_scale: 80 } },
+  });
+
+  assert.deepEqual(events.at(-1).image_conditions, image_conditions);
+  assert.equal(events.at(-1).image_scale, 80);
+});
+
 test("editor reports an invalid card height", () => {
   const { editor } = createLiveEditor();
   editor._config = {};

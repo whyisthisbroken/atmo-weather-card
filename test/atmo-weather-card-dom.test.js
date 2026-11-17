@@ -154,10 +154,92 @@ test("day and night images follow the sun", () => {
   assert.ok(src(mountCard(config, makeHass({ sun: "below_horizon", dark: true }))).includes("night.png"));
 });
 
+test("night images follow the sun by default and the theme on request", () => {
+  const config = { image_day: "/local/day.png", image_night: "/local/night.png" };
+  const src = (card) => card.shadowRoot.querySelector("#image-slot > img").getAttribute("src");
+  const sunDownLight = () => makeHass({ sun: "below_horizon", dark: false });
+  const sunUpDark = () => makeHass({ sun: "above_horizon", dark: true });
+
+  assert.equal(src(mountCard(config, sunDownLight())), "/local/night.png");
+  assert.equal(src(mountCard(config, sunUpDark())), "/local/day.png");
+  assert.equal(src(mountCard({ ...config, image_night_source: "theme" }, sunDownLight())), "/local/day.png");
+  assert.equal(src(mountCard({ ...config, image_night_source: "theme" }, sunUpDark())), "/local/night.png");
+  // Without a sun entity the theme decides.
+  assert.equal(src(mountCard({ ...config, sun_entity: undefined }, sunUpDark())), "/local/night.png");
+});
+
 test("a status entity overrides the image while it is active", () => {
   const card = mountCard({ image_day: "/local/day.png", status_entity: "binary_sensor.door", status_day: "/local/open.png", status_night: "/local/open-night.png" });
 
   assert.ok(card.shadowRoot.querySelector("#image-slot > img").getAttribute("src").includes("open.png"));
+});
+
+const imageSrc = (card) => card.shadowRoot.querySelector("#image-slot > img").getAttribute("src");
+const snowHass = (snow, extra = {}) =>
+  makeHass({
+    weather: "rainy",
+    ...extra,
+    states: {
+      "binary_sensor.snow_on_roof": { entity_id: "binary_sensor.snow_on_roof", state: snow, attributes: { depth: 4 } },
+      ...(extra.states || {}),
+    },
+  });
+const CONDITIONS = {
+  image_day: "/local/house.png",
+  image_night: "/local/house-night.png",
+  image_conditions: [
+    { entity: "binary_sensor.snow_on_roof", image_day: "/local/snow.png", image_night: "/local/snow-night.png" },
+    { entity: "weather.home", state: ["Rainy", "pouring"], image_day: "/local/rain.png" },
+  ],
+};
+
+test("image conditions pick the first match and fall back to the base image", () => {
+  assert.equal(imageSrc(mountCard(CONDITIONS, snowHass("on"))), "/local/snow.png");
+  assert.equal(imageSrc(mountCard(CONDITIONS, snowHass("off"))), "/local/rain.png");
+  assert.equal(imageSrc(mountCard(CONDITIONS, snowHass("off", { weather: "sunny" }))), "/local/house.png");
+});
+
+test("image conditions use their night image, or the day image when none is set", () => {
+  const night = { sun: "below_horizon", dark: true };
+
+  assert.equal(imageSrc(mountCard(CONDITIONS, snowHass("on", night))), "/local/snow-night.png");
+  assert.equal(imageSrc(mountCard(CONDITIONS, snowHass("off", night))), "/local/rain.png");
+});
+
+test("the image follows a condition entity when its state changes", () => {
+  const hass = snowHass("off", { weather: "sunny" });
+  const card = mountCard(CONDITIONS, hass);
+  assert.equal(imageSrc(card), "/local/house.png");
+  const snow = hass.states["binary_sensor.snow_on_roof"];
+
+  card.hass = { ...hass, states: { ...hass.states, [snow.entity_id]: { ...snow, state: "on" } } };
+
+  assert.equal(imageSrc(card), "/local/snow.png");
+});
+
+test("image conditions can match an attribute", () => {
+  const config = {
+    image_day: "/local/house.png",
+    image_conditions: [{ entity: "binary_sensor.snow_on_roof", attribute: "depth", state: 4, image_day: "/local/deep.png" }],
+  };
+
+  assert.equal(imageSrc(mountCard(config, snowHass("off"))), "/local/deep.png");
+});
+
+test("status_entity comes before the image conditions", () => {
+  const config = { ...CONDITIONS, status_entity: "binary_sensor.door", status_day: "/local/open.png" };
+
+  assert.equal(imageSrc(mountCard(config, snowHass("on"))), "/local/open.png");
+});
+
+test("broken image conditions are skipped", () => {
+  const config = {
+    image_day: "/local/house.png",
+    image_conditions: [null, "x", { image_day: "/local/a.png" }, { entity: "binary_sensor.door" }, { entity: 5, image_day: "/local/b.png" }, { entity: "sensor.none", image_day: "/local/c.png" }],
+  };
+
+  assert.equal(imageSrc(mountCard(config)), "/local/house.png");
+  assert.equal(imageSrc(mountCard({ ...config, image_conditions: "nope" })), "/local/house.png");
 });
 
 test("custom cards are created and receive hass", async () => {

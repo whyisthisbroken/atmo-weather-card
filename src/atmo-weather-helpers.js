@@ -1,5 +1,5 @@
 import { CONFIG_DEFAULTS } from "./atmo-weather-config.js";
-import { FORECAST_UNAVAILABLE } from "./atmo-weather-data.js";
+import { ACTIVE_STATES, FORECAST_UNAVAILABLE } from "./atmo-weather-data.js";
 
 // Figtree ships in dist/, so no request leaves the user's network.
 export const FIGTREE_FACES = Object.freeze([
@@ -178,4 +178,59 @@ export function fcLabel(dt, daily, locale, haLocale) {
   return daily
     ? d.toLocaleDateString(locale, { weekday: "short" })
     : d.toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit", ...timeFormatOptions(haLocale) });
+}
+
+// Image rules swap the house image while an entity matches: status_entity
+// first, then image_conditions top to bottom. The first match wins.
+function cleanText(value) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function imageRuleStates(state) {
+  const list = Array.isArray(state) ? state : [state];
+  const states = list
+    .filter((s) => ["string", "number", "boolean"].includes(typeof s))
+    .map((s) => String(s).trim().toLowerCase())
+    .filter(Boolean);
+  return states.length ? states : ACTIVE_STATES;
+}
+
+export function buildImageRules(config) {
+  const rules = [];
+  const add = (entity, attribute, state, day, night) => {
+    const id = cleanText(entity);
+    const dayImg = cleanText(day);
+    const nightImg = cleanText(night);
+    if (!id || (!dayImg && !nightImg)) return;
+    rules.push({
+      entity: id,
+      attribute: cleanText(attribute),
+      states: imageRuleStates(state),
+      day: dayImg || nightImg,
+      night: nightImg || dayImg,
+    });
+  };
+  if (!config) return rules;
+  add(config.status_entity, "", null, config.status_day, config.status_night);
+  if (Array.isArray(config.image_conditions)) {
+    for (const rule of config.image_conditions) {
+      if (rule && typeof rule === "object")
+        add(rule.entity, rule.attribute, rule.state, rule.image_day, rule.image_night);
+    }
+  }
+  return rules;
+}
+
+// The compared value: the state, or the attribute when the rule names one.
+export function imageRuleValue(rule, stateObj) {
+  if (!stateObj) return "";
+  const value = rule.attribute
+    ? stateObj.attributes && stateObj.attributes[rule.attribute]
+    : stateObj.state;
+  return value == null ? "" : String(value).trim().toLowerCase();
+}
+
+export function imageRuleMatches(rule, stateObj) {
+  const value = imageRuleValue(rule, stateObj);
+  return value !== "" && rule.states.includes(value);
 }
