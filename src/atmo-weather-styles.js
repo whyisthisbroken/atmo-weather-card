@@ -83,6 +83,7 @@ export function buildStyles() {
           #fg-canvas { -webkit-mask-image: none !important; mask-image: none !important; }
           #image-slot { position: absolute; top: 0; height: 100%; width: auto; user-select: none; pointer-events: none; box-sizing: border-box; }
           #image-slot > img { display: block; height: 100%; width: auto; max-width: 100%; object-fit: contain; border: none; outline: none; }
+          #image-slot > img.awc-img-layer { position: absolute; top: 0; left: 0; }
           #image-slot > img[src=""],
           #image-slot > img:not([src]) { display: none; visibility: hidden; }
           #wind-compass { position: absolute; inset: 0; pointer-events: none; z-index: 1; font-family: var(--awc-font-family, var(--ha-font-family, var(--paper-font-body1_-_font-family, sans-serif))); color: var(--awc-text-color, #fff); --_cmp-glow: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8)) drop-shadow(0 0 6px rgba(0, 0, 0, 0.5)); --_cmp-alt: rgba(20, 20, 24, 0.85); }

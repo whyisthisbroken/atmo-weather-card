@@ -510,7 +510,7 @@ test("embedded cards use the Home Assistant card editor when it loads", async ()
   assert.deepEqual(emitted.at(-1).custom_cards, [{ type: "markdown", content: "y", custom_width: "50%" }]);
 
   // Adding a card opens Home Assistant's card picker.
-  editor.shadowRoot.querySelector(".add-card-btn").click();
+  editor.shadowRoot.querySelector('ha-expansion-panel[data-panel="cards"] .add-card-btn').click();
   await settle(editor);
   const picker = editor.shadowRoot.querySelector("hui-card-picker");
   picker.dispatchEvent(new CustomEvent("config-changed", { detail: { config: { type: "entities", entities: [] } } }));
@@ -588,6 +588,116 @@ test("the image preview follows the image scale", async () => {
   editor._openPanel = "image";
   await settle(editor);
   assert.match(editor.shadowRoot.querySelector(".image-preview-img").getAttribute("style"), /height:150%/);
+});
+
+test("the fade time slider shows 1 s by default and keeps 0", async () => {
+  const fadeSlider = (editor) =>
+    [...editor.shadowRoot.querySelectorAll(".awc-slider")].find((s) => s.textContent.includes("Fade time"));
+  const { editor, emitted } = await mountEditor({ weather_entity: "weather.home", image_day: "/local/a.png" });
+  editor._openPanel = "image";
+  await settle(editor);
+  const range = fadeSlider(editor).querySelector(".awc-slider-range");
+  assert.equal(range.value, "1");
+  range.value = "0";
+  range.dispatchEvent(new Event("change"));
+  await settle(editor);
+  assert.equal(emitted.at(-1).image_transition, 0);
+  // 1 s is the default, so it is not saved.
+  const num = fadeSlider(editor).querySelector(".awc-slider-num");
+  num.value = "1";
+  num.dispatchEvent(new Event("change"));
+  await settle(editor);
+  assert.ok(!("image_transition" in emitted.at(-1)));
+  // Without an image there is nothing to blend.
+  const bare = await mountEditor({ weather_entity: "weather.home" });
+  bare.editor._openPanel = "image";
+  await settle(bare.editor);
+  assert.equal(fadeSlider(bare.editor), undefined);
+});
+
+// Images by state: a hass whose formatEntityState names the state it is given, like Home Assistant.
+const ruleHass = () => {
+  const hass = makeHass({ states: { "sensor.depth": { entity_id: "sensor.depth", state: "ok", attributes: { depth: 4, friendly_name: "Depth" } } } });
+  const NAMES = { rainy: "Rainy", pouring: "Pouring", on: "Wet", off: "Dry" };
+  hass.formatEntityState = (entity, state = entity.state) => NAMES[state] || state;
+  return hass;
+};
+const RULES = [
+  { entity: "binary_sensor.door", image_day: "/local/open.png" },
+  { entity: "weather.home", state: ["rainy", "pouring"], image_day: "/local/rain.png", image_night: "/local/rain-night.png" },
+];
+const ruleEvent = (value) => ({ stopPropagation() {}, detail: { value } });
+const openStates = async (config) => {
+  const mounted = await mountEditor({ weather_entity: "weather.home", ...config }, ruleHass());
+  mounted.editor._openPanel = "image_states";
+  await settle(mounted.editor);
+  return mounted;
+};
+
+test("images by state have a section of their own with one row per entry", async () => {
+  const { editor } = await openStates({ image_conditions: RULES });
+  const panel = editor.shadowRoot.querySelector('ha-expansion-panel[data-panel="image_states"]');
+  const rows = [...panel.querySelectorAll(".card-row")].map((r) => r.querySelector(".card-row-text").textContent.replace(/\s+/g, " ").trim());
+  assert.deepEqual(rows, ["Dooron, open, home or active", "HomeRainy, Pouring"]);
+  assert.ok(panel.querySelectorAll(".rule-thumb.has").length === 2);
+  // The image panel no longer holds the state images.
+  assert.ok(!editor.shadowRoot.querySelector('ha-expansion-panel[data-panel="image"] .card-row'));
+  // Open entry: previews for day and night above the image fields.
+  editor._expandedImageRule = 1;
+  await settle(editor);
+  const pics = [...panel.querySelectorAll(".card-row.expanded .rule-images .image-thumb-pic")];
+  assert.deepEqual(pics.map((p) => p.classList.contains("has")), [true, true]);
+  assert.match(pics[1].getAttribute("style"), /rain-night\.png/);
+});
+
+test("adding, editing, moving and removing images by state", async () => {
+  const { editor, emitted } = await openStates({ image_conditions: RULES });
+  const list = () => emitted.at(-1).image_conditions;
+  [...editor.shadowRoot.querySelectorAll(".add-card-btn")].find((b) => b.textContent.includes("Add image")).click();
+  await settle(editor);
+  assert.deepEqual(list()[2], {});
+  assert.equal(editor._expandedImageRule, 2);
+  // First form: entity and states. One state is saved as text, more as a list.
+  editor._onImageRuleChanged(2, ruleEvent({ entity: "sensor.depth", state: [] }));
+  editor._onImageRuleChanged(2, ruleEvent({ entity: "sensor.depth", attribute: "depth", state: ["4"] }));
+  assert.deepEqual(list()[2], { entity: "sensor.depth", attribute: "depth", state: "4" });
+  // Second form: only the images; entity, attribute and state stay.
+  editor._onImageRuleChanged(2, ruleEvent({ image_day: " /local/deep.png ", image_night: "" }));
+  assert.deepEqual(list()[2], { entity: "sensor.depth", attribute: "depth", state: "4", image_day: "/local/deep.png" });
+  // Another entity: attribute and states of the old one go.
+  editor._onImageRuleChanged(2, ruleEvent({ entity: "binary_sensor.door", attribute: "depth", state: ["4"] }));
+  assert.deepEqual(list()[2], { entity: "binary_sensor.door", image_day: "/local/deep.png" });
+  editor._moveImageRule(2, -1);
+  assert.deepEqual(list().map((r) => r.image_day), ["/local/open.png", "/local/deep.png", "/local/rain.png"]);
+  assert.equal(editor._expandedImageRule, 1);
+  editor._moveImageRule(0, -1);
+  assert.equal(list().length, 3);
+  editor._removeImageRule(0);
+  editor._removeImageRule(0);
+  editor._removeImageRule(0);
+  assert.ok(!("image_conditions" in emitted.at(-1)));
+});
+
+test("the state choices fit the entity", async () => {
+  const { editor } = await openStates({});
+  const values = (rule) => editor._imageRuleStateOptions(rule).map((o) => o.value);
+  const weather = editor._imageRuleStateOptions({ entity: "weather.home", state: "my-own" });
+  assert.ok(["rainy", "snowy", "sunny", "my-own"].every((v) => weather.some((o) => o.value === v)));
+  assert.equal(weather.find((o) => o.value === "rainy").label, "Rainy");
+  assert.deepEqual(values({ entity: "binary_sensor.door" }), ["on", "off"]);
+  // With an attribute: its current value, no state names.
+  assert.deepEqual(editor._imageRuleStateOptions({ entity: "sensor.depth", attribute: "depth" }), [{ value: "4", label: "4" }]);
+  assert.deepEqual(values({ entity: "sensor.none" }), []);
+});
+
+test("the status entity block shows only for cards that already use it", async () => {
+  const without = await openStates({});
+  const panel = (e) => e.shadowRoot.querySelector('ha-expansion-panel[data-panel="image_states"]');
+  assert.ok(!panel(without.editor).textContent.includes("Status entity"));
+  assert.ok(panel(without.editor).textContent.includes("No images by state yet."));
+  const legacy = await openStates({ status_entity: "binary_sensor.door", status_day: "/local/open.png" });
+  assert.ok(panel(legacy.editor).textContent.includes("Status entity"));
+  assert.ok(panel(legacy.editor).textContent.includes("Checked before the list below."));
 });
 
 test("the card picker gets the dashboard config, or an empty one", async () => {

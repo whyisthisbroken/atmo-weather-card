@@ -33,8 +33,12 @@ const ENTITY_MAP = {
 
 // Demo images: the placeholder image paths of the examples show the sample house.
 const IMAGE_MAP = {
-  "/local/images/my-house-day.png": "../images/house-day.webp",
-  "/local/images/my-house-night.png": "../images/house-night.webp",
+  "/local/images/my-house-day.png": "../images/state-house-day.webp",
+  "/local/images/my-house-night.png": "../images/state-house-night.webp",
+  "/local/images/my-house-rain-day.png": "../images/state-house-rain-day.webp",
+  "/local/images/my-house-rain-night.png": "../images/state-house-rain-night.webp",
+  "/local/images/my-house-snow-day.png": "../images/state-house-snow-day.webp",
+  "/local/images/my-house-snow-night.png": "../images/state-house-snow-night.webp",
 };
 
 // Same anchors as on GitHub.

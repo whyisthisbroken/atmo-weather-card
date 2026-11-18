@@ -7,6 +7,8 @@ export const CONFIG_DEFAULTS = Object.freeze({
   card_filter_sun: "none",
   image_alignment: "top-right",
   image_night_source: "sun",
+  // Seconds one image takes to blend into the next, 0 = switch at once.
+  image_transition: 1,
   card_background_style: "frosted",
   chip_area_layout: "wrap",
   chip_style: "inline",

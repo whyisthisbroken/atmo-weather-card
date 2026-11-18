@@ -172,7 +172,11 @@ test("every image the site uses exists", () => {
   assert.ok(docImgs.length > 0 && landingImgs.length >= 2);
   // No page in docs/docs/ points at images/ next to itself.
   assert.ok(!/<img[^>]+src="images\//.test(allDocs));
-  for (const src of [...docImgs, ...landingImgs])
+  // The image_transition demo builds six paths from one base name.
+  const fadeBases = [...allDocs.matchAll(/class="fade-demo" data-images="(images\/[^"]+)"/g)].map((m) => m[1]);
+  assert.equal(fadeBases.length, 1);
+  const fadeImgs = fadeBases.flatMap((b) => ["day", "night", "rain-day", "rain-night", "snow-day", "snow-night"].map((v) => `${b}-${v}.webp`));
+  for (const src of [...docImgs, ...landingImgs, ...fadeImgs])
     assert.ok(existsSync(new URL(`../docs/${src}`, import.meta.url)), src);
 });
 

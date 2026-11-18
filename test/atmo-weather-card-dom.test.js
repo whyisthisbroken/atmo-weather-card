@@ -208,13 +208,189 @@ test("image conditions use their night image, or the day image when none is set"
 
 test("the image follows a condition entity when its state changes", () => {
   const hass = snowHass("off", { weather: "sunny" });
-  const card = mountCard(CONDITIONS, hass);
+  // Without the blend, so the new image is there at once.
+  const card = mountCard({ ...CONDITIONS, image_transition: 0 }, hass);
   assert.equal(imageSrc(card), "/local/house.png");
   const snow = hass.states["binary_sensor.snow_on_roof"];
 
   card.hass = { ...hass, states: { ...hass.states, [snow.entity_id]: { ...snow, state: "on" } } };
 
   assert.equal(imageSrc(card), "/local/snow.png");
+});
+
+// Blending between images: decode() and animate() become stubs the test controls.
+function fadeStubs() {
+  const decodes = [], anims = [];
+  const proto = window.HTMLImageElement.prototype;
+  const saved = { decode: proto.decode, animate: window.Element.prototype.animate };
+  proto.decode = function () {
+    return new Promise((resolve, reject) => decodes.push({ img: this, resolve, reject }));
+  };
+  window.Element.prototype.animate = function (keyframes, options) {
+    let finish;
+    const anim = { el: this, keyframes, options, cancelled: false, finished: new Promise((r) => (finish = r)) };
+    anim.cancel = () => (anim.cancelled = true);
+    anim.finish = () => finish(anim);
+    anims.push(anim);
+    return anim;
+  };
+  const restore = () => {
+    proto.decode = saved.decode;
+    window.Element.prototype.animate = saved.animate;
+  };
+  return { decodes, anims, restore };
+}
+const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
+const slotImgs = (card) => [...card.shadowRoot.querySelectorAll("#image-slot > img")];
+function revealedCard(config) {
+  const hass = snowHass("off", { weather: "sunny" });
+  const card = mountCard({ ...CONDITIONS, ...config }, hass);
+  card._renderGate.isRevealed = true;
+  const snow = hass.states["binary_sensor.snow_on_roof"];
+  const setSnow = (state) => (card.hass = { ...hass, states: { ...hass.states, [snow.entity_id]: { ...snow, state } } });
+  return { card, setSnow };
+}
+
+test("a changed image blends in once it has loaded", async () => {
+  const stubs = fadeStubs();
+  try {
+    const { card, setSnow } = revealedCard({});
+    setSnow("on");
+    // Until the new image has loaded, the old one stays alone.
+    assert.deepEqual(slotImgs(card).map((i) => i.getAttribute("src")), ["/local/house.png"]);
+    assert.equal(stubs.decodes.length, 1);
+    stubs.decodes[0].resolve();
+    await tick();
+    const [next, old] = slotImgs(card);
+    assert.equal(next.getAttribute("src"), "/local/snow.png");
+    assert.equal(old.getAttribute("src"), "/local/house.png");
+    assert.ok(old.classList.contains("awc-img-layer"));
+    assert.equal(imageSrc(card), "/local/snow.png");
+    // Default 1 s; the new one is fully in before the old one is fully out.
+    assert.deepEqual(stubs.anims.map((a) => [a.el, a.options.duration]), [[next, 1000], [old, 1000]]);
+    assert.deepEqual(stubs.anims[0].keyframes.map((k) => k.opacity), [0, 1, 1]);
+    assert.deepEqual(stubs.anims[1].keyframes.map((k) => k.opacity), [1, 1, 0]);
+    stubs.anims[0].finish();
+    await tick();
+    assert.deepEqual(slotImgs(card).map((i) => i.getAttribute("src")), ["/local/snow.png"]);
+    assert.ok(!slotImgs(card)[0].classList.contains("awc-img-layer"));
+  } finally {
+    stubs.restore();
+  }
+});
+
+test("image_transition sets the fade time and 0 switches at once", async () => {
+  const stubs = fadeStubs();
+  try {
+    const slow = revealedCard({ image_transition: "2.5" });
+    slow.setSnow("on");
+    stubs.decodes[0].resolve();
+    await tick();
+    assert.equal(stubs.anims[0].options.duration, 2500);
+
+    const instant = revealedCard({ image_transition: 0 });
+    instant.setSnow("on");
+    assert.deepEqual(slotImgs(instant.card).map((i) => i.getAttribute("src")), ["/local/snow.png"]);
+    assert.equal(stubs.decodes.length, 1);
+  } finally {
+    stubs.restore();
+  }
+});
+
+test("quick changes end on the last image with one layer left", async () => {
+  const stubs = fadeStubs();
+  try {
+    const { card, setSnow } = revealedCard({});
+    // On and off again before the snow image has loaded: nothing happens.
+    setSnow("on");
+    setSnow("off");
+    stubs.decodes[0].resolve();
+    await tick();
+    assert.deepEqual(slotImgs(card).map((i) => i.getAttribute("src")), ["/local/house.png"]);
+    assert.equal(stubs.anims.length, 0);
+    // A new change in the middle of a blend ends the running one first.
+    setSnow("on");
+    stubs.decodes[1].resolve();
+    await tick();
+    setSnow("off");
+    assert.ok(stubs.anims.slice(0, 2).every((a) => a.cancelled));
+    assert.deepEqual(slotImgs(card).map((i) => i.getAttribute("src")), ["/local/snow.png"]);
+    stubs.decodes[2].resolve();
+    await tick();
+    stubs.anims[2].finish();
+    await tick();
+    assert.deepEqual(slotImgs(card).map((i) => i.getAttribute("src")), ["/local/house.png"]);
+  } finally {
+    stubs.restore();
+  }
+});
+
+test("images switch at once before the card shows and with reduced motion", () => {
+  const stubs = fadeStubs();
+  const savedMatch = window.matchMedia;
+  try {
+    const hidden = revealedCard({});
+    hidden.card._renderGate.isRevealed = false;
+    hidden.setSnow("on");
+    assert.equal(imageSrc(hidden.card), "/local/snow.png");
+
+    window.matchMedia = (q) => ({ matches: q.includes("reduce"), addEventListener() {}, removeEventListener() {} });
+    const calm = revealedCard({});
+    calm.setSnow("on");
+    assert.equal(imageSrc(calm.card), "/local/snow.png");
+    assert.equal(stubs.decodes.length, 0);
+  } finally {
+    window.matchMedia = savedMatch;
+    stubs.restore();
+  }
+});
+
+test("an image that does not load is not blended in", async () => {
+  const stubs = fadeStubs();
+  try {
+    const { card, setSnow } = revealedCard({});
+    setSnow("on");
+    stubs.decodes[0].reject(new Error("404"));
+    await tick();
+    const imgs = slotImgs(card);
+    assert.deepEqual(imgs.map((i) => i.getAttribute("src")), ["/local/snow.png"]);
+    assert.equal(imgs[0].style.opacity, "0");
+    assert.equal(stubs.anims.length, 0);
+  } finally {
+    stubs.restore();
+  }
+});
+
+test("an image still loading when the card is removed is dropped", async () => {
+  const stubs = fadeStubs();
+  try {
+    const { card, setSnow } = revealedCard({});
+    setSnow("on");
+    card.remove();
+    stubs.decodes[0].resolve();
+    await tick();
+    assert.deepEqual(slotImgs(card).map((i) => i.getAttribute("src")), ["/local/house.png"]);
+    assert.equal(stubs.anims.length, 0);
+  } finally {
+    stubs.restore();
+  }
+});
+
+test("a blended image keeps the broken-image handling", async () => {
+  const stubs = fadeStubs();
+  try {
+    const { card, setSnow } = revealedCard({});
+    setSnow("on");
+    stubs.decodes[0].resolve();
+    await tick();
+    const next = slotImgs(card)[0];
+    next.onerror();
+    assert.equal(next.style.opacity, "0");
+    next.onload();
+    assert.equal(next.style.opacity, "1");
+  } finally {
+    stubs.restore();
+  }
 });
 
 test("image conditions can match an attribute", () => {

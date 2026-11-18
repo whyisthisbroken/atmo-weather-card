@@ -319,6 +319,10 @@ class AtmosphericWeatherCard extends HTMLElement {
   }
   disconnectedCallback() {
     this._stopAnimation();
+    this._finishImageFade();
+    // An image still loading is dropped; the next hass update asks again.
+    this._imgToken = (this._imgToken || 0) + 1;
+    this._imgPending = null;
     if (this._resizeObserver) this._resizeObserver.disconnect();
     if (this._intersectionObserver) this._intersectionObserver.disconnect();
     if (this._marqueeObserver) this._marqueeObserver.disconnect();
@@ -1918,12 +1922,7 @@ class AtmosphericWeatherCard extends HTMLElement {
       mid = q("#mid-canvas"),
       fg = q("#fg-canvas");
     const img = q("#image-slot > img");
-    img.onerror = () => {
-      img.style.opacity = "0";
-    };
-    img.onload = () => {
-      img.style.opacity = "1";
-    };
+    this._wireImage(img);
     const chipsRow = q("#chips-row");
     chipsRow.addEventListener("click", (e) => this._handleChipClick(e));
     this._elements = {
@@ -3168,12 +3167,118 @@ class AtmosphericWeatherCard extends HTMLElement {
     const statusSrc = this._calculateStatusImage(hass, isNight);
     const baseSrc = isNight ? this._config.image_night : this._config.image_day;
     const src = statusSrc || baseSrc || this._config.image_day || "";
-    if (src) {
-      if (img.getAttribute("src") !== src) img.src = src;
-    } else {
-      img.removeAttribute("src");
+    if ((img.getAttribute("src") || "") === src) {
+      // Back to the shown image before the next one had loaded: drop that one.
+      if (this._imgPending != null) {
+        this._imgToken = (this._imgToken || 0) + 1;
+        this._imgPending = null;
+      }
+      slot.hidden = !src;
+      return;
     }
-    slot.hidden = !img.getAttribute("src");
+    if (this._imgPending === src) return;
+    // image_transition: seconds the old image takes to blend into the new
+    // one, 0 switches at once. No blend for the first image, before the card
+    // has faded in, or with reduced motion.
+    const ms =
+      readNumber(this._config.image_transition, CONFIG_DEFAULTS.image_transition, 0, 10) * 1000;
+    const reduceMotion =
+      typeof matchMedia === "function" &&
+      matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (
+      !ms ||
+      reduceMotion ||
+      !img.getAttribute("src") ||
+      !(this._renderGate && this._renderGate.isRevealed) ||
+      typeof img.animate !== "function"
+    ) {
+      this._finishImageFade();
+      this._imgToken = (this._imgToken || 0) + 1;
+      this._imgPending = null;
+      if (src) img.src = src;
+      else img.removeAttribute("src");
+      slot.hidden = !src;
+      return;
+    }
+    this._startImageFade(src, ms);
+  }
+  _wireImage(img) {
+    img.onerror = () => {
+      img.style.opacity = "0";
+    };
+    img.onload = () => {
+      img.style.opacity = "1";
+    };
+  }
+  // Loads the next image next to the shown one and blends them once it is
+  // ready, so the slot never shows a gap.
+  _startImageFade(src, ms) {
+    this._finishImageFade();
+    const token = (this._imgToken = (this._imgToken || 0) + 1);
+    this._imgPending = src;
+    const next = this._elements.img.cloneNode(false);
+    next.removeAttribute("style");
+    this._wireImage(next);
+    if (src) next.src = src;
+    else next.removeAttribute("src");
+    const ready =
+      src && typeof next.decode === "function"
+        ? next.decode().then(
+            () => true,
+            () => false,
+          )
+        : Promise.resolve(true);
+    ready.then((loaded) => {
+      if (token !== this._imgToken || !this._elements) return;
+      this._imgPending = null;
+      const slot = this._elements.imageSlot;
+      const old = this._elements.img;
+      // A path that does not load: no blend, it is hidden like before.
+      if (!loaded) {
+        old.replaceWith(next);
+        this._elements.img = next;
+        next.style.opacity = "0";
+        slot.hidden = false;
+        return;
+      }
+      // The old image leaves the flow and lies on top of the new one.
+      old.classList.add("awc-img-layer");
+      slot.insertBefore(next, old);
+      this._elements.img = next;
+      slot.hidden = false;
+      // The new image comes in under the old one first, the old one only
+      // lets go in the second half: the picture never turns see-through.
+      const opts = { duration: ms, fill: "forwards", easing: "ease-in-out" };
+      const anims = [
+        next.animate(
+          [{ opacity: 0 }, { opacity: 1, offset: 0.6 }, { opacity: 1 }],
+          opts,
+        ),
+        old.animate(
+          [{ opacity: 1 }, { opacity: 1, offset: 0.4 }, { opacity: 0 }],
+          opts,
+        ),
+      ];
+      this._imgFade = { old, anims };
+      // cancel() rejects finished; a cut-short blend is no error.
+      anims[1].finished.catch(() => {});
+      anims[0].finished.then(
+        () => {
+          if (this._imgFade && this._imgFade.old === old) this._finishImageFade();
+        },
+        () => {},
+      );
+    });
+  }
+  // Ends a running blend at once: the old image goes, the new one stays.
+  _finishImageFade() {
+    const fade = this._imgFade;
+    if (!fade) return;
+    this._imgFade = null;
+    fade.anims.forEach((a) => a.cancel());
+    fade.old.remove();
+    if (this._elements && this._elements.imageSlot)
+      this._elements.imageSlot.hidden = !this._elements.img.getAttribute("src");
   }
   _refreshMarqueeObservation() {
     if (!this._marqueeObserver) {

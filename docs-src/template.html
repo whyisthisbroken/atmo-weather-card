@@ -98,6 +98,15 @@
   .live .pill { font-size: 12px; padding: 4px 10px; }
   .live-note { color: var(--muted); font-size: 13px; margin: 0; }
   .live-foot { display: flex; justify-content: space-between; font-size: 13px; }
+  /* image_transition demo (Images by state): two cards, one switches at once, one blends. */
+  .fade-demo { display: grid; gap: 12px; margin: 18px 0; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: var(--panel); }
+  .fade-demo .fd-controls { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+  .fade-demo .fd-dur { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .fade-demo .fd-dur input { accent-color: var(--accent); width: 130px; }
+  .fade-demo .fd-dur output { font: 600 13px var(--f-mono); min-width: 3.5em; }
+  .fade-demo .fd-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+  .fade-demo .fd-label { font: 12px var(--f-mono); color: var(--muted); margin-bottom: 6px; }
+  .fade-demo atmo-weather-card { display: block; }
 
   @media (max-width: 1180px) {
     .shell { grid-template-columns: 220px minmax(0, 1fr); }
@@ -350,6 +359,64 @@
   document.getElementById("reset").onclick = () => { state.condition = "sunny"; state.night = false; title.textContent = "Default card"; document.querySelectorAll(".code.showing").forEach((c) => c.classList.remove("showing")); mount({ ...DEFAULT, ...SKY }); syncButtons(); };
   mount({ ...DEFAULT, ...SKY }); syncButtons();
   setInterval(() => card && (card.hass = buildHass()), 1000);
+
+  // image_transition demo: the same weather for two cards, one with
+  // image_transition: 0, one with the chosen fade time.
+  for (const box of document.querySelectorAll(".fade-demo")) {
+    const base = "../" + box.dataset.images;
+    const fd = { look: "normal", night: false, secs: 1 };
+    box.innerHTML = `<div class="fd-controls"><div class="pills fd-look"></div><div class="pills fd-time"></div>
+      <label class="fd-dur">image_transition <input type="range" min="0" max="4" step="0.1" value="1"><output>1 s</output></label></div>
+      <div class="fd-cards"><div><div class="fd-label">image_transition: 0</div></div><div><div class="fd-label fd-on">image_transition: 1</div></div></div>`;
+    const fdConfig = (secs) => ({
+      type: "custom:atmo-weather-card", ...BASE, card_height: 170, chips: [], ...SKY,
+      image_alignment: "bottom-right", image_scale: 100,
+      image_day: `${base}-day.webp`, image_night: `${base}-night.webp`,
+      image_conditions: [
+        { entity: "binary_sensor.snow_on_roof", image_day: `${base}-snow-day.webp`, image_night: `${base}-snow-night.webp` },
+        { entity: "weather.demo", state: ["rainy", "pouring", "lightning-rainy"], image_day: `${base}-rain-day.webp`, image_night: `${base}-rain-night.webp` },
+      ],
+      image_transition: secs,
+    });
+    const fdHass = () => {
+      const h = buildHass();
+      const cond = fd.look === "rain" ? "rainy" : fd.look === "snow" ? "snowy" : fd.night ? "clear-night" : "partlycloudy";
+      h.states = {
+        ...h.states,
+        "weather.demo": { ...h.states["weather.demo"], state: cond },
+        "sun.sun": { ...h.states["sun.sun"], state: fd.night ? "below_horizon" : "above_horizon", attributes: { ...h.states["sun.sun"].attributes, elevation: fd.night ? -12 : 32 } },
+        "binary_sensor.snow_on_roof": { entity_id: "binary_sensor.snow_on_roof", state: fd.look === "snow" ? "on" : "off", attributes: {} },
+      };
+      h.themes = { darkMode: fd.night };
+      return h;
+    };
+    const slots = box.querySelectorAll(".fd-cards > div");
+    const cards = [0, fd.secs].map((secs, i) => {
+      const c = document.createElement("atmo-weather-card");
+      c.setConfig(fdConfig(secs));
+      slots[i].append(c);
+      return c;
+    });
+    const look = box.querySelector(".fd-look"), time = box.querySelector(".fd-time");
+    const push = () => {
+      const h = fdHass();
+      cards.forEach((c) => (c.hass = h));
+      for (const b of look.children) b.classList.toggle("on", b.dataset.v === fd.look);
+      for (const b of time.children) b.classList.toggle("on", b.dataset.v === String(fd.night));
+    };
+    for (const [v, label] of [["normal", "Normal"], ["rain", "Rain"], ["snow", "Snow"]]) pill(look, label, v, () => { fd.look = v; push(); });
+    for (const [v, label] of [[false, "Day"], [true, "Night"]]) pill(time, label, String(v), () => { fd.night = v; push(); });
+    const range = box.querySelector(".fd-dur input"), out = box.querySelector(".fd-dur output"), onLabel = box.querySelector(".fd-on");
+    range.oninput = () => {
+      fd.secs = Number(range.value);
+      out.textContent = `${fd.secs} s`;
+      onLabel.textContent = `image_transition: ${fd.secs}`;
+      cards[1].setConfig(fdConfig(fd.secs));
+      push();
+    };
+    push();
+    setInterval(() => cards.forEach((c) => (c.hass = fdHass())), 1000);
+  }
 
   // Highlight the section in view.
   const navLinks = [...document.querySelectorAll(".nav-sub a")];

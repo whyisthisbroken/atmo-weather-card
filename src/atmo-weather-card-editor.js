@@ -82,6 +82,7 @@ const LABELS = Object.freeze({
   image_day: "Day Image URL",
   image_night: "Night Image URL",
   image_night_source: "Night image shows",
+  image_transition: "Fade time (s)",
   image_scale: "Image Scale (%)",
   image_alignment: "Image Position",
   image_x: "Horizontal Offset",
@@ -181,6 +182,8 @@ const HELPERS = Object.freeze({
   image_night: "Shown at night. Falls back to the day image if left empty.",
   image_night_source:
     "Applies to every image of the card, the state images too. Without a sun entity the color mode decides.",
+  image_transition:
+    "How long one image blends into the next when it changes, for example at sunset. 0 switches at once.",
   image_scale: "Image height as a percentage of the card height.",
   image_alignment: "",
   image_x: "Fine-tune horizontal position. Pixels or CSS, e.g. -20 or 10%.",
@@ -296,6 +299,7 @@ const KEY_ORDER = Object.freeze([
   "image_day",
   "image_night",
   "image_night_source",
+  "image_transition",
   "image_scale",
   "image_alignment",
   "status_entity",
@@ -411,6 +415,7 @@ const TOP_LEVEL_NUMBER_FIELDS = Object.freeze([
   "celestial_x",
   "celestial_y",
   "image_scale",
+  "image_transition",
   "chip_area_columns",
   "chip_area_scroll_count",
   "perf_fps",
@@ -636,6 +641,7 @@ const PREPARED_POSITION_GRIDS = Object.freeze(
 // Runtime defaults of number options outside the performance presets.
 const SLIDER_DEFAULTS = Object.freeze({
   image_scale: 100,
+  image_transition: CONFIG_DEFAULTS.image_transition,
   // The card sits at layer 1 when no order is set.
   card_stack_order: 1,
   // Sun and moon are drawn with a radius of 31 px when no size is set.
@@ -658,6 +664,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
       _config: { type: Object, state: true },
       _colorModeState: { type: String, state: true },
       _expandedCard: { type: Number, state: true },
+      _expandedImageRule: { type: Number, state: true },
       _expandedChip: { type: Number, state: true },
       _openPanel: { type: String, state: true },
       _cardHeightError: { type: String, state: true },
@@ -2204,6 +2211,21 @@ class AtmosphericWeatherCardEditor extends LitElement {
           right: 4%;
         }
       }
+      .rule-thumb {
+        flex: none;
+        width: 36px;
+        height: 28px;
+        border-radius: 6px;
+        border: 1px dashed var(--divider-color);
+        background: center / contain no-repeat
+          color-mix(in srgb, var(--primary-text-color, #212121) 4%, transparent);
+        &.has {
+          border-style: solid;
+        }
+      }
+      .rule-images {
+        margin-top: var(--awc-e-s3);
+      }
       .status-sentence {
         font-size: var(--awc-e-f-body);
         line-height: 1.5;
@@ -2438,6 +2460,199 @@ class AtmosphericWeatherCardEditor extends LitElement {
   _getCustomCards() {
     const cards = this._config && this._config.custom_cards;
     return Array.isArray(cards) ? [...cards] : [];
+  }
+  // A copy: Home Assistant freezes the config it hands to the editor.
+  _getImageConditions() {
+    const list = this._config && this._config.image_conditions;
+    return Array.isArray(list)
+      ? list.map((r) => (r && typeof r === "object" ? { ...r } : {}))
+      : [];
+  }
+  _imageRuleStates(rule) {
+    const v = rule.state;
+    if (v === undefined || v === null || v === "") return [];
+    return (Array.isArray(v) ? v : [v]).map((x) => String(x));
+  }
+  // Choices for the state field: the usual states of the entity's domain plus
+  // its current state; any other value can be typed in.
+  _imageRuleStateOptions(rule) {
+    const id = String(rule.entity || "");
+    const st = this.hass && this.hass.states && this.hass.states[id];
+    const domain = id.split(".")[0];
+    const byDomain = {
+      weather: ["sunny", "clear-night", "partlycloudy", "cloudy", "fog", "rainy", "pouring", "lightning", "lightning-rainy", "snowy", "snowy-rainy", "hail", "windy", "windy-variant", "exceptional"],
+      binary_sensor: ["on", "off"], input_boolean: ["on", "off"], switch: ["on", "off"], light: ["on", "off"], fan: ["on", "off"],
+      cover: ["open", "closed", "opening", "closing"], lock: ["locked", "unlocked"],
+      person: ["home", "not_home"], device_tracker: ["home", "not_home"], sun: ["above_horizon", "below_horizon"],
+    };
+    let values = rule.attribute ? [] : [...(byDomain[domain] || [])];
+    if (!rule.attribute && st && Array.isArray(st.attributes && st.attributes.options))
+      values = [...st.attributes.options];
+    const current = st
+      ? rule.attribute
+        ? st.attributes && st.attributes[rule.attribute]
+        : st.state
+      : undefined;
+    if (current !== undefined && current !== null && !["unavailable", "unknown"].includes(String(current)))
+      values.push(String(current));
+    for (const v of this._imageRuleStates(rule)) values.push(v);
+    const label = (v) => {
+      if (rule.attribute || !st || !this.hass.formatEntityState) return v;
+      try {
+        return this.hass.formatEntityState(st, v) || v;
+      } catch (e) {
+        return v;
+      }
+    };
+    return [...new Set(values)].map((v) => ({ value: v, label: label(v) }));
+  }
+  _imageRuleSchema(rule) {
+    return [
+      { name: "entity", selector: { entity: {} } },
+      ...(rule.entity
+        ? [
+            { name: "attribute", selector: { attribute: {} }, context: { filter_entity: "entity" } },
+            {
+              name: "state",
+              selector: {
+                select: { multiple: true, custom_value: true, mode: "dropdown", options: this._imageRuleStateOptions(rule) },
+              },
+            },
+          ]
+        : []),
+    ];
+  }
+  static _imageRuleImageSchema = [
+    {
+      type: "grid",
+      name: "",
+      schema: [
+        { name: "image_day", selector: { text: {} } },
+        { name: "image_night", selector: { text: {} } },
+      ],
+    },
+  ];
+  _imageRuleLabel = (schema) =>
+    schema && schema.name
+      ? t(
+          {
+            entity: "Entity",
+            attribute: "Attribute (optional)",
+            state: "States",
+            image_day: "Day image",
+            image_night: "Night image",
+          }[schema.name] || schema.name,
+        )
+      : "";
+  _imageRuleHelper = (schema) =>
+    schema && schema.name === "state"
+      ? t("Leave empty to show the image while the entity is on, open, home, unlocked or active.")
+      : schema && schema.name === "attribute"
+        ? t("Compares this attribute instead of the state.")
+        : undefined;
+  _renderImageConditions() {
+    const list = this._getImageConditions();
+    return html`${list.length === 0
+        ? html`<div class="cards-empty">${t("No images by state yet.")}</div>`
+        : ""}
+      ${list.map((rule, idx) => this._renderImageRuleRow(rule, idx, list.length))}
+      <button type="button" class="add-card-btn" @click=${this._addImageRule}>
+        <ha-icon icon="mdi:plus"></ha-icon>
+        <span>${t("Add image")}</span>
+      </button>`;
+  }
+  _renderImageRuleRow(rule, idx, total) {
+    const st = rule.entity && this.hass && this.hass.states[rule.entity];
+    const name =
+      (st && st.attributes && st.attributes.friendly_name) || rule.entity || t("New image");
+    const states = this._imageRuleStates(rule);
+    const labels = this._imageRuleStateOptions(rule);
+    const shown = states.map((v) => (labels.find((o) => o.value === v) || { label: v }).label);
+    const subtitle = rule.entity
+      ? (rule.attribute ? rule.attribute + ": " : "") +
+        (shown.length ? shown.join(", ") : t("on, open, home or active"))
+      : t("Pick an entity");
+    const pic = rule.image_day || rule.image_night;
+    const badge = html`<span
+      class="rule-thumb ${pic ? "has" : ""}"
+      style=${pic ? `background-image:url("${cssUrl(pic)}")` : ""}
+    ></span>`;
+    const data = { ...rule, state: states };
+    const preview = (field) =>
+      html`<div class="image-thumb-pic ${rule[field] ? "has" : ""}"
+        style=${rule[field] ? `background-image:url("${cssUrl(rule[field])}")` : ""}
+      >${rule[field] ? "" : t("No image")}</div>`;
+    const body = html`<ha-form
+        .hass=${this.hass}
+        .data=${data}
+        .schema=${this._imageRuleSchema(rule)}
+        .computeLabel=${this._imageRuleLabel}
+        .computeHelper=${this._imageRuleHelper}
+        @value-changed=${(e) => this._onImageRuleChanged(idx, e)}
+      ></ha-form>
+      <div class="image-thumbs rule-images">${preview("image_day")} ${preview("image_night")}</div>
+      <ha-form
+        .hass=${this.hass}
+        .data=${data}
+        .schema=${this.constructor._imageRuleImageSchema}
+        .computeLabel=${this._imageRuleLabel}
+        @value-changed=${(e) => this._onImageRuleChanged(idx, e)}
+      ></ha-form>`;
+    return this._renderListRow({
+      idx,
+      total,
+      expanded: this._expandedImageRule === idx,
+      title: name,
+      subtitle,
+      badge,
+      body,
+      onToggle: () => (this._expandedImageRule = this._expandedImageRule === idx ? null : idx),
+      onMoveUp: () => this._moveImageRule(idx, -1),
+      onMoveDown: () => this._moveImageRule(idx, 1),
+      onRemove: () => this._removeImageRule(idx),
+    });
+  }
+  _onImageRuleChanged(idx, e) {
+    e.stopPropagation();
+    const list = this._getImageConditions();
+    const old = list[idx] || {};
+    // Two forms edit one entry: each sends only its own fields.
+    const v = { ...old, state: this._imageRuleStates(old), ...((e.detail && e.detail.value) || {}) };
+    const rule = {};
+    const text = (x) => (typeof x === "string" ? x.trim() : "");
+    if (text(v.entity)) rule.entity = text(v.entity);
+    // Another entity: its attribute and states no longer fit.
+    const sameEntity = rule.entity === old.entity;
+    if (sameEntity && text(v.attribute)) rule.attribute = text(v.attribute);
+    const states = sameEntity
+      ? [].concat(v.state ?? []).map((x) => String(x).trim()).filter(Boolean)
+      : [];
+    if (states.length === 1) rule.state = states[0];
+    else if (states.length > 1) rule.state = [...new Set(states)];
+    for (const k of ["image_day", "image_night"]) if (text(v[k])) rule[k] = text(v[k]);
+    list[idx] = rule;
+    this._updateField("image_conditions", list);
+  }
+  _addImageRule() {
+    const list = this._getImageConditions();
+    list.push({});
+    this._expandedImageRule = list.length - 1;
+    this._updateField("image_conditions", list);
+  }
+  _moveImageRule(idx, delta) {
+    const list = this._getImageConditions();
+    const target = idx + delta;
+    if (target < 0 || target >= list.length) return;
+    [list[idx], list[target]] = [list[target], list[idx]];
+    if (this._expandedImageRule === idx) this._expandedImageRule = target;
+    else if (this._expandedImageRule === target) this._expandedImageRule = idx;
+    this._updateField("image_conditions", list);
+  }
+  _removeImageRule(idx) {
+    const list = this._getImageConditions();
+    list.splice(idx, 1);
+    this._expandedImageRule = null;
+    this._updateField("image_conditions", list.length ? list : undefined);
   }
   _imageStatusSchema() {
     const c = this._formData,
@@ -6375,6 +6590,16 @@ class AtmosphericWeatherCardEditor extends LitElement {
           ])
         : ""}
       ${src
+        ? this._renderSlider(
+            "image_transition",
+            t(LABELS.image_transition),
+            0,
+            5,
+            0.1,
+            t(HELPERS.image_transition),
+          )
+        : ""}
+      ${src
         ? this._renderGroup(
             "Placement",
             html`<div class="image-place">
@@ -6402,20 +6627,30 @@ class AtmosphericWeatherCardEditor extends LitElement {
               ${this._renderImageOffsetPicker()}`,
           )
         : ""}
-      ${this._renderGroup(
-        "Switch image by state",
-        html`<div class="status-sentence">
-            ${t(
-              "When this entity is on, open or home, the card shows other images:",
-            )}
-          </div>
-          ${this._renderForm(this._imageStatusSchema())}
-          <div class="composite-helper">
-            ${t(
-              "For example a picture with the garage door open while the door is open.",
-            )}
-          </div>`,
-      )}`;
+`;
+  }
+  _renderImageStatesPanel() {
+    const c = this._formData;
+    // The older single status entity: only for cards that already use it.
+    const legacy = c.status_entity
+      ? this._renderGroup(
+          "Status entity",
+          html`<div class="status-sentence">
+              ${t("When this entity is on, open or home, the card shows other images:")}
+            </div>
+            ${this._renderForm(this._imageStatusSchema())}
+            <div class="composite-helper">
+              ${t("Checked before the list below.")}
+            </div>`,
+        )
+      : "";
+    return html`${this._renderIntro(
+        "image_states",
+        "Show another picture while an entity has a certain state, for example snow on the roof, a wet house in the rain or the open garage door. The first entry that matches wins; without a match the normal images stay.",
+        "appearance.html#image-conditions",
+      )}
+      ${legacy}
+      ${this._renderImageConditions()}`;
   }
   _renderCardsPanel() {
     return html`${this._renderIntro(
@@ -6492,6 +6727,13 @@ class AtmosphericWeatherCardEditor extends LitElement {
         "Image",
         "Your own picture for day and night, e.g. your house",
         this._renderImagePanel(),
+      )}
+      ${this._panel(
+        "image_states",
+        "mdi:image-multiple-outline",
+        "Images by state",
+        "Other pictures for snow, rain or an open door",
+        this._renderImageStatesPanel(),
       )}
       ${this._panel(
         "cards",
