@@ -17,11 +17,12 @@ const README = "https://github.com/whyisthisbroken/atmo-weather-card";
 export const PAGES = [
   { file: "setup", heading: "Setup", label: "Getting started", group: "Start", blurb: "Entities, the first card and where the options live." },
   { file: "examples", heading: "Examples", label: "Examples", group: "Start", blurb: "Complete cards to copy, each one runs live." },
-  { file: "appearance", heading: "Appearance", label: "Appearance", group: "Customize", blurb: "Card style, colors, sun and moon, images and embedded cards." },
+  { file: "appearance", heading: "Appearance", label: "Appearance", group: "Customize", blurb: "Layouts, card style, colors, sun and moon, embedded cards and CSS." },
+  { file: "images", heading: "Images", label: "Images & house", group: "Customize", blurb: "The house of the Home layout, your own house picture, pictures by weather or state, and the blend between them." },
   { file: "chips", heading: "Chips", label: "Chips & forecasts", group: "Customize", blurb: "Values, forecasts, rings and bars, in a row or anywhere." },
   { file: "weather-data", heading: "Weather Data & Sky Light", label: "Weather data & sky light", group: "Sky & effects", blurb: "How cloud cover, rain, haze and mist shape the sky." },
   { file: "effects", heading: "Performance", label: "Effects & performance", group: "Sky & effects", blurb: "Presets, wind and compass, night sky, birds and planes." },
-  { file: "guides", heading: "Guides", label: "Guides", group: "Help", blurb: "Layering, weather icons and your own house picture." },
+  { file: "guides", heading: "Guides", label: "Guides", group: "Help", blurb: "Layering and weather icons." },
   { file: "troubleshooting", heading: "Troubleshooting", label: "Troubleshooting", group: "Help", blurb: "When something looks wrong after an install or update." },
 ];
 
@@ -31,14 +32,17 @@ const ENTITY_MAP = {
   "weather.home": "weather.demo",
 };
 
-// Demo images: the placeholder image paths of the examples show the sample house.
+// Demo images: the placeholder image paths of the examples show the house that
+// comes with the card (assets/house, copied next to the card into docs/).
 const IMAGE_MAP = {
-  "/local/images/my-house-day.png": "../images/state-house-day.webp",
-  "/local/images/my-house-night.png": "../images/state-house-night.webp",
-  "/local/images/my-house-rain-day.png": "../images/state-house-rain-day.webp",
-  "/local/images/my-house-rain-night.png": "../images/state-house-rain-night.webp",
-  "/local/images/my-house-snow-day.png": "../images/state-house-snow-day.webp",
-  "/local/images/my-house-snow-night.png": "../images/state-house-snow-night.webp",
+  "/local/images/my-house-day.png": "../house-day.webp",
+  "/local/images/my-house-night.png": "../house-night.webp",
+  "/local/images/my-house-rain-day.png": "../house-rain-day.webp",
+  "/local/images/my-house-rain-night.png": "../house-rain-night.webp",
+  "/local/images/my-house-snow-day.png": "../house-snow-day.webp",
+  "/local/images/my-house-snow-night.png": "../house-snow-night.webp",
+  // A picture folder (image_folder) with sunny, clear-night, rainy and snowy pictures.
+  "/local/images/my-house/": "../images/house-folder/",
 };
 
 // Same anchors as on GitHub.
@@ -166,12 +170,24 @@ export async function renderDocs({ source }) {
       }
       // "yaml nolive" keeps an example off the live card, for example when its images do not exist here.
       const cfg = opts.includes("nolive") ? null : liveConfig(parsed, entities);
+      // "try=wind_compass:arrow|rose" adds buttons for that option to the live card,
+      // so a reader can switch it without editing the example. A dotted key
+      // (chips.0.bearing_format) reaches into a chip.
+      const tries = opts
+        .filter((o) => o.startsWith("try="))
+        .map((o) => {
+          const [key, list = ""] = o.slice(4).split(":");
+          const values = list.split("|").filter(Boolean).map((v) => YAML.parse(v));
+          if (!key || values.length < 2) throw new Error(`A try= option needs a key and two values or more: ${o}`);
+          return { key, values };
+        });
       if (cfg) {
         examples++;
-        live = `<button type="button" class="try"${scene ? ` data-scene="${escapeAttr(scene)}"` : ""} data-example="${escapeAttr(JSON.stringify(cfg))}">Show live</button>`;
+        live = `<button type="button" class="try"${scene ? ` data-scene="${escapeAttr(scene)}"` : ""}${tries.length ? ` data-tries="${escapeAttr(JSON.stringify(tries))}"` : ""} data-example="${escapeAttr(JSON.stringify(cfg))}">Show live</button>`;
       }
     }
-    return `<div class="code"><div class="code-bar"><span>${escapeHtml(lang || "text")}</span><span class="code-actions">${live}<button type="button" class="copy">Copy</button></span></div><pre><code>${escapeHtml(code)}</code></pre></div>`;
+    // Plain text (an AI prompt) wraps; code keeps its lines.
+    return `<div class="code${lang === "text" ? " code-text" : ""}"><div class="code-bar"><span>${escapeHtml(lang || "text")}</span><span class="code-actions">${live}<button type="button" class="copy">Copy</button></span></div><pre><code>${escapeHtml(code)}</code></pre></div>`;
   };
   // Option names in the first table column get their own anchor (#opt-perf_mode).
   renderer.tablecell = (content, flags) => {

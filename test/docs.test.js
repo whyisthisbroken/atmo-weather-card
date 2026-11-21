@@ -43,16 +43,30 @@ test("the live card of the documentation starts sunny without measured cloud cov
   // A fixed cloud_coverage in the demo data put clouds into every sunny sky.
   const script = docPages.setup.slice(docPages.setup.indexOf("function buildHass()"));
   assert.ok(!/cloud_coverage/.test(script.slice(0, script.indexOf("return {"))));
-  assert.match(docPages.setup, /const state = \{ condition: "sunny", night: false \};/);
+  assert.match(docPages.setup, /const state = \{ condition: "sunny", night: false, frost: false \};/);
 });
 
 test("the editor help links point at sections of the documentation", () => {
   const editor = read("src/atmo-weather-card-editor.js").replace(/\r\n/g, "\n");
   assert.ok(editor.includes(`const DOCS_URL = "${DOCS}";`));
-  assert.ok(editor.includes('href="${DOCS_URL}docs/${anchor}"'));
-  const links = [...editor.matchAll(/this\._renderIntro\(\n\s+"[a-z_]+",\n[\s\S]*?\n\s+"([a-z-]+)\.html#([a-z0-9-]+)",?\n\s+\)/g)];
-  assert.equal(links.length, (editor.match(/this\._renderIntro\(/g) || []).length);
-  assert.ok(links.length >= 6);
+  assert.ok(editor.includes('href="${DOCS_URL}docs/${href}"'));
+  // Every help box has a link: a direct call names its page, the tables of
+  // the sections and chip tabs give theirs.
+  const direct = [...editor.matchAll(/this\._renderIntro\(\n\s+"[a-z_0-9]+",\n[\s\S]*?\n\s+"([a-z-]+)\.html#([a-z0-9-]+)",?\n\s+\)/g)];
+  const fromTables = editor.match(/this\._renderIntro\([^()]*\.\.\.(SECTION_HELP|CHIP_TAB_HELP)\[/g) || [];
+  assert.equal(direct.length + fromTables.length, (editor.match(/this\._renderIntro\(/g) || []).length);
+  assert.equal(fromTables.length, 2);
+  const links = [...editor.matchAll(/"([a-z-]+)\.html#([a-z0-9-]+)"/g)];
+  assert.ok(links.length >= 30);
+  // Each section and each chip tab has help: from the table or a call of its own.
+  const table = (name) => {
+    const body = editor.match(new RegExp(`const ${name} = \\{([\\s\\S]*?)\\n\\};`))[1];
+    return [...body.matchAll(/^  ([a-z_]+): \[/gm)].map((m) => m[1]);
+  };
+  const sections = [...editor.matchAll(/this\._section\(\n\s+"([a-z_]+)",/g)].map((m) => m[1]);
+  const ownHelp = ["style", "css", "sun_moon", "image_folder", "image_states"];
+  assert.deepEqual(sections.filter((id) => !table("SECTION_HELP").includes(id) && !ownHelp.includes(id)), []);
+  assert.deepEqual(table("CHIP_TAB_HELP").sort(), ["data", "icon", "look", "position", "tap", "text", "visibility"]);
   // Each help link opens the page that holds its section.
   // Fixed links like the SVG icons tip go the same way.
   const fixed = [...editor.matchAll(/href="\$\{DOCS_URL\}docs\/([a-z-]+)\.html#([a-z0-9-]+)"/g)];
@@ -134,7 +148,7 @@ test("the documentation build stops on a broken link, invalid YAML or a page wit
 });
 
 test("links to another page get its file name", async () => {
-  const source = PAGES.map((p, i) => `## ${p.heading}\n\n${i === 0 ? "[Wind](#wind-here) [Top](#setup)" : i === 5 ? "### Wind here\n" : "Text"}\n`).join("\n");
+  const source = PAGES.map((p, i) => `## ${p.heading}\n\n${i === 0 ? "[Wind](#wind-here) [Top](#setup)" : p.file === "effects" ? "### Wind here\n" : "Text"}\n`).join("\n");
   const { pages } = await renderDocs({ source });
   assert.match(pages[0].html, /href="effects\.html#wind-here"/);
   assert.match(pages[0].html, /href="#setup"/);
@@ -173,11 +187,18 @@ test("every image the site uses exists", () => {
   // No page in docs/docs/ points at images/ next to itself.
   assert.ok(!/<img[^>]+src="images\//.test(allDocs));
   // The image_transition demo builds six paths from one base name.
-  const fadeBases = [...allDocs.matchAll(/class="fade-demo" data-images="(images\/[^"]+)"/g)].map((m) => m[1]);
+  const fadeBases = [...allDocs.matchAll(/class="fade-demo" data-images="([^"]+)"/g)].map((m) => m[1]);
   assert.equal(fadeBases.length, 1);
   const fadeImgs = fadeBases.flatMap((b) => ["day", "night", "rain-day", "rain-night", "snow-day", "snow-night"].map((v) => `${b}-${v}.webp`));
   for (const src of [...docImgs, ...landingImgs, ...fadeImgs])
     assert.ok(existsSync(new URL(`../docs/${src}`, import.meta.url)), src);
+  // The house of the demo and the landing page: the one that comes with the card.
+  const demoHtml = read("docs/demo.html");
+  const housePaths = [...(demoHtml + landing).matchAll(/["'](house-[a-z-]+\.webp)["']/g)].map((m) => m[1]);
+  assert.ok(housePaths.length >= 6, housePaths.join());
+  for (const src of housePaths) assert.ok(existsSync(new URL(`../docs/${src}`, import.meta.url)), src);
+  // Till890's sample house is gone from the site.
+  assert.ok(!/state-house/.test(allDocs + landing + demoHtml));
 });
 
 test("live examples run in the scene they need", () => {
@@ -196,9 +217,18 @@ test("live examples run in the scene they need", () => {
 });
 
 test("a nolive example shows its code without a Show live button", () => {
-  const html = docPages.appearance;
-  const section = html.slice(html.indexOf('id="image-conditions"'), html.indexOf('id="embedded-cards"'));
+  const html = docPages.images;
+  const section = html.slice(html.indexOf('id="image-conditions"'), html.indexOf('id="blending-between-images"'));
   assert.ok(section.includes("binary_sensor.snow_on_roof"));
   assert.ok(!section.includes('class="try"'));
   assert.ok(!section.includes("nolive"));
+});
+
+test("the demo has an icon for every icon the layouts use", () => {
+  // demo.html is written by hand, so its stand-in icon list misses new layout icons
+  // unless this checks it; a missing one shows as a question mark.
+  const demo = read("docs/demo.html");
+  const icons = JSON.parse(demo.match(/const ICONS = (\{.*?\});/)[1]);
+  const used = new Set([...read("src/atmo-weather-config.js").matchAll(/mdi:([a-z0-9-]+)/g)].map((m) => m[1]));
+  assert.deepEqual([...used].filter((n) => !icons[n]), []);
 });

@@ -61,6 +61,7 @@
   .code-actions { display: flex; gap: 6px; }
   .code pre { margin: 0; padding: 12px 14px; overflow: auto; max-height: 420px; font: 13px/1.55 var(--f-mono); }
   .code pre code { background: none; border: 0; padding: 0; font-size: inherit; }
+  .code-text pre { white-space: pre-wrap; overflow-wrap: anywhere; }
   button { font: 600 12.5px var(--f-body); border-radius: 7px; padding: 5px 11px; cursor: pointer; border: 1px solid var(--line); background: var(--raised); color: var(--text); }
   button:hover { border-color: var(--muted); }
   button.try { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
@@ -97,6 +98,10 @@
   .dash-slot { position: relative; }
   .live .pill { font-size: 12px; padding: 4px 10px; }
   .live-note { color: var(--muted); font-size: 13px; margin: 0; }
+  .tries { display: grid; gap: 8px; }
+  .tries[hidden] { display: none; }
+  .try-row { display: grid; gap: 4px; }
+  .try-key { font: 600 11.5px var(--f-mono, ui-monospace, monospace); color: var(--muted); }
   .live-foot { display: flex; justify-content: space-between; font-size: 13px; }
   /* image_transition demo (Images by state): two cards, one switches at once, one blends. */
   .fade-demo { display: grid; gap: 12px; margin: 18px 0; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: var(--panel); }
@@ -140,8 +145,6 @@
   <div class="top-in">
     <a class="brand" href="../index.html"><span class="sun"></span>Atmo Weather Card</a>
     <nav>
-      <a href="../index.html#station" class="hide-s">Your station</a>
-      <a href="../index.html#tune" class="hide-s">Tune</a>
       <a href="../index.html#gallery">Examples</a>
       <a href="../index.html#install">Install</a>
       <a class="here" href="index.html">Docs</a>
@@ -171,6 +174,7 @@
       <div class="live-head"><span class="live-label">Live</span><button type="button" id="reset">Reset</button></div>
       <div class="live-title" id="live-title">Default card</div>
       <div id="card-slot"></div>
+      <div class="tries" id="tries" hidden></div>
       <div class="pills" id="conditions"></div>
       <div class="pills" id="time"></div>
       <p class="live-note" id="live-note">Press <b>Show live</b> on any example and this card runs it with demo data.</p>
@@ -236,7 +240,7 @@
   });
   await import("../atmo-weather-card.js");
 
-  const state = { condition: "sunny", night: false };
+  const state = { condition: "sunny", night: false, frost: false };
   const CONDS = [["sunny", "Clear"], ["partlycloudy", "Partly cloudy"], ["cloudy", "Cloudy"], ["rainy", "Rain"], ["lightning-rainy", "Thunderstorm"], ["snowy", "Snow"], ["fog", "Fog"], ["windy", "Windy"]];
   const sensorFor = (id) => {
     const m = (re) => re.test(id);
@@ -256,14 +260,16 @@
   const forecast = (type) => {
     const conds = ["sunny", "partlycloudy", "rainy", "cloudy", "sunny", "lightning-rainy", "partlycloudy"];
     const n = type === "hourly" ? 24 : 7, step = type === "hourly" ? 3600e3 : 86400e3;
-    return Array.from({ length: n }, (_, i) => ({ datetime: new Date(Date.now() + i * step).toISOString(), condition: conds[i % conds.length], temperature: 14 + ((i * 3) % 7), templow: 6 + (i % 4), precipitation_probability: [20, 10, 70, 40, 5, 80, 30][i % 7], humidity: 60 + (i % 5) * 4, uv_index: [3, 5, 2, 4, 6, 1, 3][i % 7] }));
+    // Like Home Assistant: hourly entries on the full hour.
+    const start = type === "hourly" ? Math.floor(Date.now() / step) * step : Date.now();
+    return Array.from({ length: n }, (_, i) => ({ datetime: new Date(start + i * step).toISOString(), condition: conds[i % conds.length], temperature: 14 + ((i * 3) % 7), templow: 6 + (i % 4), precipitation_probability: [20, 10, 70, 40, 5, 80, 30][i % 7], humidity: 60 + (i % 5) * 4, uv_index: [3, 5, 2, 4, 6, 1, 3][i % 7] }));
   };
   // The next time the clock shows h:m, today or tomorrow.
   const nextAt = (h, m) => { const d = new Date(); d.setHours(h, m, 0, 0); if (d < Date.now()) d.setDate(d.getDate() + 1); return d.toISOString(); };
   function buildHass() {
     const states = {
       "weather.demo": { entity_id: "weather.demo", state: state.night && state.condition === "sunny" ? "clear-night" : state.condition,
-        attributes: { temperature: 14, humidity: 64, uv_index: 3, precipitation_probability: 20, wind_speed: state.condition === "windy" ? 45 : 12, wind_bearing: 250, pressure: 1016, pressure_unit: "hPa", wind_speed_unit: "km/h", temperature_unit: "°C", friendly_name: "Home" } },
+        attributes: { temperature: state.frost ? -6 : 14, humidity: state.frost ? 92 : 64, uv_index: 3, precipitation_probability: 20, wind_speed: state.condition === "windy" ? 45 : 12, wind_bearing: 250, pressure: 1016, pressure_unit: "hPa", wind_speed_unit: "km/h", temperature_unit: "°C", friendly_name: "Home" } },
       "sun.sun": { entity_id: "sun.sun", state: state.night ? "below_horizon" : "above_horizon", attributes: { elevation: state.night ? -12 : 32, azimuth: 200, next_rising: nextAt(6, 12), next_setting: nextAt(19, 41) } },
       "sensor.moon_phase": { entity_id: "sensor.moon_phase", state: "waxing_gibbous", attributes: {} },
       "sensor.time": { entity_id: "sensor.time", state: new Date().toISOString(), attributes: {} },
@@ -317,7 +323,56 @@
   const condBox = document.getElementById("conditions"), timeBox = document.getElementById("time");
   const pill = (box, label, v, act) => { const b = document.createElement("button"); b.type = "button"; b.className = "pill"; b.textContent = label; b.dataset.v = v; b.onclick = act; box.append(b); };
   for (const [v, label] of CONDS) pill(condBox, label, v, () => { state.condition = v; refresh(); });
-  for (const [v, label] of [[false, "Day"], [true, "Night"]]) pill(timeBox, label, String(v), () => { state.night = v; mount(current); syncButtons(); });
+  // Day and night change the running card, like the sun does in Home Assistant,
+  // so a house image blends over (image_transition) instead of popping in.
+  for (const [v, label] of [[false, "Day"], [true, "Night"]]) pill(timeBox, label, String(v), () => {
+    state.night = v;
+    const dash = slot.querySelector(".dash");
+    if (dash) dash.classList.toggle("dash-night", v);
+    refresh();
+  });
+
+  // Option buttons of an example (try= in the docs source): each switches one
+  // option of the running card.
+  const triesBox = document.getElementById("tries");
+  const getPath = (o, path) => path.split(".").reduce((x, k) => (x == null ? x : x[k]), o);
+  const setPath = (o, path, v) => {
+    const keys = path.split(".");
+    const copy = structuredClone(o);
+    let x = copy;
+    for (const k of keys.slice(0, -1)) x = x[k];
+    x[keys[keys.length - 1]] = v;
+    return copy;
+  };
+  const showLabel = (v) => (v === true ? "On" : v === false ? "Off" : String(v));
+  // An option the example leaves out shows its usual value: off, auto or false.
+  const isActive = (cur, v) => (cur === undefined ? v === false || v === "off" || v === "auto" : JSON.stringify(cur) === JSON.stringify(v));
+  function renderTries(tries) {
+    triesBox.replaceChildren();
+    triesBox.hidden = !tries.length;
+    for (const { key, values } of tries) {
+      const row = document.createElement("div");
+      row.className = "try-row";
+      row.innerHTML = `<span class="try-key"></span><div class="pills"></div>`;
+      row.querySelector(".try-key").textContent = key.replace(/^chips.d+./, "chip: ");
+      const box = row.querySelector(".pills");
+      for (const v of values)
+        pill(box, showLabel(v), JSON.stringify(v), () => {
+          current = setPath(current, key, v);
+          const { _host_style: _s, ...cardCfg } = current;
+          card.setConfig({ type: "custom:atmo-weather-card", ...cardCfg });
+          card.hass = buildHass();
+          syncTries();
+        });
+      row.dataset.key = key;
+      triesBox.append(row);
+    }
+    syncTries();
+  }
+  function syncTries() {
+    for (const row of triesBox.children)
+      for (const b of row.querySelectorAll(".pill")) b.classList.toggle("on", isActive(getPath(current, row.dataset.key), JSON.parse(b.dataset.v)));
+  }
   function syncButtons() {
     for (const b of condBox.children) b.classList.toggle("on", b.dataset.v === state.condition);
     for (const b of timeBox.children) b.classList.toggle("on", b.dataset.v === String(state.night));
@@ -341,12 +396,15 @@
       // Without one it is a sunny day, so the last example's night does not carry over.
       const words = (t.dataset.scene || "").split(",");
       state.night = words.includes("night");
+      // "frost": a cold, humid morning (-6 °C, 92 %), so rime shows.
+      state.frost = words.includes("frost");
       state.condition = words.find((w) => CONDS.some(([v]) => v === w)) || "sunny";
       // Examples without chips of their own keep the chips of the default card;
       // next to embedded cards only the temperature, so nothing overlaps.
       const chips = cfg.chips || (cfg.custom_cards ? DEFAULT.chips.slice(0, 1) : DEFAULT.chips);
       // A card_layout example shows exactly its own YAML: the layout brings height, chips and sky.
       mount(cfg.card_layout ? { ...BASE_NO_HEIGHT, ...cfg } : { ...DEFAULT, ...skyFor(cfg), ...cfg, chips });
+      renderTries(t.dataset.tries ? JSON.parse(t.dataset.tries) : []);
       syncButtons();
       if (window.innerWidth <= 1180) document.querySelector(".live").scrollIntoView({ behavior: "smooth", block: "start" });
       return;
@@ -356,7 +414,7 @@
       navigator.clipboard?.writeText(c.closest(".code").querySelector("code").textContent).then(() => { c.textContent = "Copied"; setTimeout(() => (c.textContent = "Copy"), 1200); }, () => {});
     }
   });
-  document.getElementById("reset").onclick = () => { state.condition = "sunny"; state.night = false; title.textContent = "Default card"; document.querySelectorAll(".code.showing").forEach((c) => c.classList.remove("showing")); mount({ ...DEFAULT, ...SKY }); syncButtons(); };
+  document.getElementById("reset").onclick = () => { state.condition = "sunny"; state.night = false; state.frost = false; title.textContent = "Default card"; document.querySelectorAll(".code.showing").forEach((c) => c.classList.remove("showing")); mount({ ...DEFAULT, ...SKY }); renderTries([]); syncButtons(); };
   mount({ ...DEFAULT, ...SKY }); syncButtons();
   setInterval(() => card && (card.hass = buildHass()), 1000);
 
@@ -370,7 +428,8 @@
       <div class="fd-cards"><div><div class="fd-label">image_transition: 0</div></div><div><div class="fd-label fd-on">image_transition: 1</div></div></div>`;
     const fdConfig = (secs) => ({
       type: "custom:atmo-weather-card", ...BASE, card_height: 170, chips: [], ...SKY,
-      image_alignment: "bottom-right", image_scale: 100,
+      // Out by the card padding, so the house meets the right and bottom edge.
+      image_alignment: "bottom-right", image_scale: 100, image_x: "16", image_y: "-16",
       image_day: `${base}-day.webp`, image_night: `${base}-night.webp`,
       image_conditions: [
         { entity: "binary_sensor.snow_on_roof", image_day: `${base}-snow-day.webp`, image_night: `${base}-snow-night.webp` },

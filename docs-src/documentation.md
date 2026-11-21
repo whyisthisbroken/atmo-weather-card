@@ -12,7 +12,7 @@ These entities connect the card to Home Assistant. Only `weather_entity` is requ
 | :------------------- | :------- | :------ | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **`weather_entity`** | `string` | —       | **Required.** Your weather integration entity (e.g., `weather.your_weather_entity`). The weather state, the forecasts and every reading come from it, unless you set [your own sensors](#your-own-sensors) for single readings. See [Troubleshooting: Weather entity is unavailable or values look wrong](#weather-entity-is-unavailable-or-values-look-wrong).                    |
 | `sun_entity`         | `string` | —       | _Recommended._ Usually `sun.sun`. Switches between day and night and drives the golden hour, sunset colors, the blue hour, sun rays and the moving sun. Without it the card always shows day. How it also sets the card colors is explained in [Color Mode](#color-mode). |
-| `moon_phase_entity`  | `string` | —       | _Recommended._ Displays the correct moon phase (e.g., `sensor.moon_phase`).                                                                                                                                                             |
+| `moon_phase_entity`  | `string` | —       | _Optional._ A moon phase sensor, for example `sensor.moon_phase` from the **Moon** integration. Without it the card works out the phase from the date, within about a day, and draws it smoothly from a thin crescent to the full moon. |
 | `precipitation_entity` | `string` | —     | _Optional._ A sensor with the current rain intensity in mm/h (or in/h). The editor lists only sensors with one of these units. Rain, snow and sleet then follow the measured amount, from drizzle to downpour; hail keeps its own. Without it the density follows the weather state. See [Weather Data & Sky Light](#weather-data). |
 
 A new card added from the card picker starts with `card_layout: standard`: a big temperature, the condition and a quiet row of readings. In Home Assistant's **By entity** tab, a weather entity also suggests the card in its three layouts, see [Card layouts](#card-layouts).
@@ -25,7 +25,7 @@ The card is meant to be pretty flexible. You can customize these examples howeve
 
 Replace the entity IDs and the `icon_path` folder with your own. `grid_options` at the end is the standard Home Assistant option for the size of a card in the sections view.
 
-The three large cards come first. After them, smaller cards each show one idea, grouped by topic: [forecasts](#forecast-layouts), [clocks and the night sky](#clocks--night), [your own sensors](#sensors--energy) and [card shapes](#card-shapes). Every example has a **Show live** button that runs it with demo data.
+The three large cards come first. After them, smaller cards each show one idea, grouped by topic: [forecasts](#forecast-layouts), [clocks and the night sky](#clocks--night), [your own sensors](#sensors--energy), [whole cards from one option](#one-option) and [card shapes](#card-shapes). Every example has a **Show live** button that runs it with demo data.
 
 ### Forecast Slider
 <img width="480" alt="Forecast slider example" src="https://github.com/user-attachments/assets/7ce1551c-d815-4eae-8556-a81825ea5606" />
@@ -586,6 +586,80 @@ chips:
     sub_value_attribute: templow
 ```
 
+#### Week with a curve
+
+The week ahead with a soft line through the five highs above the tiles. `forecast_curve` draws it through the forecast chips; the card is a little taller, so the line has room. Try the other curves with the buttons under the live card.
+
+<img width="480" alt="Week with a curve example" src="images/example-week-curve.webp" />
+
+```yaml scene=sunny try=forecast_curve:line|soft|band|color
+type: custom:atmo-weather-card
+weather_entity: weather.home
+sun_entity: sun.sun
+card_height: 250
+chip_style: vertical
+chip_area_position: bottom-center
+chip_area_background: true
+chip_area_layout: grid
+chip_area_columns: 5
+chip_area_width: 100%
+chip_area_gap: 6px
+forecast_curve: soft
+chips:
+  - entity: weather.home
+    attribute: temperature
+    position: custom
+    position_anchor: top-left
+    position_x: 18px
+    position_y: 14px
+    text_size: 40px
+    hide_icon: true
+    hide_label: true
+    background: false
+    fancy_unit: true
+    value_weight: "700"
+  - entity: weather.home
+    forecast: daily
+    forecast_offset: 1
+    attribute: temperature
+    icon: weather
+    forecast_precision: 0
+    unit_format: °
+    sub_value_attribute: templow
+  - entity: weather.home
+    forecast: daily
+    forecast_offset: 2
+    attribute: temperature
+    icon: weather
+    forecast_precision: 0
+    unit_format: °
+    sub_value_attribute: templow
+  - entity: weather.home
+    forecast: daily
+    forecast_offset: 3
+    attribute: temperature
+    icon: weather
+    forecast_precision: 0
+    unit_format: °
+    sub_value_attribute: templow
+  - entity: weather.home
+    forecast: daily
+    forecast_offset: 4
+    attribute: temperature
+    icon: weather
+    forecast_precision: 0
+    unit_format: °
+    sub_value_attribute: templow
+  - entity: weather.home
+    forecast: daily
+    forecast_offset: 5
+    attribute: temperature
+    icon: weather
+    forecast_precision: 0
+    unit_format: °
+    sub_value_attribute: templow
+```
+
 ### Clocks & night
 
 For wall tablets and the bedside table.
@@ -894,6 +968,36 @@ chips:
     icon: mdi:weather-windy
 ```
 
+### One option
+
+Whole cards from a single `card_layout`. Each layout brings its height, its chips and the place of the sun; add your own chips to change what it shows. See [Card layouts](#card-layouts).
+
+#### Panel
+
+A tall card for a column of its own: the temperature with today's high and low, four tiles with wind, humidity, UV index and rain chance (the pressure or the sunset step in when a value is missing), and the next five hours under a soft curve.
+
+<img width="300" alt="Panel example" src="images/example-panel.webp" />
+
+```yaml scene=cloudy
+type: custom:atmo-weather-card
+weather_entity: weather.home
+sun_entity: sun.sun
+card_layout: panel
+```
+
+#### Home
+
+The house that comes with the card, wet in the rain and snowy in the snow, with the sunset time, a big temperature, a tick ring compass and a frosted bar with humidity, wind and pressure. For your own house and room temperatures in the bar, see the [house guide](#custom-house-image).
+
+<img width="480" alt="Home example" src="images/example-home.webp" />
+
+```yaml scene=partlycloudy
+type: custom:atmo-weather-card
+weather_entity: weather.home
+sun_entity: sun.sun
+card_layout: home
+```
+
 ### Card shapes
 
 From a slim strip to a square tile.
@@ -1053,7 +1157,7 @@ The card has a visual editor for setting up layouts. All YAML settings are liste
 
 ### Where to find things in the editor
 
-The visual editor groups settings into collapsible panels, top to bottom. The editor is in English and German and follows your Home Assistant language; other languages show English. Every panel has a **Help** button with a short explanation and a link to the matching part of this documentation.
+The visual editor groups settings into collapsible panels, top to bottom, ordered from what you set first to what you rarely touch. Inside a panel, each topic is a row with an icon and a short line about what it holds; a tap opens it, and only one topic is open at a time. The editor is in English and German and follows your Home Assistant language; other languages show English. Every panel has a **Help** button with a short explanation and a link to the matching part of this documentation.
 
 ```
 Card editor
@@ -1061,42 +1165,35 @@ Card editor
 ├─ Your own sensors (optional) ▸ precipitation_entity, wind_speed_entity,
 │     wind_bearing_entity, temperature_entity, humidity_entity,
 │     dew_point_entity, cloud_coverage_entity, visibility_entity
-├─ Sun & Moon
-│  ├─ sun_entity, moon_phase_entity
-│  └─ Position & size ▸ celestial_position, celestial_alignment,
-│                       celestial_x, celestial_y, celestial_size
-├─ Appearance
-│  ├─ Color mode ▸ card_color_mode, theme_entity
-│  ├─ Layout ▸ card_layout
-│  ├─ Card style ▸ card_style, card_height, card_padding, effect_text_scrim
-│  ├─ Frame & layers ▸ card_hide_text, card_square, card_full_width,
-│  │                   card_mask_vertical, card_mask_horizontal,
-│  │                   card_stack_order, card_offset
-│  └─ Color filters ▸ card_filter_clouds, card_filter_sun
+├─ Layouts ▸ card_layout (Standard, Compact, Wide, Home, Panel or Free)
+├─ Card
+│  ├─ Style & size ▸ card_style, card_height, card_padding,
+│  │                 effect_text_scrim, card_square, card_hide_text
+│  ├─ Colors ▸ card_color_mode, theme_entity,
+│  │           card_filter_clouds, card_filter_sun
+│  ├─ Position & layers ▸ card_full_width, card_mask_vertical,
+│  │                      card_mask_horizontal (immersive only),
+│  │                      card_stack_order, card_offset
+│  ├─ Tap action ▸ card_tap_action
+│  └─ Own CSS ▸ css
 ├─ Chips
-│  ├─ the chips list (tabs per chip: Data, Text, Icon, Look, Position, Tap)
+│  ├─ the chips list (tabs per chip: Data, Text, Icon, Look, Position, Tap,
+│  │   Conditions)
 │  ├─ Quick add ▸ temperature, humidity, wind, rain chance, tomorrow
 │  ├─ Chip area ▸ chip_area_position, chip_area_layout,
 │  │              chip_area_columns or chip_area_scroll_count (by layout),
 │  │              chip_style, chip_area_background, card_background_style
+│  ├─ Chip area 2 ▸ chip_area_2 (position, layout, columns or scroll_count,
+│  │                gap, style, background), when a chip uses area 2
+│  ├─ Temperature curve ▸ forecast_curve, forecast_curve_height
 │  └─ Fine tuning ▸ gaps, sizes and colors of all chips
-├─ Image
-│  ├─ image_day, image_night (with preview), image_night_source,
-│  │  image_transition
-│  └─ Placement ▸ image_alignment, image_scale, image_x, image_y
-├─ Images by state
-│  ├─ image_conditions (list: entity, attribute, state, image_day,
-│  │  image_night, with preview)
-│  └─ Status entity ▸ status_entity, status_day, status_night
-│     (only shown when the card already uses status_entity)
-├─ Embedded cards
-│  └─ custom_cards_position, custom_cards (Home Assistant's card picker
-│     and visual card editors), custom_cards_css_class
-├─ Performance & effects
-│  ├─ perf_mode
-│  ├─ Graphics ▸ perf_fps, perf_cloud_quality, perf_effects, perf_dpr
-│  ├─ Sky & light ▸ effect_blue_hour, effect_golden_hour, effect_sun_rays,
-│  │                effect_haze, effect_ground_mist, effect_cloud_coverage
+├─ Sky & weather
+│  ├─ Sun & moon ▸ sun_entity, moon_phase_entity, celestial_position,
+│  │               celestial_alignment, celestial_x, celestial_y,
+│  │               celestial_size
+│  ├─ Light & clouds ▸ effect_blue_hour, effect_golden_hour,
+│  │                   effect_sun_rays, effect_haze, effect_ground_mist,
+│  │                   effect_frost, effect_cloud_coverage
 │  ├─ Wind ▸ wind_style, leaf_density, wind_compass, wind_compass_position,
 │  │         wind_compass_cardinal, wind_compass_degrees,
 │  │         wind_compass_speed, wind_compass_background
@@ -1104,27 +1201,39 @@ Card editor
 │  │                snow_density, effect_snow_edge, effect_spill
 │  ├─ Night sky ▸ effect_shooting_stars, shooting_star_rate,
 │  │              effect_comets, comet_rate, star_animation_speed
-│  ├─ Birds & planes ▸ fauna_birds, fauna_bird_density, bird_animation_speed,
-│  │                   fauna_bird_flock_size, fauna_birds_at_night,
-│  │                   fauna_planes, fauna_plane_density, fauna_plane_speed
-│  └─ Animation ▸ animation_speed
-└─ Tap action                              (bottom)
-   └─ card_tap_action
+│  └─ Birds & planes ▸ fauna_birds, fauna_bird_density, bird_animation_speed,
+│                      fauna_bird_flock_size, fauna_birds_at_night,
+│                      fauna_planes, fauna_plane_density, fauna_plane_speed
+├─ Images
+│  ├─ image_day, image_night (with preview)
+│  ├─ Day & night ▸ image_night_source, image_transition
+│  ├─ Placement ▸ image_alignment, image_scale, image_max_width, image_x, image_y
+│  ├─ Pictures by weather ▸ image_folder, image_folder_type
+│  └─ Images by state ▸ image_conditions (list: entity, attribute, state,
+│        image_day, image_night, with preview); status_entity, status_day,
+│        status_night (only when the card already uses status_entity)
+├─ Embedded cards
+│  └─ custom_cards_position, custom_cards (Home Assistant's card picker
+│     and visual card editors), custom_cards_css_class
+└─ Performance                             (bottom)
+   ├─ perf_mode
+   ├─ Graphics ▸ perf_fps, perf_cloud_quality, perf_effects, perf_dpr
+   └─ Animation ▸ animation_speed
 ```
 
 The sections below document every option, including type, default, and behavior.
 
 ### Card layouts
 
-`card_layout` gives the card a finished look with one option. Each layout sets the height, where the sun and moon stand, the chip row and a set of chips. Every value you set yourself wins over the layout, and so do your own chips: the layout's chips only show while the card has none of its own. Their labels come from Home Assistant in your language, and a reading your weather entity does not report, such as the pressure, is left out. In the editor the layouts are under **Appearance ▸ Layout**.
+`card_layout` gives the card a finished look with one option. Each layout sets the height, where the sun and moon stand, the chip row and a set of chips. Every value you set yourself wins over the layout, and so do your own chips: the layout's chips only show while the card has none of its own. Their labels come from Home Assistant in your language, and a reading your weather entity does not report, such as the pressure, is left out. In the editor the layouts are the first panel, **Layouts**, each with a small picture and a line about it.
 
 <img width="480" alt="card_layout standard, compact and wide" src="images/example-layouts.webp" />
 
 | Option        | Type     | Default | Description |
 | :------------ | :------- | :------ | :---------- |
-| `card_layout` | `string` | —       | `standard`: a big, light temperature, the condition under it and a quiet row with humidity, wind and tomorrow. `compact`: one slim strip, about 96 px high, with the temperature, the condition and two readings. `wide`: for wall tablets and wide columns from about 700 px, a very big temperature on the left and humidity, wind, pressure and tomorrow in two columns on the right. On a card narrower than 600 px it shows the standard layout instead, so it also works in a phone column. Without a value the card uses only your own settings. |
+| `card_layout` | `string` | —       | `standard`: a big, light temperature, the condition under it and a quiet row with humidity, wind and tomorrow. `compact`: one slim strip, about 96 px high, with the temperature, the condition and two readings. `wide`: for wall tablets and wide columns from about 700 px, a very big temperature on the left and humidity, wind, pressure and tomorrow in two columns on the right. On a card narrower than 600 px it shows the standard layout instead, so it also works in a phone column. `home`: a house on the right, [the one that comes with the card](#bundled-house) or your own (`image_day`, `image_night`); the sunset time top left, a big temperature and the condition bottom left, a tick ring compass top right and a frosted bar with values bottom right. `panel`: a tall card, about 440 px; the temperature and today's high and low on top, four tiles (wind, humidity with a bar, UV index with a colored bar, rain chance; when your weather service sends no UV index or rain chance, the pressure and then the sunset take the free place) and the next five hours under a soft curve. Without a value the card uses only your own settings. |
 
-```yaml scene=partlycloudy
+```yaml scene=partlycloudy try=card_layout:standard|compact|wide|home|panel
 type: custom:atmo-weather-card
 weather_entity: weather.home
 sun_entity: sun.sun
@@ -1144,6 +1253,78 @@ weather_entity: weather.home
 sun_entity: sun.sun
 card_layout: wide
 ```
+
+<p align="center"><img src="images/example-layout-panel.webp" alt="card_layout panel by day and at night" width="480" /></p>
+
+```yaml scene=cloudy
+type: custom:atmo-weather-card
+weather_entity: weather.home
+sun_entity: sun.sun
+card_layout: panel
+```
+
+<p align="center"><img src="images/example-layout-home.webp" alt="card_layout home with the bar of the layout and with own room chips" width="480" /></p>
+
+`home` brings [a house of its own](#bundled-house): wet in the rain, snowy in the snow and with lit windows at night. A picture of your own replaces it, and `image_day: none` leaves the right half to the sky. On a narrow card the picture shrinks (`image_max_width: 58`), so it stays clear of the temperature. The bar at the bottom shows humidity, wind and pressure until you add your own chips; for room temperatures, keep the sunset, the temperature and the condition and put your rooms into the bar:
+
+```yaml scene=rainy
+type: custom:atmo-weather-card
+weather_entity: weather.home
+sun_entity: sun.sun
+card_layout: home
+chips:
+  - entity: sun.sun
+    attribute: next_setting
+    icon: mdi:weather-sunset-down
+    date_format: "%H:%M"
+    position: custom
+    position_anchor: top-left
+    position_x: 20px
+    position_y: 18px
+    background: false
+    hide_label: true
+    text_size: 15px
+    value_weight: "700"
+    style: inline
+  - entity: weather.home
+    attribute: temperature
+    unit_format: °
+    position: custom
+    position_anchor: bottom-left
+    position_x: 18px
+    position_y: 84px
+    text_size: 72px
+    value_weight: "700"
+    hide_icon: true
+    hide_label: true
+    background: false
+  - entity: weather.home
+    position: custom
+    position_anchor: bottom-left
+    position_x: 21px
+    position_y: 62px
+    text_size: 16px
+    hide_icon: true
+    hide_label: true
+    background: false
+  - entity: sensor.living_room_temperature
+    icon: mdi:sofa-outline
+    hide_label: true
+    unit_format: °
+    value_precision: 0
+  - entity: sensor.office_temperature
+    icon: mdi:desk
+    hide_label: true
+    unit_format: °
+    value_precision: 0
+  - entity: sensor.bathroom_temperature
+    icon: mdi:shower-head
+    hide_label: true
+    unit_format: °
+    value_precision: 0
+```
+
+`panel` puts the next five hours into a [second chip area](#chip-area-2) at the bottom, under a `soft` [temperature curve](#forecast-curve). Pick another curve with `forecast_curve`, or `forecast_curve: off` for none.
 
 `card_height` works with every layout: without it the card takes the layout's height, with it your height. Without a layout (**Free** in the editor) the card uses `card_height`, or 200 px.
 
@@ -1207,81 +1388,6 @@ The sun and moon share a single position and the card swaps them based on your `
 | `celestial_alignment` | `string` | `top-left` | Where the sun and moon anchor inside the card. Uses a 9-cell grid (e.g., `top-left`, `center`, `bottom-right`). Also accepts `left`, `right` as shorthand.                                                                                                              |
 | `celestial_x`         | `number` | `0`        | Horizontal offset in pixels from the anchored position.                                                                                                                                                                                                                 |
 | `celestial_y`         | `number` | `0`        | Vertical offset in pixels from the anchored position.                                                                                                                                                                                                                   |
-
-### Custom Images
-
-You can add your own images (such as a house image) to the card. This works in both standalone and immersive modes. See the [Custom House Image](#custom-house-image) tutorial for a step-by-step guide.
-
-| Option            | Type     | Default     | Description                                                                                                                                               |
-| :---------------- | :------- | :---------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `image_day`       | `string` | —           | File path for the daytime image (e.g., `/local/house-day.png`).                                                                                           |
-| `image_night`     | `string` | —           | File path for the nighttime image. Falls back to the day image if left empty.                                                                             |
-| `image_night_source` | `string` | `sun`    | When the night images show. `sun`: from sunset to sunrise, like the sky. `theme`: while the card is dark, following the [Color Mode](#color-mode). Applies to `image_night`, `status_night` and the night images of `image_conditions`. Without a `sun_entity`, `sun` acts like `theme`. |
-| `image_transition` | `number` | `1`       | Seconds one image takes to blend into the next when it changes: day to night, a state image, an entry of `image_conditions`. `0` switches at once, at most `10`. See [Blending between images](#image-transition). |
-| `image_scale`     | `number` | `100`       | Image size as a percentage of the total card height.                                                                                                      |
-| `image_alignment` | `string` | `top-right` | Image placement. Options: `top-left`, `top-center`, `top-right`, `center-left`, `center`, `center-right`, `bottom-left`, `bottom-center`, `bottom-right`. |
-| `image_x`         | `string` | `0`         | Horizontal offset from the selected image alignment. Accepts pixels or CSS values such as `-20` or `10%`.                                                 |
-| `image_y`         | `string` | `0`         | Vertical offset from the selected image alignment. Accepts pixels or CSS values such as `10` or `-5%`.                                                    |
-| `status_entity`   | `string` | —           | Entity to monitor for a status-specific image (for example a door sensor).                                                                                |
-| `status_day`      | `string` | —           | Day image to show while `status_entity` is active, open, or home.                                                                                         |
-| `status_night`    | `string` | —           | Night image to show while `status_entity` is active, open, or home.                                                                                       |
-| `image_conditions` | `list`  | —           | More images that each replace the house image while an entity has a given state, see [Images by state](#image-conditions). In the editor: section "Images by state". |
-
-<a name="image-conditions"></a>
-
-#### Images by state
-
-`image_conditions` swaps the house image for any number of states: snow on the roof, a wet roof, fog, Christmas lights. The card checks the entries from top to bottom and shows the first one that matches. If none matches, `image_day` and `image_night` stay. `status_entity` keeps working and is checked before the list.
-
-In the editor, the section **Images by state** holds the list: add an entry, pick the entity, choose one or more states (or type your own), and enter the day and night image. The arrows set the order. Without states, an entry shows its image while the entity is `on`, `open`, `home` and the like.
-
-| Key           | Type               | Description                                                                                                         |
-| :------------ | :----------------- | :------------------------------------------------------------------------------------------------------------------ |
-| `entity`      | `string`           | Entity to watch. Required.                                                                                          |
-| `state`       | `string` or `list` | State, or list of states, that shows the image. Upper and lower case do not matter. Without it the image shows while the entity is `on`, `true`, `open`, `unlocked`, `home` or `active`. |
-| `attribute`   | `string`           | Compares this attribute of the entity instead of its state.                                                         |
-| `image_day`   | `string`           | Image by day.                                                                                                       |
-| `image_night` | `string`           | Image at night. With only one of the two images set, the entry shows that image day and night. Each entry needs at least one. |
-
-Entries without an entity or without an image are skipped. While an entity is `unavailable` or `unknown`, its entry does not match.
-
-```yaml nolive
-image_day: /local/images/house-day.png
-image_night: /local/images/house-night.png
-image_conditions:
-  - entity: binary_sensor.snow_on_roof
-    image_day: /local/images/house-snow-day.png
-    image_night: /local/images/house-snow-night.png
-  - entity: weather.home
-    state: [rainy, pouring, lightning-rainy]
-    image_day: /local/images/house-wet-day.png
-    image_night: /local/images/house-wet-night.png
-  - entity: weather.home
-    state: fog
-    image_day: /local/images/house-fog.png
-  - entity: input_boolean.christmas
-    image_day: /local/images/house-christmas-day.png
-    image_night: /local/images/house-christmas-night.png
-```
-
-Snow stays on the roof long after it stops snowing, so the weather state alone switches back too early. A template binary sensor that turns on with snowfall and stays on while it is cold fits better here; the card only needs its `on` state.
-
-The order sets the priority: put the entry that should win at the top. In the example, the snow image beats the wet roof, and the Christmas image only shows when no weather image matches.
-
-<a name="image-transition"></a>
-
-#### Blending between images
-
-When the image changes, the new one fades in under the old one first, then the old one fades out. The house never turns see-through on the way. `image_transition` sets how long that takes, in seconds; `0` switches at once like before. The card waits until the new image has loaded, so there is no empty moment in between. With "reduce motion" turned on in your system settings, images always switch at once.
-
-Try it here: both cards get the same weather, the top one switches at once, the bottom one blends.
-
-<div class="fade-demo" data-images="images/state-house"></div>
-
-The images are by [Till890](https://github.com/whyisthisbroken/atmo-weather-card/discussions/13), drawn on one shared canvas, so the house sits at exactly the same spot in all six. That is what makes the blend look smooth: if the house moves between two images, you see it slide. Save every variant from the same canvas size and position.
-
-> [!TIP]
-> Browsers keep images from `/local/` for a long time. If you replace an image under the same file name and still see the old one, add a version to the path, for example `/local/images/house-day.png?v=2`, and count it up after each change.
 
 ### Embedded Cards
 
@@ -1380,9 +1486,43 @@ These variables only apply when `chip_style` is set to `stacked` or `vertical`.
 | `--awc-stacked-row-gap`       | `4px`     | Vertical gap between the name and value rows in stacked/vertical chips.                     |
 | `--awc-vertical-icon-gap`     | `6px`     | Bottom margin of the icon in vertical chips.                                                |
 
+<a name="own-css"></a>
+
+#### Own CSS without card_mod
+
+The `css` option puts your own styles straight into the card, no card_mod needed. It is in the editor under **Card → Own CSS**. Use `:host` for the whole card and its variables, or the parts of the card: `#image-slot img` (house image), `#chips-row` (chip area), `.chip` (every chip), `.chip-free` (freely placed chips) and `#custom-cards-wrapper` (embedded cards). Your styles come after the card's own, so a rule of the same weight wins.
+
+```yaml
+type: custom:atmo-weather-card
+weather_entity: weather.home
+chips:
+  - entity: weather.home
+    attribute: temperature
+  - entity: weather.home
+    attribute: humidity
+    icon: mdi:water-percent
+  - entity: weather.home
+    attribute: wind_speed
+    icon: mdi:weather-windy
+css: |
+  .chip {
+    background: rgba(255, 255, 255, 0.28);
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    backdrop-filter: blur(8px);
+    border-radius: 999px;
+    padding: 5px 12px;
+  }
+```
+
+<p align="center"><img src="images/css-option.webp" alt="chips without css and as round frosted pills from the css option" width="480" /></p>
+
+| Option | Type     | Default | Description |
+| :----- | :------- | :------ | :---------- |
+| `css`  | `string` | —       | CSS for the inside of the card. Changes apply at once, in the editor preview too. |
+
 #### Card mod example
 
-This example shows how you can apply styles to the card using `card_mod`.
+card_mod works as before. This example sets the text colors with `card_mod`; the same block works under `css` too.
 
 ```yaml
 type: custom:atmo-weather-card
@@ -1396,6 +1536,310 @@ card_mod:
       --awc-text-shadow-night: 0 1px 2px rgba(0, 0, 0, 0.8);
     }
 ```
+
+
+#### Sun and weather for your own styles
+
+The card tells your own styles (the `css` option or `card_mod`) where the sun stands and what the weather is, so your own image can react to it, for example with a shadow that turns with the sun. It needs a `sun_entity` (or `sun.sun`).
+
+| Variable or attribute | Values | Description |
+| :-------------------- | :----- | :---------- |
+| `--awc-sun-x` | `-1` to `1` | East-west direction of the sun: `1` in the east, `-1` in the west. |
+| `--awc-sun-y` | `-1` to `1` | North-south direction: `1` in the north, `-1` in the south. |
+| `--awc-sun-elevation` | degrees | Height of the sun above the horizon, negative at night. |
+| `--awc-sun-shadow` | `0` to `3` | Length of a shadow compared to the height of what casts it; `0` while the sun is down. |
+| `--awc-sun-light` | `0` to `1` | Strength of direct sunlight: low sun, clouds, rain and fog weaken it, `0` at night. |
+| `data-condition` | weather state | The weather the card shows, like `sunny`, `rainy` or `clear-night`, on the card element. |
+| `data-daytime` | `day` or `night` | Day or night, as the sky shows it. |
+
+This example gives your house image a soft shadow that follows the sun and fades under clouds, and lightens it a bit in snow. It assumes the house faces south, with east on the right of the picture; for a house facing north, drop the minus sign.
+
+```yaml
+type: custom:atmo-weather-card
+weather_entity: weather.home
+sun_entity: sun.sun
+image_day: /local/images/my-house-day.png
+image_night: /local/images/my-house-night.png
+image_scale: 70
+image_max_width: 60
+image_x: "16"
+image_y: "12"
+css: |
+  #image-slot img {
+    filter: drop-shadow(
+      calc(var(--awc-sun-x, 0) * -10px)
+      calc(var(--awc-sun-shadow, 0) * 3px + 2px)
+      6px
+      rgba(0, 0, 0, calc(var(--awc-sun-light, 0) * 0.45))
+    );
+  }
+  :host([data-condition="snowy"]) #image-slot img {
+    filter: brightness(1.08);
+  }
+```
+
+## Images
+
+Pictures in front of the sky: the house of the `home` layout, your own house by day and at night, pictures that change with the weather or with any entity, and a soft blend between them. The step-by-step guide at the end shows how to draw your house with an AI image tool.
+
+<a name="bundled-house"></a>
+
+### The house of the Home layout
+
+The [`home` layout](#card-layouts) brings a house of its own, so the card looks finished without any picture. It is an invented house, rendered with Gemini, in six pictures: by day and at night, wet while it rains or storms (`rainy`, `pouring`, `lightning-rainy`, `lightning`, `hail`) and snowy while it snows (`snowy`, `snowy-rainy`). Day and night follow the sun, and the pictures [blend](#image-transition) into each other like your own.
+
+The house is wide, so it sits a little smaller and lower than an own picture (`image_scale: 55`, `image_y: "28%"`), and on a narrow card it shrinks with `image_max_width`. To make it bigger, open **Image** → **Placement** in the editor or set `image_scale` yourself; your values win.
+
+<p align="center"><img src="images/house-all.webp" alt="The house of the home layout by day, at night, in the rain and in the snow" width="560" /></p>
+
+As soon as you set a picture of your own, `image_day`, `image_night`, `image_folder`, `image_conditions` or `status_entity`, your pictures replace the whole house. `image_day: none` shows no picture at all. The snowy house only shows while it snows; for snow that stays on the roof, use your own pictures with a sensor, see [Images by state](#image-conditions).
+
+
+### Custom Images
+
+You can add your own images (such as a house image) to the card. This works in both standalone and immersive modes. See the [Custom House Image](#custom-house-image) tutorial for a step-by-step guide.
+
+| Option            | Type     | Default     | Description                                                                                                                                               |
+| :---------------- | :------- | :---------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `image_day`       | `string` | —           | File path for the daytime image (e.g., `/local/house-day.png`). `none` shows no picture, also not the [house of the Home layout](#bundled-house). |
+| `image_night`     | `string` | —           | File path for the nighttime image. Falls back to the day image if left empty.                                                                             |
+| `image_night_source` | `string` | `sun`    | When the night images show. `sun`: from sunset to sunrise, like the sky. `theme`: while the card is dark, following the [Color Mode](#color-mode). Applies to `image_night`, `status_night` and the night images of `image_conditions`. Without a `sun_entity`, `sun` acts like `theme`. |
+| `image_transition` | `number` | `1`       | Seconds one image takes to blend into the next when it changes: day to night, a state image, an entry of `image_conditions`. `0` switches at once, at most `10`. See [Blending between images](#image-transition). |
+| `image_scale`     | `number` | `100`       | Image size as a percentage of the total card height.                                                                                                      |
+| `image_max_width` | `number` | —           | The most of the card width the image may take, in percent, or a CSS size like `240px`. On a narrower card the image shrinks and keeps its side and its bottom line, so it does not run into the values next to it. The [`home` layout](#card-layouts) uses `58`. In the editor: **Image** → **Placement** → **Max width**. |
+| `image_alignment` | `string` | `top-right` | Image placement. Options: `top-left`, `top-center`, `top-right`, `center-left`, `center`, `center-right`, `bottom-left`, `bottom-center`, `bottom-right`. |
+| `image_x`         | `string` | `0`         | Horizontal offset from the selected image alignment. Accepts pixels or CSS values such as `-20` or `10%`.                                                 |
+| `image_y`         | `string` | `0`         | Vertical offset from the selected image alignment. Accepts pixels or CSS values such as `10` or `-5%`.                                                    |
+| `status_entity`   | `string` | —           | Entity to monitor for a status-specific image (for example a door sensor).                                                                                |
+| `status_day`      | `string` | —           | Day image to show while `status_entity` is active, open, or home.                                                                                         |
+| `status_night`    | `string` | —           | Night image to show while `status_entity` is active, open, or home.                                                                                       |
+| `image_conditions` | `list`  | —           | More images that each replace the house image while an entity has a given state, see [Images by state](#image-conditions). In the editor: section "Images by state". |
+| `image_folder`    | `string` | —           | A folder with one picture per weather state, found by file name, see [Pictures by weather](#image-folder). In the editor: section "Pictures by weather". |
+| `image_folder_type` | `string` | `webp`    | File ending of the pictures in `image_folder`: `webp`, `png`, `jpg` or `svg`. |
+
+<a name="image-folder"></a>
+
+#### Pictures by weather
+
+With `image_folder` the card looks for a picture of the current weather on its own. Name each file after the weather state and put them all into one folder under `/config/www/`:
+
+```
+/config/www/house/
+├─ sunny.webp          sunny-night.webp   (or clear-night.webp)
+├─ partlycloudy.webp   partlycloudy-night.webp
+├─ cloudy.webp         cloudy-night.webp
+├─ rainy.webp          rainy-night.webp
+├─ snowy.webp          snowy-night.webp
+└─ fog.webp, lightning.webp, windy.webp, hail.webp …
+```
+
+<p align="center"><img src="images/image-folder.webp" alt="pictures from image_folder for sunny, pouring and a snowy night" width="560" /></p>
+
+```yaml scene=rainy try=image_transition:0|1|3
+type: custom:atmo-weather-card
+weather_entity: weather.home
+sun_entity: sun.sun
+image_day: /local/images/my-house-day.png
+image_night: /local/images/my-house-night.png
+image_folder: /local/images/my-house/
+image_scale: 70
+image_max_width: 60
+image_x: "16"
+image_y: "12"
+```
+
+On this page the folder holds pictures for sunny, rainy and snowy, by day and at night. Switch the weather of the live card to see them change; fog and the other states show the normal images.
+
+You do not need a picture for every state. A missing one falls back to a close relative: `pouring` and `hail` to `rainy`, `lightning-rainy` to `lightning` and then `rainy`, `lightning` to `rainy`, `snowy-rainy` to `snowy` and then `rainy`, `windy-variant` to `windy`, `clear-night` to `sunny`. When nothing fits, `image_day` and `image_night` show as usual.
+
+At night the card first tries the `-night` pictures (`rainy-night.webp`), then `image_night`, and only then the day picture of the weather. `image_night_source` decides when it is night, as for the other images.
+
+[Images by state](#image-conditions) are checked first: an entry that matches wins over the folder, so snow on the roof can still beat the plain `snowy` picture.
+
+The card cannot list a folder, so it asks for each file once. A file that is missing shows up once as a `404` line in the browser console; that is harmless. Save all pictures on the same canvas so the house does not jump when the weather changes (see [Blending between images](#image-transition)).
+
+<a name="image-conditions"></a>
+
+#### Images by state
+
+`image_conditions` swaps the house image for any number of states: snow on the roof, a wet roof, fog, Christmas lights. The card checks the entries from top to bottom and shows the first one that matches. If none matches, `image_day` and `image_night` stay. `status_entity` keeps working and is checked before the list.
+
+In the editor, the section **Images by state** holds the list: add an entry, pick the entity, choose one or more states (or type your own), and enter the day and night image. The arrows set the order. Without states, an entry shows its image while the entity is `on`, `open`, `home` and the like.
+
+| Key           | Type               | Description                                                                                                         |
+| :------------ | :----------------- | :------------------------------------------------------------------------------------------------------------------ |
+| `entity`      | `string`           | Entity to watch. Required.                                                                                          |
+| `state`       | `string` or `list` | State, or list of states, that shows the image. Upper and lower case do not matter. Without it the image shows while the entity is `on`, `true`, `open`, `unlocked`, `home` or `active`. |
+| `attribute`   | `string`           | Compares this attribute of the entity instead of its state.                                                         |
+| `image_day`   | `string`           | Image by day.                                                                                                       |
+| `image_night` | `string`           | Image at night. With only one of the two images set, the entry shows that image day and night. Each entry needs at least one. |
+
+Entries without an entity or without an image are skipped. While an entity is `unavailable` or `unknown`, its entry does not match.
+
+```yaml nolive
+image_day: /local/images/house-day.png
+image_night: /local/images/house-night.png
+image_conditions:
+  - entity: binary_sensor.snow_on_roof
+    image_day: /local/images/house-snow-day.png
+    image_night: /local/images/house-snow-night.png
+  - entity: weather.home
+    state: [rainy, pouring, lightning-rainy, lightning]
+    image_day: /local/images/house-wet-day.png
+    image_night: /local/images/house-wet-night.png
+  - entity: weather.home
+    state: fog
+    image_day: /local/images/house-fog.png
+  - entity: input_boolean.christmas
+    image_day: /local/images/house-christmas-day.png
+    image_night: /local/images/house-christmas-night.png
+```
+
+Snow stays on the roof long after it stops snowing, so the weather state alone switches back too early. A template binary sensor that turns on with snowfall and stays on while it is cold fits better here; the card only needs its `on` state.
+
+The order sets the priority: put the entry that should win at the top. In the example, the snow image beats the wet roof, and the Christmas image only shows when no weather image matches.
+
+<a name="image-transition"></a>
+
+#### Blending between images
+
+When the image changes, the new one fades in under the old one first, then the old one fades out. The house never turns see-through on the way. `image_transition` sets how long that takes, in seconds; `0` switches at once like before. The card waits until the new image has loaded, so there is no empty moment in between. With "reduce motion" turned on in your system settings, images always switch at once.
+
+Try it here: both cards get the same weather, the top one switches at once, the bottom one blends.
+
+<div class="fade-demo" data-images="house"></div>
+
+The demo uses the [house of the Home layout](#bundled-house). Its six pictures share one canvas, so the house sits at exactly the same spot in all of them. That is what makes the blend look smooth: if the house moves between two images, you see it slide. Save every variant from the same canvas size and position.
+
+> [!TIP]
+> Browsers keep images from `/local/` for a long time. If you replace an image under the same file name and still see the old one, add a version to the path, for example `/local/images/house-day.png?v=2`, and count it up after each change.
+
+<a name="custom-house-image"></a>
+
+### Custom House Image
+
+Put your own home into the sky. A drawing of the house sits in the card, by day in daylight colors and at night with lit windows; the card swaps the two at sunset. Until you add yours, the `home` layout shows [the house that comes with the card](#bundled-house).
+
+<img width="640" alt="Custom house image in the card, by day in the sun and at night in the rain" src="images/example-house.webp" />
+
+1. **Take a reference photo** from a corner, so the picture shows two sides of the house and its depth.
+2. **Let an AI image tool render the day picture.** Upload the photo and start with the prompt below; the house that comes with the card was made with it in Gemini. Two things in it matter most: flat light without shadows, and a plain chroma-green background, so the house can be cut out cleanly. Under "The house", add what the photo does not show well.
+
+   ```text
+   Photorealistic 3D architectural render of the house in the uploaded photo, shown as an isolated diorama on a flat rectangular base plate, placed on a solid, perfectly uniform chroma-green background (#00B140). No sky, no horizon, no gradient, no vignette.
+
+   LIGHTING (most important): completely flat, neutral, shadowless studio lighting, as if lit evenly from all directions by a huge white dome. No sun, no key light, no light direction. NO cast shadows anywhere: none on the base plate, none under roofs or canopies, none from the chimney, hedges or shrubs, and NO shadow of the base plate on the green background. All facades are equally bright. Only extremely faint ambient occlusion in tight inner corners. Neutral white balance.
+
+   The green background is a flat backdrop: it receives no shadow and casts no light, color or reflections onto the house or the base plate.
+
+   Camera: elevated three-quarter view from the front-left, about 30° above the horizon, long-lens perspective that looks almost isometric. House and entire base plate fully visible and centered, occupying about 75% of the image width, with clear green margin on all sides. The base plate has straight, clean edges with a thin visible stone edge.
+
+   The house:
+   - shape, facade, roof, windows and doors as in the photo
+   - (add what the photo does not show well, for example the color of the window frames or a carport)
+   - base plate: the paths and the garden around the house, kept simple
+   - no people, no cars, no animals, no text, no house number, no logos, no watermark, no frame
+
+   Everything dry, neutral natural colors.
+   Style: high-end architectural visualization, sharp detail, realistic materials, no cartoon look.
+   Aspect ratio 4:3.
+   ```
+
+3. **Let it render the night picture as an edit of the first one**, in the same chat, so the house stays at exactly the same spot:
+
+   ```text
+   Now image 2 – night, as an exact edit of image 1: same house, same pixel position, same camera, same green background (#00B140, not darker). Keep the flat, shadowless lighting – no cast shadows. Dark, desaturated grey-blue moonlight tone on house and base plate (not a blue-painted wall), evenly on all facades. Warm 2700 K interior light in about half of the windows; the wall lamp beside the door is on and casts a soft warm glow onto the door area and path. Everything dry and matte – no puddles, no reflections. No text.
+   ```
+
+   <img width="480" alt="The same house by day and at night, on one canvas" src="images/house-pair.webp" />
+4. **Cut out the house.** Remove the green background with an image editor or a background removal tool. Remove it from the edge inwards, not as "every green pixel", or the lawn and the hedge go too, and check closed gaps such as the space under a carport. Crop all pictures the same way, so the house keeps its place, and save them as PNG.
+5. **Upload the files** to `config/www/images/` in Home Assistant, for example as `my-house-day.png` and `my-house-night.png`. They are then at `/local/images/my-house-day.png`.
+6. **Add them to the card.** `image_day` and `image_night` set the pictures, `image_alignment`, `image_scale`, `image_x` and `image_y` place them (see [Custom Images](#custom-images)). Put the sun and moon where the house does not cover them, and the values into the free space next to it. Or let the [`home` layout](#card-layouts) do all of that, as in the example below.
+7. **Optional: variants.** Ask for the house in the rain and in the snow, by day and at night, as further edits in the same chat, and switch to them with [`image_conditions`](#image-conditions). Snow, Christmas lights or anything else works the same way.
+
+   ```text
+   Now image 3 – rain, day, as an exact edit of image 1: same house, same pixel position, same camera, same green background. Keep the flat, shadowless lighting – no cast shadows. Overcast grey tone; roof tiles glossy wet, facade base slightly damp, paving dark and wet with shallow puddles and soft reflections, lawn and hedge darker and wet; cool, slightly desaturated grading. No falling raindrops. No text.
+
+   Now image 4 – snow, day, as an exact edit of image 1: same house, same pixel position, same camera, same green background. Keep the flat, shadowless lighting – no cast shadows. Fresh thick snow (about 15 cm) on the roof, chimney top, window sills, hedges and shrubs; small icicles at the eaves; lawn fully snow-covered; footprints along the path to the door; cool white tones; facade and door colors unchanged. No falling snowflakes. No text.
+
+   Now image 5 – rain at night, as an exact edit of image 2: same house, same pixel position, same green background. EVERY window is lit with warm light exactly as in image 2 – no dark window anywhere – and the door lamp is on. Keep the flat, shadowless lighting – no cast shadows. All surfaces wet: paving dark and glossy with puddles reflecting the warm window light and door lamp, glossy roof tiles, wet lawn. No falling raindrops. No text.
+
+   Now image 6 – snow at night, as an exact edit of image 2: same house, same pixel position, same green background. EVERY window is lit with warm light exactly as in image 2 – no dark window anywhere – and the door lamp is on. Keep the flat, shadowless lighting – no cast shadows. Add the snow cover from image 4. The snow is a soft pale blue-grey in the moonlight, with a warm golden glow near the windows and door. No falling snowflakes. No text.
+   ```
+
+   <img width="480" alt="The same house in the rain and with snow on the roof, on the same canvas as the day image" src="images/house-variants.webp" />
+
+The card from the picture above uses the [`home` layout](#card-layouts): the time of the next sunset at the top, the outside temperature large at the bottom left, and three rooms in the frosted bar under the house. While it rains or snows, the wet and the snowy house replace the normal one. Replace the room sensors with your own.
+
+```yaml scene=sunny
+type: custom:atmo-weather-card
+weather_entity: weather.home
+sun_entity: sun.sun
+card_layout: home
+image_day: /local/images/my-house-day.png
+image_night: /local/images/my-house-night.png
+image_conditions:
+  - entity: weather.home
+    state: [snowy, snowy-rainy]
+    image_day: /local/images/my-house-snow-day.png
+    image_night: /local/images/my-house-snow-night.png
+  - entity: weather.home
+    state: [rainy, pouring, lightning-rainy, lightning]
+    image_day: /local/images/my-house-rain-day.png
+    image_night: /local/images/my-house-rain-night.png
+chips:
+  - entity: sun.sun
+    attribute: next_setting
+    icon: mdi:weather-sunset-down
+    date_format: "%H:%M"
+    position: custom
+    position_anchor: top-left
+    position_x: 20px
+    position_y: 18px
+    background: false
+    hide_label: true
+    text_size: 15px
+    value_weight: "700"
+    style: inline
+  - entity: weather.home
+    attribute: temperature
+    unit_format: °
+    position: custom
+    position_anchor: bottom-left
+    position_x: 18px
+    position_y: 84px
+    text_size: 72px
+    value_weight: "700"
+    hide_icon: true
+    hide_label: true
+    background: false
+  - entity: weather.home
+    position: custom
+    position_anchor: bottom-left
+    position_x: 21px
+    position_y: 62px
+    text_size: 16px
+    hide_icon: true
+    hide_label: true
+    background: false
+  - entity: sensor.living_room_temperature
+    icon: mdi:sofa-outline
+    hide_label: true
+    unit_format: °
+    value_precision: 0
+  - entity: sensor.bedroom_temperature
+    icon: mdi:bed-outline
+    hide_label: true
+    unit_format: °
+    value_precision: 0
+  - entity: sensor.bathroom_temperature
+    icon: mdi:shower-head
+    hide_label: true
+    unit_format: °
+    value_precision: 0
+```
+
+The layout places the picture, the sun, the wind compass and the bar. Without your own chips the bar shows humidity, wind and pressure; with them, keep the first three chips above (sunset, temperature, condition) and change only the rooms.
 
 ## Chips
 
@@ -1416,9 +1860,11 @@ Chip
 │              Forecast: entity, forecast, forecast_offset,
 │                        attribute ("Show"), forecast_precision
 ├─ Text      ▸ Label: hide_label, name, name_sensor, name_attribute,
+│                     date_format (forecast chips),
 │                     label_size, label_weight, label_overflow
 │              Value: hide_value, fancy_unit, bearing_format, bearing_icon,
-│                     bearing_speed, unit_format, value_precision,
+│                     bearing_speed, unit_format or date_format (for a
+│                     point in time), value_precision,
 │                     text_size, value_weight, overflow
 │              Sub value: hide_sub_value, sub_value_entity, sub_value_attribute,
 │                         sub_value_format, sub_value_size, sub_value_weight,
@@ -1430,8 +1876,11 @@ Chip
 │                    and Ring entity or Bar entity (gauge_entity, gauge_attribute)
 │              Layout: style, align, chip_round, background, background_color,
 │                      width, height, padding, inner_gap, text_gap
-├─ Position  ▸ position, position_anchor, position_x, position_y, behind_effects
-└─ Tap       ▸ tap_action (for this chip only)
+├─ Position  ▸ chip area 1 or 2 (area) or free (position, position_anchor,
+│              position_x, position_y), behind_effects
+├─ Tap       ▸ tap_action (for this chip only)
+└─ Conditions ▸ visibility: entity state, entity value, screen size,
+                 time and weekday, user (and/or/not groups in YAML)
 ```
 
 **Reset all styles** at the bottom of an open chip removes its style overrides, so it follows the chip area settings again.
@@ -1475,6 +1924,9 @@ Chip
 | `chip_area_background_color` | `string`  | —             | Custom background color for the grouped container when `chip_area_grouped` is enabled.                                                                                                                                                                                                                |
 | `chip_text_gap`              | `string`  | `0.35em`      | Gap between the name label and the value text inside each chip.                                                                                                                                                                                                                                       |
 | `chip_area_hide`             | `boolean` | `false`       | Hides the chips row entirely.                                                                                                                                                                                                                                                                         |
+| `chip_area_2` | `object` | — | A second chip area with its own place, layout and look, for the chips with `area: 2`. See [Two chip areas](#chip-area-2). |
+| `forecast_curve` | `string` | — | Draws a temperature curve over the forecast chips of the chip area that show the temperature (at least two): `line` (white), `soft` (thin and see-through), `band` (high and low with the range between, needs `templow`; without it a line) or `color` (colored by the temperature). `off` turns off a curve that a layout brings. See [Temperature curve](#forecast-curve). |
+| `forecast_curve_height` | `number` | `46` | Room the curve takes above the chips, in pixels (24–120). |
 
 ### Per-chip options
 
@@ -1485,10 +1937,11 @@ Each entry inside the `chips` list accepts the following keys.
 | `entity`                | `string`  | —           | **Required.** Any sensor, binary_sensor, or weather entity. Pointing it at the weather entity shows the current state (e.g., `Sunny`).                                                                                                                                                                                                                                                         |
 | `attribute`             | `string`  | —           | Read a specific attribute of the entity instead of its state (e.g., `humidity` on a weather entity).                                                                                                                                                                                                                                                                                           |
 | `forecast`              | `string`  | —           | Set to `daily` or `hourly` to show forecast data instead of live entity data. The chip's name is generated automatically (day names for daily, time for hourly). Requires the entity to be a weather entity.                                                                                                                                                                                   |
-| `forecast_offset`       | `number`  | `0`         | Which forecast entry to display. `0` = today/now, `1` = tomorrow/next hour, and so on. Daily goes up to 6, hourly up to 23.                                                                                                                                                                                                                                                                    |
+| `forecast_offset`       | `number`  | `0`         | Which forecast entry to display. `0` = today/now, `1` = tomorrow/next hour, and so on. Daily goes up to 6, hourly up to 23. When your weather service sends fewer entries, a chip past the last one stays hidden instead of showing the last entry twice.                                                                                                                                                                                                                                                                    |
 | `forecast_precision`    | `number`  | —           | Maximum number of decimal places for forecast values (0–2). Only limits the number shown; trailing zero decimals are trimmed (e.g. a whole number stays without a decimal point even at precision `1` or `2`).                                                                                                                                                                                 |
 | `value_precision`       | `number`  | —           | Forces the chip's main value to always show exactly this many decimal places (0–2), padding with zeros if needed (e.g. `22` becomes `22.0` at precision `1`). Leave unset to use Home Assistant's own display precision for the entity/attribute ("Auto"). Does not apply to forecast chips — use `forecast_precision` for those.                                                              |
 | `unit_format`           | `string`  | —           | Replaces the unit shown after the value. Placed directly after the value with no space, e.g. `°` turns `12 °C` into `12°`.                                                                                                                                                                                                                                                                     |
+| `date_format`           | `string`  | —           | Prints a date or time with codes, like Home Assistant templates: `%a` day name, `%A` long day name, `%d` day, `%m` month, `%b`/`%B` month name, `%y`/`%Y` year, `%H` hour (24 h), `%I` hour (12 h), `%M` minute, `%S` second, `%p` AM/PM. A `-` after `%` drops the leading zero (`%-d` prints `5`). Works on the label of a forecast chip (`%a %-d.` prints `Thu 12.`) and on a value that is a point in time, such as `next_rising` of `sun.sun` (`%H:%M`). Without a code the usual text stays. |
 | `bearing_format`        | `string`  | `degrees`   | Shows a wind direction as degrees (`degrees`, the number as Home Assistant delivers it, e.g. `250`; add `unit_format: °` for the sign; with `bearing_icon` or `bearing_speed` the sign is added), as a compass point (`cardinal`, e.g. `WSW`) or as both (`both`, e.g. `WSW 250°`). Works on the `wind_bearing` attribute of a weather entity, live or forecast, and on sensors with the `wind_direction` device class. Compass points are in German or English. See [Wind compass](#wind-compass) for an image.                                                                     |
 | `bearing_icon`          | `string`  | —           | Turns the chip icon into a pointer that follows the wind: `arrow` or `filled` point where the wind blows, like the wind lines; `needle` is a compass needle whose red tip points where the wind comes from. Works on the same chips as `bearing_format` and replaces `icon`.                                                                                                                                                                                                                                               |
 | `bearing_speed`         | `boolean` | `false`     | Adds the wind speed of the weather entity after the direction, for example `NW · 6.5 mph`, in the unit of the entity. Only on chips that read `wind_bearing` of a weather entity, live or forecast.                                                                                                                                                                                                                                                                                                                        |
@@ -1506,6 +1959,8 @@ Each entry inside the `chips` list accepts the following keys.
 | `marquee_speed`         | `number`  | `30`        | Scroll speed in pixels per second when any overflow mode is `marquee` (`overflow`, `label_overflow`, or `sub_value_overflow`). Minimum `5`.                                                                                                                                                                                                                                                    |
 | `marquee_rtl`           | `boolean` | `false`     | Reverses marquee direction (scrolls right-to-left) for all marquee-based text overflows.                                                                                                                                                                                                                                                                                                       |
 | `tap_action`            | `object`  | `more-info` | A standard Home Assistant [tap action](https://www.home-assistant.io/dashboards/actions/) scoped to this chip.                                                                                                                                                                                                                                                                                 |
+| `area` | `number` | `1` | `2` puts the chip into the second chip area (`chip_area_2`). Freely placed chips (`position: custom`) belong to no area. |
+| `visibility`            | `list`    | —           | Shows the chip only while every condition in the list holds. Same format as the `visibility` of Home Assistant cards: `state`, `numeric_state`, `screen`, `user`, `time`, and `and`/`or`/`not` groups. Hidden chips leave no gap. See [Show chips only when they matter](#chip-visibility). |
 | `name_sensor`           | `string`  | —           | An entity whose state (or attribute) is used as the chip's dynamic name label. Updates in real time.                                                                                                                                                                                                                                                                                           |
 | `name_attribute`        | `string`  | —           | Reads a specific attribute from the `name_sensor` entity instead of its state.                                                                                                                                                                                                                                                                                                                 |
 | `hide_sub_value`        | `boolean` | `false`     | Hides the optional secondary value.                                                                                                                                                                                                                                                                                                                                                            |
@@ -1551,7 +2006,7 @@ Setting `type` to `ring` or `bar` turns a chip into a circular or linear gauge i
 
 | Option                                       | Type     | Default         | Description                                                                                                                                                                |
 | :------------------------------------------- | :------- | :-------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `type`                                       | `string` | —               | Set to `ring` or `bar` to enable the gauge.                                                                                                                                |
+| `type`                                       | `string` | —               | Set to `ring` or `bar` to enable the gauge, or to `sun_path` on `sun.sun` for the arc of the sun, see [Sun path](#sun-path). |
 | `ring_min` / `bar_min`                       | `number` | `0`             | Minimum value for the gauge range.                                                                                                                                         |
 | `ring_max` / `bar_max`                       | `number` | `100`           | Maximum value for the gauge range.                                                                                                                                         |
 | `ring_width` / `bar_height`                  | `number` | `4`             | Thickness of the ring stroke, or height of the bar, in pixels.                                                                                                             |
@@ -1607,7 +2062,205 @@ chips:
 
 The first chip shows tomorrow's temperature range (low – high) with a weather icon matching tomorrow's condition. The second chip shows the temperature 3 hours from now, with `°` directly after the value instead of the full unit.
 
+<a name="date-format"></a>
+
+`date_format` writes the day name, the date or the time your way, with the same codes as Home Assistant templates. On a forecast chip it changes the label, on a value that is a point in time, like the sunrise of `sun.sun`, the value itself.
+
+<p align="center"><img src="images/date-format.webp" alt="date_format on forecast labels and on sunrise and sunset" width="480" /></p>
+
+```yaml scene=partlycloudy
+chip_style: vertical
+chip_area_layout: grid
+chip_area_columns: 5
+chip_area_width: 100%
+chip_area_background: true
+chips:
+  - entity: weather.home
+    forecast: daily
+    forecast_offset: 0
+    attribute: temperature
+    sub_value_attribute: templow
+    icon: weather
+    date_format: "%a %-d."
+  - entity: weather.home
+    forecast: daily
+    forecast_offset: 1
+    attribute: temperature
+    sub_value_attribute: templow
+    icon: weather
+    date_format: "%a %-d."
+  - entity: weather.home
+    forecast: daily
+    forecast_offset: 2
+    attribute: temperature
+    sub_value_attribute: templow
+    icon: weather
+    date_format: "%a %-d."
+  - entity: sun.sun
+    attribute: next_rising
+    name: Sunrise
+    icon: mdi:weather-sunset-up
+    date_format: "%H:%M"
+  - entity: sun.sun
+    attribute: next_setting
+    name: Sunset
+    icon: mdi:weather-sunset-down
+    date_format: "%H:%M"
+```
+
+In a grid every tile of a row gets the same width and height, so the sun times line up with the forecast tiles.
+
 For the full list of forecast-related options (`forecast`, `forecast_offset`, `forecast_precision`, `sub_value_attribute`, `sub_value_position`, `value_precision`, `unit_format`), see **Per-chip options** in [Appearance](#appearance).
+
+<a name="chip-area-2"></a>
+
+#### Two chip areas
+
+One chip area holds one row or grid. For a card with tiles in the middle and a forecast row at the bottom, add a second area with `chip_area_2` and give its chips `area: 2`. Both areas have their own place, layout, chip style and background; the chip sizes and colors of the card apply to both. In the editor, pick **Chip area 2** in a chip's **Position** tab, then set the area under **Chips → Chip area 2**.
+
+<p align="center"><img src="images/chip-area-2.webp" alt="two tiles in the first chip area, the next hours in the second" width="480" /></p>
+
+```yaml scene=cloudy
+type: custom:atmo-weather-card
+weather_entity: weather.home
+sun_entity: sun.sun
+card_height: 300
+chip_area_position: top-left
+chip_area_layout: grid
+chip_area_columns: 2
+chip_area_width: 100%
+chip_area_background: true
+chip_style: stacked
+chip_area_2:
+  position: bottom-left
+  layout: grid
+  columns: 4
+  width: 100%
+  style: vertical
+forecast_curve: soft
+chips:
+  - entity: weather.home
+    attribute: humidity
+    icon: mdi:water-percent
+  - entity: weather.home
+    attribute: wind_speed
+    icon: mdi:weather-windy
+  - entity: weather.home
+    forecast: hourly
+    forecast_offset: 1
+    attribute: temperature
+    icon: weather
+    area: 2
+  - entity: weather.home
+    forecast: hourly
+    forecast_offset: 2
+    attribute: temperature
+    icon: weather
+    area: 2
+  - entity: weather.home
+    forecast: hourly
+    forecast_offset: 3
+    attribute: temperature
+    icon: weather
+    area: 2
+  - entity: weather.home
+    forecast: hourly
+    forecast_offset: 4
+    attribute: temperature
+    icon: weather
+    area: 2
+```
+
+`chip_area_2` takes the names of the `chip_area_*` options without the prefix. Anything not set uses the default, not the value of the first area.
+
+| Key                | Type      | Default    | Description |
+| :----------------- | :-------- | :--------- | :---------- |
+| `position`         | `string`  | `top-left` | Where the area sits, like `chip_area_position`. |
+| `layout`           | `string`  | `wrap`     | `wrap`, `grid`, `horizontal-scroll` or `vertical-scroll`, like `chip_area_layout`. |
+| `columns`          | `number`  | `1`        | Columns of the grid layout. |
+| `scroll_count`     | `number`  | —          | Chips visible at once in a scroll layout. |
+| `align`            | `string`  | `start`    | `start`, `center`, `end` or `spread`. |
+| `width`, `height`, `padding`, `gap` | `string` | — | Like `chip_area_width`, `chip_area_height`, `chip_area_padding` and `chip_area_gap`. |
+| `style`            | `string`  | `chip_style` | `inline`, `stacked` or `vertical`. Without it the area uses the card's `chip_style`. |
+| `background`       | `boolean` | `false`    | A background behind each chip, like `chip_area_background`. |
+| `background_style` | `string`  | `card_background_style` | `frosted`, `contrast` or `theme`. |
+| `grouped`, `full_width`, `separator`, `hide` | `boolean` | `false` | Like the `chip_area_*` switches of the same name. |
+| `background_color` | `string`  | —          | Like `chip_area_background_color`. |
+
+The [temperature curve](#forecast-curve) draws over the first area when it has at least two forecast temperatures, else over the second.
+
+<a name="forecast-curve"></a>
+
+#### Temperature curve
+
+`forecast_curve` draws the course of the temperature over the forecast chips, daily or hourly. It uses every forecast chip in the chip area that shows `temperature` (at least two) and puts a point above the middle of each. Freely placed chips do not count. With the chip area at the top of the card the curve sits below the chips.
+
+| Value   | Look |
+| :------ | :--- |
+| `line`  | A white line with points. Works on every sky. |
+| `soft`  | A thin, see-through line with hollow points and a faint fill below. Quiet; fits frosted chips. |
+| `band`  | The high in orange, the low in blue, the range between them filled. Needs `templow`; most hourly forecasts do not have it and then show the line. |
+| `color` | Colored by the temperature: blue when cold, green when mild, orange when warm, red when hot, with a soft fill below. |
+
+<p align="center"><img src="images/forecast-curve-modes.webp" alt="forecast_curve line, soft, band and color" width="480" /></p>
+
+```yaml scene=sunny try=forecast_curve:line|soft|band|color|off
+type: custom:atmo-weather-card
+weather_entity: weather.home
+sun_entity: sun.sun
+card_height: 250
+chip_style: vertical
+chip_area_position: bottom-center
+chip_area_background: true
+chip_area_layout: grid
+chip_area_columns: 5
+chip_area_width: 100%
+chip_area_gap: 6px
+forecast_curve: color
+chips:
+  - entity: weather.home
+    forecast: daily
+    forecast_offset: 1
+    attribute: temperature
+    icon: weather
+    forecast_precision: 0
+    unit_format: °
+    sub_value_attribute: templow
+  - entity: weather.home
+    forecast: daily
+    forecast_offset: 2
+    attribute: temperature
+    icon: weather
+    forecast_precision: 0
+    unit_format: °
+    sub_value_attribute: templow
+  - entity: weather.home
+    forecast: daily
+    forecast_offset: 3
+    attribute: temperature
+    icon: weather
+    forecast_precision: 0
+    unit_format: °
+    sub_value_attribute: templow
+  - entity: weather.home
+    forecast: daily
+    forecast_offset: 4
+    attribute: temperature
+    icon: weather
+    forecast_precision: 0
+    unit_format: °
+    sub_value_attribute: templow
+  - entity: weather.home
+    forecast: daily
+    forecast_offset: 5
+    attribute: temperature
+    icon: weather
+    forecast_precision: 0
+    unit_format: °
+    sub_value_attribute: templow
+```
+
+Give the card enough height for the curve: about `forecast_curve_height` (46 px) more than without it. In the editor the curve is under **Chips → Temperature curve**.
 
 #### Per-chip styling
 
@@ -1653,6 +2306,48 @@ This places the temperature chip 20px from the right and 10px from the top, inde
 
 Free-positioned chips can still use all the same styling and forecast options as regular chips.
 
+<a name="chip-visibility"></a>
+
+#### Show chips only when they matter
+
+A chip with a `visibility` list shows only while every condition in it holds. The format is the same as the `visibility` of Home Assistant cards, so conditions copied from a card work here too. A hidden chip leaves no gap, the others move up. In the editor, the **Conditions** tab of a chip builds the list and says whether the chip is shown right now.
+
+```yaml
+chips:
+  - entity: weather.home
+    attribute: temperature
+  - entity: weather.home
+    attribute: uv_index
+    name: UV
+    visibility:
+      - condition: numeric_state
+        entity: weather.home
+        attribute: uv_index
+        above: 2
+  - entity: weather.home
+    attribute: wind_speed
+    name: Wind
+    visibility:
+      - condition: screen
+        media_query: "(min-width: 768px)"
+      - condition: time
+        after: "06:00"
+        before: "22:00"
+```
+
+The UV chip appears only above UV index 2. The wind chip shows on tablets and larger screens between 06:00 and 22:00.
+
+<p align="center"><img src="images/chip-visibility.webp" alt="a UV chip hidden at UV index 1 and shown at UV index 5" width="480" /></p>
+
+| Condition       | Keys                                                                                                                         |
+| :-------------- | :--------------------------------------------------------------------------------------------------------------------------- |
+| `state`         | `entity`, optional `attribute`, and `state` or `state_not` (one value or a list). A value that names an entity compares against that entity's state. |
+| `numeric_state` | `entity`, optional `attribute`, `above` and/or `below`. Both may name an entity, then its state is the limit.               |
+| `screen`        | `media_query`, a CSS media query such as `(max-width: 767px)`. The editor fills it from Phone, Tablet, Desktop and Wide screen. |
+| `time`          | `after`, `before` (`HH:MM`, may cross midnight like `22:00` to `06:00`) and `weekdays` (`mon` … `sun`).                     |
+| `user`          | `users`, a list of Home Assistant user ids.                                                                                  |
+| `and`, `or`, `not` | `conditions`, a list of conditions. `not` hides the chip when all of them hold. The editor shows these groups but they are changed in YAML. |
+
 #### Ring & bar gauges
 
 Any chip can be turned into a circular or linear gauge by setting `type: ring` or `type: bar`. The gauge fills proportionally based on the entity's value within a min/max range. This works well for things like battery levels, humidity, CPU usage, or any numeric sensor.
@@ -1690,6 +2385,35 @@ chips:
 
 Full option reference (including the `bar` equivalents and `gauge_entity`/`gauge_attribute`) is under **Ring & Bar gauge options** in [Appearance](#appearance).
 
+<a name="sun-path"></a>
+
+#### Sun path
+
+`type: sun_path` on a chip with `sun.sun` draws the day as a flat arc: sunrise on the left, sunset on the right and the sun where it stands now; the way it has gone is drawn solid. At night the arc runs from sunset to the next sunrise with the moon on it. The label says **Daylight** or **Night** (in German **Tageslicht** or **Nacht**) unless you set a `name`, and the times follow the 12 or 24 hours of your Home Assistant profile, or `date_format`. In the editor it is the chip type **Sun path**, offered for sun entities.
+
+<p align="center"><img src="images/chip-sun-path.webp" alt="a sun_path tile by day with the sun on the arc and at night with the moon" width="560" /></p>
+
+```yaml scene=partlycloudy
+chip_style: vertical
+chip_area_layout: grid
+chip_area_columns: 3
+chip_area_width: 100%
+chip_area_background: true
+chips:
+  - entity: weather.home
+    attribute: humidity
+    name: Humidity
+    icon: mdi:water-percent
+  - entity: weather.home
+    attribute: wind_speed
+    name: Wind
+    icon: mdi:weather-windy
+  - entity: sun.sun
+    type: sun_path
+```
+
+It fits best as a tile in a grid row, as above. In a plain row it keeps the width of a tile. The colors of the solid part come from `--awc-sunpath-color` by day and `--awc-sunpath-night-color` at night ([Own CSS](#own-css)).
+
 ## Weather Data & Sky Light
 
 <a name="weather-data"></a>
@@ -1705,8 +2429,37 @@ The card reads optional attributes of your weather entity, or the readings of [y
 | `precipitation_entity` (sensor, mm/h or in/h)  | Sets the rain, snow and sleet density: light drizzle just above 0 mm/h, a downpour from about 8 mm/h. Hail keeps its own amount. The weather entity has no standard attribute for this, so the value comes from a sensor you choose in the editor.       |
 | Sun elevation (`sun_entity`)                   | **Golden hour:** below about 12° the light turns warm: the sky glows gold towards the horizon, clouds catch gold light on the side of the sun, and the sun itself turns gold. In the last degrees before sunset (and after sunrise) it deepens to orange and rose, with a touch of violet higher up, and after sunset the afterglow fades over the blue hour. It works in clear, partly cloudy and windy weather, weaker under clouds and in fog, not in rain or snow. Home Assistant updates the sun every two minutes near the horizon; the light glides to each new value. **Blue hour:** from sunset until the sun is 6° below the horizon (and before sunrise) the sky stays deep blue with a warm glow at the horizon, and the stars come out one by one until about 8°.        |
 | Weather state + sun elevation                  | **Sun rays:** soft beams fan out from the sun in `partlycloudy` and `cloudy` weather, strongest with a low sun (below 35°) and not under a closed cloud cover (95 % or more).                         |
+| `temperature` + `humidity` (weather attributes) | **Frost:** below 0 °C, or just above it in very humid air, rime grows on the card from the edges, see [Frost](#frost).                                                                               |
 
-Cloud cover and precipitation are rounded into steps, so small sensor changes do not rebuild the scene every few minutes. Haze and ground mist glide to a new reading over about three seconds, so a weather service that reports once an hour does not make the mist jump. Haze, ground mist and sun rays need `perf_effects` 1 or higher. The golden and the blue hour work in every mode, but they tint the sky only in the `standalone` card style, because the `immersive` style has no sky of its own; the golden light on the clouds shows in both styles.
+Cloud cover and precipitation are rounded into steps, so small sensor changes do not rebuild the scene every few minutes. Haze and ground mist glide to a new reading over about three seconds, so a weather service that reports once an hour does not make the mist jump. Haze, ground mist, frost and sun rays need `perf_effects` 1 or higher. The golden and the blue hour work in every mode, but they tint the sky only in the `standalone` card style, because the `immersive` style has no sky of its own; the golden light on the clouds shows in both styles.
+
+### Frost
+
+When it is cold, rime grows on the card like on a car windscreen: a milky, grainy layer of ice that creeps in from the edges in uneven patches. It comes from the `temperature` and `humidity` of your weather entity, or from [your own sensors](#your-own-sensors). Nothing needs to be configured.
+
+| Temperature      | Humidity   | Frost                                                                                                     |
+| :--------------- | :--------- | :-------------------------------------------------------------------------------------------------------- |
+| above +3.5 °C    | any        | none                                                                                                      |
+| 0 to +3.5 °C     | from 85 %  | a thin rime at the edges, more the closer it gets to 0 °C and the more humid the air; not in rain, sleet or hail |
+| 0 °C             | any        | rime along the edges and in the corners                                                                   |
+| 0 to −12 °C      | any        | it reaches further in the colder it gets; from −12 °C it covers most of the card, the middle stays clearer |
+
+Humidity sets how thick it is: dry cold gives a thin, fine rime, humid cold a thick, milky one. Without a humidity value the card uses a medium thickness below 0 °C and shows no rime above 0 °C.
+
+- **It takes the light without moving.** In sunshine it is warmer and brighter towards the sun, with a few still points of light; under clouds and in fog it stays even and matte; at night it is cool and blue, a little brighter towards the moon.
+- **It grows and thaws slowly.** When the readings change, it grows in over about a minute and thaws in about half a minute. When a dashboard opens, it fades in at the current amount.
+- **Chips, the compass and the text stay on top** and readable.
+- It shows in the `standalone` card style only, because the `immersive` style has no pane for it, and needs `perf_effects` 1 or higher.
+
+<img width="640" alt="Frost on the card: a cold, humid morning, a clear noon and a frosty night" src="images/frost.webp" />
+
+```yaml scene=frost
+type: custom:atmo-weather-card
+weather_entity: weather.your_weather_entity
+effect_frost: true
+```
+
+Switch it off with `effect_frost: false`, or in the editor under **Sky & weather** › **Light & clouds** › **Frost**.
 
 ### Your own sensors
 
@@ -1726,8 +2479,8 @@ All of these are optional. The `weather_entity` is the one entity the card needs
 | :--- | :--- | :--- |
 | `wind_speed_entity` | `wind_speed` | Wind speed in km/h, mph, m/s, kn, ft/s or Beaufort. Moves the sky and drives the wind lines, the compass and the speed in wind direction chips. |
 | `wind_bearing_entity` | `wind_bearing` | Where the wind comes from, in degrees or as a compass point like `NW`, as some stations report it. Turns the sky, the compass and turning chip icons. |
-| `temperature_entity` | `temperature` | Temperature in °C or °F, for ground mist. |
-| `humidity_entity` | `humidity` | Relative humidity in %, for haze and ground mist. |
+| `temperature_entity` | `temperature` | Temperature in °C or °F, for ground mist and frost. |
+| `humidity_entity` | `humidity` | Relative humidity in %, for haze, ground mist and frost. |
 | `dew_point_entity` | `dew_point` | Dew point in °C or °F. Without it, but with your own temperature or humidity, the card works the dew point out from both. |
 | `cloud_coverage_entity` | `cloud_coverage` | Cloud cover in %. Sets the amount of clouds. |
 | `visibility_entity` | `visibility` | Visibility in km, mi, m, ft or yd, for haze. |
@@ -1747,7 +2500,7 @@ humidity_entity: sensor.station_humidity
 - **A sensor that is missing, unknown or unavailable** falls back to the value of the weather entity, so the card keeps working while the station is offline.
 - **Chips are separate.** A chip shows whatever entity you give it; pick your station sensors there too. A wind direction chip with **Show wind speed** uses `wind_speed_entity` when it is set, also on a wind direction sensor.
 
-Each of these effects can be switched off on its own, in the editor under **Performance & effects** › **Sky & light** or in YAML:
+Each of these effects can be switched off on its own, in the editor under **Sky & weather** › **Light & clouds** or in YAML:
 
 | Option                  | Type      | Default | Description                                                                                  |
 | :---------------------- | :-------- | :------ | :------------------------------------------------------------------------------------------- |
@@ -1756,6 +2509,7 @@ Each of these effects can be switched off on its own, in the editor under **Perf
 | `effect_sun_rays`       | `boolean` | `true`  | Sun rays through broken clouds.                                                              |
 | `effect_haze`           | `boolean` | `true`  | Haze from low visibility or humid air.                                                       |
 | `effect_ground_mist`    | `boolean` | `true`  | Ground mist near the dew point.                                                              |
+| `effect_frost`          | `boolean` | `true`  | Rime on the card below 0 °C, or just above it in very humid air, see [Frost](#frost).        |
 | `effect_cloud_coverage` | `boolean` | `true`  | Measured cloud cover sets the number of clouds. Off: a fixed amount per weather state. Sun rays still stay away under a closed cloud cover. |
 
 ```yaml
@@ -1838,7 +2592,7 @@ perf_mode: ultra
 perf_fps: 30 # Ultra quality at 30 fps; the editor shows "Custom"
 ```
 
-The options below follow the groups of the editor panel **Performance & effects**.
+In the editor, **Performance** holds the preset, Graphics and Animation; the effects below sit in the panel **Sky & weather**, one topic each.
 
 ### Graphics
 
@@ -1869,7 +2623,7 @@ The wind follows `wind_speed` and `wind_bearing` of the weather entity. `wind_be
 
 Leaves fly the way the wind blows, a few at a time. Some catch an updraft and rise, weak gusts let others sink, and each one tumbles as it turns. Their colours follow the season: green in spring and summer, yellow, orange and brown in autumn and winter. South of the equator, taken from the latitude in your Home Assistant settings, the seasons are the other way round. At night the leaves are darker.
 
-```yaml scene=windy
+```yaml scene=windy try=wind_style:lines|flow|leaves|off
 type: custom:atmo-weather-card
 weather_entity: weather.home
 wind_style: leaves
@@ -1878,14 +2632,14 @@ leaf_density: 1.5
 
 #### Wind compass
 
-An optional compass shows where the wind comes from. It is off by default. Pick a style in the editor under **Performance & effects ▸ Wind**. The arrow points where the wind blows, like the wind lines; the needles of the rose, chip and vane point into the wind, and the band shows the direction under its marker. North is up. When the wind turns, the compass turns with it over three seconds, always the short way round. Without `wind_bearing` on the weather entity the compass stays hidden.
+An optional compass shows where the wind comes from. It is off by default. Pick a style in the editor under **Sky & weather ▸ Wind**. The arrow points where the wind blows, like the wind lines; the needles of the rose, chip and vane and the pointer of the tick ring point into the wind, the arrow of the badge points where it blows, and the band shows the direction under its marker. North is up. When the wind turns, the compass turns with it over three seconds, always the short way round. Without `wind_bearing` on the weather entity the compass stays hidden.
 
 <p align="center"><img src="images/wind-compass-styles.webp" alt="wind_compass styles arrow, rose, pill, band and vane" width="560" /></p>
 
 | Option                  | Type     | Default | Description |
 | :---------------------- | :------- | :------ | :---------- |
-| `wind_compass`          | `string` | `off`   | `arrow` a wind arrow, `rose` a small compass rose, `pill` a compass chip with a frosted background, `band` a compass band like a heading display, `vane` a wind vane. `off` hides the compass. |
-| `wind_compass_position` | `string` | `auto`  | `top-left`, `top-center`, `top-right`, `bottom-left`, `bottom-center` or `bottom-right`. `auto` uses the usual place of each style: arrow bottom left, rose and vane bottom right, chip top right, band bottom center. When chips already sit in that corner, `auto` moves the compass to the other edge on the same side, or else to the other side. |
+| `wind_compass`          | `string` | `off`   | `arrow` a wind arrow, `rose` a small compass rose, `pill` a compass chip with a frosted background, `band` a compass band like a heading display, `vane` a wind vane, `ticks` a ring of fine ticks with a pointer and the wind speed in the middle, `badge` a frosted tile with an arrow, the speed and the compass point (turn on `wind_compass_speed` for the speed). `off` hides the compass. |
+| `wind_compass_position` | `string` | `auto`  | `top-left`, `top-center`, `top-right`, `bottom-left`, `bottom-center` or `bottom-right`. `auto` uses the usual place of each style: arrow bottom left, rose and vane bottom right, chip, tick ring and badge top right, band bottom center. With `auto` the card measures the chips once they are laid out and moves the compass to the first place where it covers none: the other edge on the same side, then the other side, then the middle of an edge. A chip area set to `100%` wide counts as its whole row. When no place is free, as in the `panel` layout, the compass stays hidden; pick a position to show it anyway. |
 
 The six places, here with the rose:
 
@@ -1902,7 +2656,7 @@ The text next to the compass is built from three switches. The compass point is 
 | `wind_compass_speed`      | `boolean` | `false` | Shows the wind speed, for example `25 km/h`. |
 | `wind_compass_background` | `boolean` | `false` | Puts a frosted box behind the compass, so it stays readable on a pale or busy sky. The chip always has one. |
 
-```yaml scene=windy
+```yaml scene=windy try=wind_compass:arrow|rose|pill|band|vane|ticks|badge try=wind_compass_position:auto|top-left|top-center|top-right|bottom-left|bottom-center|bottom-right
 type: custom:atmo-weather-card
 weather_entity: weather.home
 wind_compass: rose
@@ -1911,13 +2665,25 @@ wind_compass_degrees: true
 wind_compass_speed: true
 ```
 
+<p align="center"><img src="images/wind-compass-ticks-badge.webp" alt="wind_compass ticks and badge" width="560" /></p>
+
+The tick ring and the badge show the speed best: turn on `wind_compass_speed`. The tick ring has room for the speed alone, so turn off `wind_compass_cardinal` there.
+
+```yaml scene=windy try=wind_compass:ticks|badge try=wind_compass_cardinal:true|false try=wind_compass_degrees:true|false try=wind_compass_speed:true|false try=wind_compass_background:true|false
+type: custom:atmo-weather-card
+weather_entity: weather.home
+wind_compass: ticks
+wind_compass_speed: true
+wind_compass_cardinal: false
+```
+
 Chips can show the compass point too: set [`bearing_format`](#per-chip-options) on a chip that shows the wind direction, for example `cardinal` for `WSW` or `both` for `WSW 250°`. In the editor it is in the chip under **Text ▸ Value ▸ Wind direction as**.
 
 A chip can also be a small compass of its own, in the chip row like any other chip: [`bearing_icon`](#opt-bearing_icon) turns its icon with the wind and [`bearing_speed`](#opt-bearing_speed) adds the speed. In the editor both sit next to **Wind direction as**.
 
 <p align="center"><img src="images/chip-bearing-format.webp" alt="bearing_format degrees, cardinal and both on a wind direction chip" width="560" /></p>
 
-```yaml scene=windy
+```yaml scene=windy try=chips.0.bearing_format:degrees|cardinal|both try=chips.0.bearing_icon:arrow|filled|needle
 chips:
   - entity: weather.home
     attribute: wind_bearing
@@ -2099,127 +2865,6 @@ chips:
 
 The card then resolves the icon by the current weather state. For example, `rainy` weather loads `/local/weather-icons/rainy.svg`.
 
-<a name="custom-house-image"></a>
-
-### Custom House Image
-
-Put your own home into the sky. A drawing of the house sits in the card, by day in daylight colors and at night with lit windows; the card swaps the two at sunset.
-
-<img width="640" alt="Custom house image in the card, by day in the sun and at night in the rain" src="images/example-house.webp" />
-
-1. **Take a reference photo** from a corner, so the picture shows two sides of the house and its depth.
-2. **Let an AI image tool draw it.** Upload the photo and use a prompt like this one. Asking for day and night in one picture keeps both drawings exactly alike:
-   > _Isometric illustration of this house from the outside, on a plain white background. Two versions side by side: on the left by day with light walls, on the right the same view at night with dark blue walls and warm light in every window. Clean lines, flat colors, no text._
-
-   <img width="480" alt="The same house by day and at night, drawn on one canvas" src="images/state-house-pair.webp" />
-
-   _House images by [Till890](https://github.com/whyisthisbroken/atmo-weather-card/discussions/13)._
-3. **Cut out the two houses.** Crop each version to its own file, then remove the background with a background removal tool, so only the area around the house turns transparent and white walls stay. Save both as PNG.
-4. **Upload the files** to `config/www/images/` in Home Assistant, for example as `my-house-day.png` and `my-house-night.png`. They are then at `/local/images/my-house-day.png`.
-5. **Add them to the card.** `image_day` and `image_night` set the pictures, `image_alignment`, `image_scale`, `image_x` and `image_y` place them (see [Custom Images](#custom-images)). Put the sun and moon where the house does not cover them, and the values into the free space next to it.
-6. **Optional: variants.** Let the AI tool draw the same house with snow on the roof, wet, or with Christmas lights, and switch to them with [`image_conditions`](#image-conditions). Ask for the variants from the same picture, so the house stays in exactly the same place.
-
-   <img width="480" alt="The same house in the rain and with snow on the roof, on the same canvas as the day image" src="images/state-house-variants.webp" />
-
-The card from the picture above: the time of the next sunset at the top, the outside temperature large at the bottom left, and three rooms next to the house. While it rains or snows, the wet and the snowy house replace the normal one. Replace the room sensors with your own.
-
-```yaml scene=sunny
-type: custom:atmo-weather-card
-weather_entity: weather.home
-sun_entity: sun.sun
-card_height: 300
-image_day: /local/images/my-house-day.png
-image_night: /local/images/my-house-night.png
-image_conditions:
-  - entity: weather.home
-    state: [snowy, snowy-rainy]
-    image_day: /local/images/my-house-snow-day.png
-    image_night: /local/images/my-house-snow-night.png
-  - entity: weather.home
-    state: [rainy, pouring, lightning-rainy]
-    image_day: /local/images/my-house-rain-day.png
-    image_night: /local/images/my-house-rain-night.png
-image_alignment: top-right
-image_scale: 70
-image_x: "16"
-image_y: "6"
-celestial_alignment: top-left
-celestial_x: 190
-celestial_y: 26
-celestial_size: 40
-chip_area_position: bottom-right
-chip_area_gap: 22px
-chip_area_padding: 0 18px 14px 0
-chips:
-  - entity: weather.home
-    attribute: temperature
-    position: custom
-    position_anchor: bottom-left
-    position_x: 20px
-    position_y: 40px
-    hide_icon: true
-    hide_label: true
-    background: false
-    unit_format: °
-    value_precision: 0
-    text_size: 72px
-    value_weight: "300"
-  - entity: weather.home
-    position: custom
-    position_anchor: bottom-left
-    position_x: 22px
-    position_y: 16px
-    hide_icon: true
-    hide_label: true
-    background: false
-    text_size: 15px
-  - entity: sun.sun
-    attribute: next_setting
-    name: Sunset
-    position: custom
-    position_anchor: top-left
-    position_x: 20px
-    position_y: 18px
-    hide_icon: true
-    background: false
-    text_size: 14px
-    label_size: 14px
-    value_weight: "500"
-  - entity: sensor.living_room_temperature
-    name: Living
-    style: vertical
-    align: start
-    hide_icon: true
-    background: false
-    unit_format: °
-    value_precision: 0
-    text_size: 22px
-    label_size: 13px
-    value_weight: "400"
-  - entity: sensor.bedroom_temperature
-    name: Bedroom
-    style: vertical
-    align: start
-    hide_icon: true
-    background: false
-    unit_format: °
-    value_precision: 0
-    text_size: 22px
-    label_size: 13px
-    value_weight: "400"
-  - entity: sensor.bath_temperature
-    name: Bath
-    style: vertical
-    align: start
-    hide_icon: true
-    background: false
-    unit_format: °
-    value_precision: 0
-    text_size: 22px
-    label_size: 13px
-    value_weight: "400"
-```
-
 ## Troubleshooting
 
 ### Installation & Updates
@@ -2277,8 +2922,8 @@ chips:
 
 #### The wind compass covers a chip
 
-1. With `wind_compass_position: auto` the compass moves away from corners that hold chips. This covers the chip area and free-positioned chips anchored to a corner.
-2. A chip placed with an offset can still sit under it. Then pick a corner for the compass with `wind_compass_position`.
+1. With `wind_compass_position: auto` the card measures where the chips are and moves the compass to a place where it covers none, including chip areas set to `100%` wide and free-positioned chips.
+2. A position you pick yourself is always kept, even over a chip. Set it back to `auto`, or pick another corner.
 
 #### The editor is in English
 
@@ -2300,24 +2945,25 @@ The chip appears in German or English, following your Home Assistant language (o
 2. Confirm the entity has valid state/attributes (temperature, wind, etc.).
 3. If unavailable, fix entity availability first, then reload the dashboard.
 
-#### The card always shows day, or the moon is always full
+#### The card always shows day, or the moon looks wrong
 
 1. Day and night come from `sun_entity`. Without it the card always shows day. Set it to `sun.sun`.
 2. `card_color_mode: day` keeps the sky in daylight, `night` keeps it at night. Remove it to follow the sun again.
-3. The moon phase comes from `moon_phase_entity`, for example `sensor.moon_phase` from the **Moon** integration. Without it the moon is always full.
+3. Without `moon_phase_entity` the card works out the moon phase from the date. A moon sensor wins over that; if it is unavailable, the card falls back to its own phase.
 
 #### The card colors do not match the dashboard
 
 1. By default the card follows your Home Assistant theme. With `theme_entity` it follows that entity instead, and `card_color_mode: dark` or `light` locks the look.
 2. See [Color Mode](#color-mode) for the combinations.
 
-#### Clouds, haze or mist on a clear day
+#### Clouds, haze, mist or frost on a clear day
 
 The card reads the measured weather data, not only the weather state (see [Weather Data & Sky Light](#weather-data)):
 
 1. A high `cloud_coverage` adds clouds even when the state is `sunny`. Switch off **Cloud amount from data** (`effect_cloud_coverage: false`) for a fixed amount per weather state.
 2. Low `visibility` or humid air adds haze. Switch off **Haze** (`effect_haze: false`).
 3. Ground mist forms when the temperature is close to the dew point. Switch off **Ground mist** (`effect_ground_mist: false`).
+4. White, grainy edges in winter are [frost](#frost): below 0 °C, or just above it in very humid air. Switch off **Frost** (`effect_frost: false`).
 
 Check the values under **Developer Tools** › **States** on your weather entity first. Some providers report a cloud cover that does not fit the weather state.
 
@@ -2348,8 +2994,9 @@ Check the values under **Developer Tools** › **States** on your weather entity
 
 #### The wind compass does not show
 
-1. The compass is off by default. Pick a style under **Performance & effects** › **Wind** › **Wind compass** (`wind_compass`).
+1. The compass is off by default. Pick a style under **Sky & weather** › **Wind** › **Wind compass** (`wind_compass`).
 2. It needs `wind_bearing` on the weather entity. Without a direction it stays hidden.
+3. With `wind_compass_position: auto` it also stays hidden when every place on the card holds chips, as in the `panel` layout. Pick a position for it, for example `top-center`.
 
 #### A wind direction chip shows a number instead of WSW
 
