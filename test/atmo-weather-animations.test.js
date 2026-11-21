@@ -313,6 +313,19 @@ test("some strikes also draw a branching bolt", () => {
   assert.ok(ctx.strokeCalls > 0);
 });
 
+test("the bolt goes behind a house picture, the flash stays in front", () => {
+  const card = stormCard();
+  const front = createContext();
+  const behind = createContext();
+
+  withRandomSequence([0, 0.5, 0.5, 0], 0.5, () => drawLightning(card, front, 100, 100, behind));
+
+  assert.ok(card._bolt);
+  assert.equal(front.strokeCalls, 0);
+  assert.ok(behind.strokeCalls > 0);
+  assert.ok(front.fillRectCalls > 0);
+});
+
 test("the flash fades out and takes the bolt with it", () => {
   const card = stormCard();
   card._flashOpacity = 0.4;

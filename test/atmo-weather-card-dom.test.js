@@ -1154,6 +1154,55 @@ test("an automatic compass moves away from the chips", () => {
   assert.equal(pos({ wind_compass_position: "bottom-left", chips: [SENSOR] }), "bottom-left");
 });
 
+test("a chip area 100 % wide takes its whole row from the compass", () => {
+  const pos = (cfg) => {
+    const card = mountCard({ wind_compass: "arrow", ...cfg }, makeHass({ weather: "windy" }));
+    runFrames(2);
+    const cls = compassEl(card).firstElementChild.className;
+    document.body.replaceChildren();
+    return cls.match(/cmp-pos-([a-z-]+)/)[1];
+  };
+  // The row sits bottom center, 100 % wide: the arrow leaves the bottom left corner.
+  assert.equal(pos({ chip_area_position: "bottom-center", chip_area_width: "100%", chips: [SENSOR] }), "top-left");
+  // The second area, 100 % wide at the bottom, does the same.
+  assert.equal(pos({ chip_area_position: "top-left", chip_area_2: { position: "bottom-left", width: "100%" }, chips: [SENSOR, { ...SENSOR, area: 2 }] }), "top-right");
+});
+
+test("an automatic compass measures the chips, hides without room and keeps a chosen place", () => {
+  // Boxes in px for each place of the compass, and one chip under the bottom row.
+  const BOX = { "bottom-left": [10, 150, 60, 190], "bottom-right": [340, 150, 390, 190], "bottom-center": [175, 150, 225, 190], "top-left": [10, 10, 60, 50], "top-right": [340, 10, 390, 50], "top-center": [175, 10, 225, 50] };
+  const rect = ([l, t, r, b]) => ({ left: l, top: t, right: r, bottom: b, width: r - l, height: b - t });
+  const stub = (card, chipBoxes) => {
+    const box = compassEl(card).firstElementChild;
+    box.getBoundingClientRect = () => rect(BOX[box.className.match(/cmp-pos-([a-z-]+)/)[1]]);
+    const chips = [...card.shadowRoot.querySelectorAll(".chip")];
+    chips.forEach((c, i) => (c.getBoundingClientRect = () => rect(chipBoxes[i] || [0, 0, 0, 0])));
+  };
+  const posOf = (card) => compassEl(card).firstElementChild.className.match(/cmp-pos-([a-z-]+)/)[1];
+  // The chip row covers the whole bottom and the top left: top right is free.
+  let card = mountCard({ wind_compass: "rose", chips: [SENSOR, { ...SENSOR, position: "custom", position_anchor: "top-left" }] }, makeHass({ weather: "windy" }));
+  runFrames(2);
+  stub(card, [[0, 140, 400, 200], [0, 0, 120, 60]]);
+  card._fitCompass();
+  assert.equal(posOf(card), "top-right");
+  assert.equal(compassEl(card).hidden, false);
+  // Chips everywhere: no compass, and the next update keeps it hidden.
+  stub(card, [[0, 140, 400, 200], [0, 0, 400, 60]]);
+  card._fitCompass();
+  assert.equal(compassEl(card).hidden, true);
+  card.hass = makeHass({ weather: "windy" });
+  runFrames(2);
+  assert.equal(compassEl(card).hidden, true);
+  document.body.replaceChildren();
+  // A chosen place is never moved, even over a chip.
+  card = mountCard({ wind_compass: "rose", wind_compass_position: "bottom-left", chips: [SENSOR] }, makeHass({ weather: "windy" }));
+  runFrames(2);
+  stub(card, [[0, 140, 400, 200]]);
+  card._fitCompass();
+  assert.equal(posOf(card), "bottom-left");
+  assert.equal(compassEl(card).hidden, false);
+});
+
 test("the wind arrow keeps its full size on a low card", () => {
   const card = mountCard({ wind_compass: "arrow" }, makeHass({ weather: "windy" }));
   runFrames(2);
@@ -1330,5 +1379,342 @@ test("embedded cards without Home Assistant's card helpers leave the card runnin
     assert.equal(card._customCardElements.length, 0);
   } finally {
     if (saved) window.loadCardHelpers = saved;
+  }
+});
+
+test("the moon phase follows the date without a moon sensor", async () => {
+  const { moonPhaseAt } = await import("../src/atmo-weather-helpers.js");
+  // New moon 2024-01-11 11:57 UTC, first quarter 01-18, full moon 01-25, last quarter 02-02.
+  // The mean month puts the quarters up to a day off, so they show 0.44 to 0.56.
+  const at = (iso) => moonPhaseAt(new Date(iso));
+  assert.equal(at("2024-01-11T12:00:00Z").state, "new_moon");
+  assert.ok(at("2024-01-11T12:00:00Z").illumination <= 0.01);
+  assert.equal(at("2024-01-18T04:00:00Z").state, "first_quarter");
+  assert.equal(at("2024-01-18T04:00:00Z").direction, "right");
+  assert.ok(Math.abs(at("2024-01-18T04:00:00Z").illumination - 0.5) < 0.08);
+  assert.equal(at("2024-01-25T18:00:00Z").state, "full_moon");
+  assert.ok(at("2024-01-25T18:00:00Z").illumination >= 0.99);
+  assert.equal(at("2024-02-02T23:00:00Z").state, "last_quarter");
+  assert.equal(at("2024-02-02T23:00:00Z").direction, "left");
+  // Dates before the reference new moon work too.
+  assert.equal(at("1999-12-08T00:00:00Z").state, "new_moon");
+});
+
+test("a moon sensor wins, and without a usable one the card computes the phase", () => {
+  const hass = makeHass({ states: { "sensor.moon": { entity_id: "sensor.moon", state: "waxing_crescent", attributes: {} } } });
+  const card = mountCard({ moon_phase_entity: "sensor.moon" }, hass);
+  assert.equal(card._moonPhaseState, "waxing_crescent");
+  assert.equal(card._moonPhaseConfig.illumination, 0.25);
+
+  card._updateMoonPhase({ state: "unavailable" }, new Date("2024-01-25T18:00:00Z"));
+  assert.equal(card._moonPhaseState, "full_moon");
+  assert.ok(card._moonPhaseConfig.illumination >= 0.99);
+
+  card._updateMoonPhase(null, new Date("2024-01-18T04:00:00Z"));
+  assert.equal(card._moonPhaseState, "first_quarter");
+  // Back on the sensor, even when it reports the phase it had before.
+  card._updateMoonPhase({ state: "waxing_crescent" });
+  assert.equal(card._moonPhaseState, "waxing_crescent");
+  assert.equal(card._moonPhaseConfig.illumination, 0.25);
+
+  const plain = mountCard({});
+  assert.ok(plain._moonPhaseConfig.illumination >= 0 && plain._moonPhaseConfig.illumination <= 1);
+  assert.ok(["left", "right", "none"].includes(plain._moonPhaseConfig.direction));
+});
+
+test("date codes print dates and times like Home Assistant templates", async () => {
+  const { formatDateCodes, hasDateCodes, fcLabel } = await import("../src/atmo-weather-helpers.js");
+  const d = new Date(2026, 10, 5, 7, 4, 9);
+  assert.equal(formatDateCodes(d, "%d.%m.%Y %H:%M:%S", "en"), "05.11.2026 07:04:09");
+  assert.equal(formatDateCodes(d, "%-d.%-m. %-H:%M %y", "en"), "5.11. 7:04 26");
+  assert.equal(formatDateCodes(d, "%a %A %b %B", "en"), "Thu Thursday Nov November");
+  assert.equal(formatDateCodes(d, "%a", "de"), "Do");
+  assert.equal(formatDateCodes(new Date(2026, 10, 5, 0, 30), "%I:%M %p", "en"), "12:30 AM");
+  assert.equal(formatDateCodes(new Date(2026, 10, 5, 13, 30), "%I %p 100%%", "en"), "01 PM 100%");
+  assert.equal(formatDateCodes("nonsense", "%d", "en"), "");
+  assert.equal(formatDateCodes(d, "%d", "not-a-locale-!!"), "05");
+  assert.ok(hasDateCodes("%a") && !hasDateCodes("plain") && !hasDateCodes(undefined) && !hasDateCodes("100%"));
+  assert.equal(fcLabel(d.toISOString(), true, "en", undefined, "%a %-d."), "Thu 5.");
+  // Without a code the usual label stays.
+  assert.equal(fcLabel(d.toISOString(), true, "en", undefined, "Day"), "Thu");
+});
+
+test("date_format changes the label of a forecast chip and a time value", async () => {
+  const hass = makeHass();
+  const push = {};
+  hass.connection.subscribeMessage = async (callback, message) => {
+    push[message.forecast_type] = callback;
+    return () => {};
+  };
+  const sunrise = new Date(2026, 10, 20, 7, 41);
+  hass.states["sun.sun"].attributes.next_rising = sunrise.toISOString();
+  const card = mountCard({
+    chips: [
+      { entity: "weather.home", forecast: "daily", attribute: "temperature", forecast_offset: 1, date_format: "%A" },
+      { entity: "sun.sun", attribute: "next_rising", date_format: "%H:%M" },
+      { entity: "sun.sun", attribute: "next_rising" },
+    ],
+  }, hass);
+  await Promise.resolve();
+  const day = 864e5;
+  const tomorrow = new Date(Date.now() + day);
+  push.daily({ forecast: [0, 1, 2].map((n) => ({ datetime: new Date(Date.now() + n * day).toISOString(), temperature: 10 + n, condition: "rainy" })) });
+
+  assert.ok(text(chips(card)[0]).includes(tomorrow.toLocaleDateString("en", { weekday: "long" })));
+  assert.ok(text(chips(card)[1]).includes("07:41"));
+  assert.ok(!text(chips(card)[2]).includes("07:41") || text(chips(card)[2]) !== text(chips(card)[1]));
+});
+
+test("the card tells card_mod styles where the sun is and what the weather is", () => {
+  const hass = makeHass({ weather: "partlycloudy" });
+  Object.assign(hass.states["sun.sun"].attributes, { elevation: 30, azimuth: 90 });
+  const card = mountCard({}, hass);
+  const v = (name) => card.style.getPropertyValue(name);
+  assert.equal(v("--awc-sun-x"), "1.000");
+  assert.equal(v("--awc-sun-y"), "0.000");
+  assert.equal(v("--awc-sun-elevation"), "30.0");
+  assert.equal(v("--awc-sun-shadow"), "1.732");
+  assert.equal(Number(v("--awc-sun-light")), 0.75);
+  assert.equal(card.dataset.condition, "partlycloudy");
+  assert.equal(card.dataset.daytime, "day");
+
+  // Night: no light and no shadow, the night weather.
+  const night = makeHass({ weather: "sunny", sun: "below_horizon" });
+  Object.assign(night.states["sun.sun"].attributes, { elevation: -10, azimuth: 300 });
+  card.hass = night;
+  assert.equal(v("--awc-sun-light"), "0.000");
+  assert.equal(v("--awc-sun-shadow"), "0.000");
+  assert.equal(card.dataset.condition, "clear-night");
+  assert.equal(card.dataset.daytime, "night");
+
+  // Without a sun position the variables go away.
+  const none = makeHass({ weather: "rainy" });
+  delete none.states["sun.sun"].attributes.azimuth;
+  card.hass = none;
+  assert.equal(v("--awc-sun-x"), "");
+  assert.equal(v("--awc-sun-light"), "");
+});
+
+test("a chip with visibility conditions shows only while they hold", () => {
+  const hass = makeHass({ states: { "input_boolean.guest": { entity_id: "input_boolean.guest", state: "off", attributes: {} } } });
+  const card = mountCard({
+    chips: [
+      SENSOR,
+      { entity: "weather.home", attribute: "humidity", name: "Hum", visibility: [{ condition: "state", entity: "input_boolean.guest", state: "on" }] },
+      { entity: "weather.home", attribute: "wind_speed", name: "Wind", visibility: [{ condition: "numeric_state", entity: "weather.home", attribute: "humidity", above: 50 }] },
+    ],
+  }, hass);
+  assert.deepEqual(chips(card).map((c) => text(c).includes("Hum")), [false, false]);
+  assert.ok(text(chips(card)[1]).includes("Wind"));
+
+  const guest = { ...hass.states["input_boolean.guest"], state: "on" };
+  card.hass = { ...hass, states: { ...hass.states, "input_boolean.guest": guest } };
+
+  assert.equal(chips(card).length, 3);
+  assert.ok(text(chips(card)[1]).includes("Hum"));
+});
+
+test("a screen condition follows the media query", () => {
+  const saved = globalThis.matchMedia;
+  const listeners = new Set();
+  let wide = false;
+  globalThis.matchMedia = (q) => ({
+    media: q,
+    get matches() {
+      return wide;
+    },
+    addEventListener: (_, fn) => listeners.add(fn),
+    removeEventListener: (_, fn) => listeners.delete(fn),
+  });
+  try {
+    const card = mountCard({
+      chips: [SENSOR, { entity: "weather.home", attribute: "humidity", name: "Hum", visibility: [{ condition: "screen", media_query: "(min-width: 768px)" }] }],
+    });
+    assert.equal(chips(card).length, 1);
+    wide = true;
+    for (const fn of listeners) fn();
+    assert.equal(chips(card).length, 2);
+    card.remove();
+    assert.equal(listeners.size, 0);
+  } finally {
+    globalThis.matchMedia = saved;
+  }
+});
+
+test("the css option puts own styles last into the card and follows changes", () => {
+  const card = mountCard({ css: ".chip { color: red; }" });
+  const own = () => card.shadowRoot.querySelector("#awc-own-css");
+  assert.equal(own().textContent, ".chip { color: red; }");
+  assert.equal(card.shadowRoot.lastElementChild, own());
+  card.setConfig({ weather_entity: "weather.home", css: ":host { --awc-bottom-font-size: 20px; }" });
+  assert.equal(own().textContent, ":host { --awc-bottom-font-size: 20px; }");
+  assert.equal(card.shadowRoot.querySelectorAll("#awc-own-css").length, 1);
+  card.setConfig({ weather_entity: "weather.home" });
+  assert.equal(own(), null);
+  // Not a string: ignored.
+  card.setConfig({ weather_entity: "weather.home", css: { a: 1 } });
+  assert.equal(own(), null);
+});
+
+test("image_folder picks the picture for the weather, with fallbacks and the base image", async () => {
+  const card = document.createElement("atmo-weather-card");
+  const files = new Set(["/local/h/rainy.webp", "/local/h/sunny.webp"]);
+  const asked = [];
+  card._probeImage = (url) => {
+    asked.push(url);
+    return Promise.resolve(files.has(url));
+  };
+  card.setConfig({ weather_entity: "weather.home", sun_entity: "sun.sun", image_folder: "/local/h", image_day: "/local/base.png", image_transition: 0 });
+  document.body.append(card);
+  const settle = async () => {
+    for (let i = 0; i < 6; i++) await Promise.resolve();
+  };
+  const hass = makeHass({ weather: "pouring" });
+  card.hass = hass;
+  await settle();
+  // pouring.webp is missing, rainy.webp is there.
+  assert.equal(imageSrc(card), "/local/h/rainy.webp");
+  assert.deepEqual(asked, ["/local/h/pouring.webp", "/local/h/rainy.webp"]);
+  card.hass = { ...hass, states: { ...hass.states, "weather.home": { ...hass.states["weather.home"], state: "fog" } } };
+  await settle();
+  // No fog picture: the day image.
+  assert.equal(imageSrc(card), "/local/base.png");
+  // Every file is asked once only.
+  card.hass = hass;
+  await settle();
+  assert.equal(asked.filter((u) => u === "/local/h/pouring.webp").length, 1);
+});
+
+test("an image condition wins over the picture folder", async () => {
+  const card = document.createElement("atmo-weather-card");
+  card._probeImage = () => Promise.resolve(true);
+  const hass = snowHass("on", { weather: "sunny" });
+  card.setConfig({ weather_entity: "weather.home", sun_entity: "sun.sun", ...CONDITIONS, image_folder: "/local/h2", image_transition: 0 });
+  document.body.append(card);
+  card.hass = hass;
+  for (let i = 0; i < 6; i++) await Promise.resolve();
+  assert.equal(imageSrc(card), "/local/snow.png");
+});
+
+test("a screen change while the card is away counts once it is back", () => {
+  const saved = globalThis.matchMedia;
+  let wide = false;
+  globalThis.matchMedia = () => ({ get matches() { return wide; }, addEventListener() {}, removeEventListener() {} });
+  try {
+    const card = mountCard({
+      chips: [SENSOR, { entity: "weather.home", attribute: "humidity", name: "Hum", visibility: [{ condition: "screen", media_query: "(min-width: 768px)" }] }],
+    });
+    assert.equal(chips(card).length, 1);
+    // Home Assistant moves the card to another column on resize.
+    card.remove();
+    wide = true;
+    document.body.append(card);
+    assert.equal(chips(card).length, 2);
+  } finally {
+    globalThis.matchMedia = saved;
+  }
+});
+
+test("forecast_curve draws over the forecast temperature chips", async () => {
+  const proto = window.HTMLElement.prototype;
+  const saved = proto.getBoundingClientRect;
+  proto.getBoundingClientRect = function () {
+    const i = Number(this.dataset && this.dataset.idx);
+    if (Number.isFinite(i)) return { left: i * 100, width: 80, top: 0, height: 60, right: i * 100 + 80, bottom: 60 };
+    return { left: 0, width: 600, top: 0, height: 100, right: 600, bottom: 100 };
+  };
+  try {
+    const hass = makeHass();
+    const push = {};
+    hass.connection.subscribeMessage = async (callback, message) => {
+      push[message.forecast_type] = callback;
+      return () => {};
+    };
+    const fc = (o) => ({ entity: "weather.home", forecast: "daily", forecast_offset: o, attribute: "temperature" });
+    const card = mountCard({ forecast_curve: "band", chips: [SENSOR, fc(1), fc(2), fc(3), { ...fc(4), attribute: "humidity" }] }, hass);
+    await Promise.resolve();
+    push.daily({ forecast: [0, 1, 2, 3, 4].map((n) => ({ datetime: new Date(Date.now() + n * 864e5).toISOString(), temperature: 10 + n * 2, templow: 3 + n, humidity: 50, condition: "rainy" })) });
+    runFrames(2);
+    const svg = card.shadowRoot.querySelector("#chips-group > #forecast-curve");
+    assert.ok(svg);
+    // Three temperature chips, high and low each: six dots.
+    assert.equal(svg.querySelectorAll("circle").length, 6);
+    const dots = [...svg.querySelectorAll("circle")].map((c) => Number(c.getAttribute("cx")));
+    assert.deepEqual([...new Set(dots)], [140, 240, 340]);
+    card.setConfig({ weather_entity: "weather.home", sun_entity: "sun.sun", chips: [SENSOR, fc(1), fc(2)] });
+    runFrames(2);
+    assert.equal(card.shadowRoot.querySelector("#forecast-curve"), null);
+  } finally {
+    proto.getBoundingClientRect = saved;
+  }
+});
+
+test("the tick ring shows the speed with its unit below", () => {
+  const card = mountCard({ wind_compass: "ticks", wind_compass_speed: true, wind_compass_cardinal: false }, makeHass({ weather: "windy" }));
+  runFrames(2);
+  const el = card.shadowRoot.querySelector("#wind-compass");
+  assert.ok(el.querySelector(".cmp-style-ticks.cmp-pos-top-right"));
+  assert.deepEqual([...el.querySelectorAll(".cmp-label span")].map((s) => [s.textContent, s.className]), [["20", ""], ["km/h", "cmp-unit"]]);
+});
+
+test("chips with area 2 go to the second chip area with its own place and look", () => {
+  const card = mountCard({
+    chip_area_background: true,
+    chip_area_columns: 3,
+    chip_area_layout: "grid",
+    chip_area_2: { position: "bottom-right", layout: "grid", columns: 2 },
+    chips: [SENSOR, { entity: "weather.home", attribute: "humidity", name: "Hum", area: 2 }, { entity: "weather.home", attribute: "wind_speed", name: "Wind", area: 2 }],
+  });
+  const row2 = card.shadowRoot.querySelector("#chips-row-2");
+  const group2 = card.shadowRoot.querySelector("#chips-group-2");
+  assert.equal(row(card).querySelectorAll(".chip").length, 1);
+  assert.equal(row2.querySelectorAll(".chip").length, 2);
+  assert.equal(group2.style.display, "");
+  assert.ok(group2.classList.contains("pos-bottom-right"));
+  assert.ok(row2.classList.contains("row-grid"));
+  assert.equal(group2.style.getPropertyValue("--awc-row-columns"), "2");
+  // Unset: not the first area's value from the card.
+  assert.equal(group2.style.getPropertyValue("--awc-bottom-gap"), "initial");
+  // The first area has a background, the second not.
+  assert.ok(row(card).querySelector(".chip").classList.contains("with-bg"));
+  assert.ok(!row2.querySelector(".chip").classList.contains("with-bg"));
+  // A tap on a chip of the second area works like any other.
+  const fired = [];
+  card.addEventListener("hass-action", (e) => fired.push(e.detail.config.entity));
+  row2.querySelector(".chip").click();
+  assert.deepEqual(fired, ["weather.home"]);
+  // Without area 2 chips the second area hides.
+  card.setConfig({ weather_entity: "weather.home", sun_entity: "sun.sun", chips: [SENSOR] });
+  card.hass = makeHass({ weather: "rainy" });
+  assert.equal(group2.style.display, "none");
+});
+
+test("the temperature curve uses the second area when only it has forecast temperatures", async () => {
+  const proto = window.HTMLElement.prototype;
+  const saved = proto.getBoundingClientRect;
+  proto.getBoundingClientRect = function () {
+    const i = Number(this.dataset && this.dataset.idx);
+    if (Number.isFinite(i)) return { left: i * 100, width: 80, top: 0, height: 60, right: i * 100 + 80, bottom: 60 };
+    return { left: 0, width: 600, top: 0, height: 100, right: 600, bottom: 100 };
+  };
+  try {
+    const hass = makeHass();
+    const push = {};
+    hass.connection.subscribeMessage = async (callback, message) => {
+      push[message.forecast_type] = callback;
+      return () => {};
+    };
+    const fc = (o) => ({ entity: "weather.home", forecast: "hourly", forecast_offset: o, attribute: "temperature", area: 2 });
+    const card = mountCard({ forecast_curve: "soft", chip_area_2: { position: "top-left" }, chips: [SENSOR, fc(1), fc(2), fc(3)] }, hass);
+    await Promise.resolve();
+    push.hourly({ forecast: [0, 1, 2, 3].map((n) => ({ datetime: new Date(Date.now() + (n + 1) * 36e5).toISOString(), temperature: 10 + n, condition: "rainy" })) });
+    runFrames(2);
+    const svg = card.shadowRoot.querySelector("#chips-group-2 > #forecast-curve");
+    assert.ok(svg);
+    // The area sits at the top, so the curve goes below it.
+    assert.ok(svg.classList.contains("below"));
+    assert.equal(svg.querySelectorAll("circle").length, 3);
+  } finally {
+    proto.getBoundingClientRect = saved;
   }
 });

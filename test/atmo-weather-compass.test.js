@@ -6,7 +6,10 @@ import {
   bearingIconSvg,
   compassLabel,
   compassMarkup,
+  compassCandidates,
   compassPoint,
+  isFullWidth,
+  wholeRow,
   formatBearingValue,
   isBearingChip,
   resolveCompassPosition,
@@ -71,11 +74,13 @@ test("the arrow points where the wind blows, the needles where it comes from", (
   // Wind from the west: the arrow, drawn pointing east, stays east.
   assert.equal(styleRotation("arrow", 270) % 360, 0);
   assert.equal(styleRotation("arrow", 90) % 360, 180);
-  for (const style of ["rose", "pill", "vane"]) assert.equal(styleRotation(style, 250), 250);
+  for (const style of ["rose", "pill", "vane", "ticks"]) assert.equal(styleRotation(style, 250), 250);
+  // The badge arrow points where the wind blows: from the west it points east.
+  assert.equal(styleRotation("badge", 270) % 360, 90);
 });
 
 test("every style builds its own markup with a label slot", () => {
-  for (const style of ["arrow", "rose", "pill", "band", "vane"]) {
+  for (const style of ["arrow", "rose", "pill", "band", "vane", "ticks", "badge"]) {
     const html = compassMarkup(style, "bottom-left", "en");
     assert.match(html, new RegExp(`cmp-style-${style} cmp-pos-bottom-left`));
     assert.match(html, /class="cmp-label"/);
@@ -83,6 +88,11 @@ test("every style builds its own markup with a label slot", () => {
   }
   assert.match(compassMarkup("vane", "bottom-right", "de"), />O</);
   assert.match(compassMarkup("band", "bottom-center", "de"), />WSW</);
+  // The badge is a frosted tile already and gets no second background.
+  assert.ok(!compassMarkup("badge", "top-right", "en", true).includes("cmp-bg"));
+  assert.ok(compassMarkup("ticks", "top-right", "en", true).includes("cmp-bg"));
+  assert.equal(resolveCompassPosition("ticks", "auto"), "top-right");
+  assert.equal(resolveCompassPosition("badge", "auto"), "top-right");
 });
 
 test("bearing chips are the wind_bearing attribute or wind_direction sensors", () => {
@@ -116,4 +126,23 @@ test("bearing icons point where the wind blows, the needle where it comes from",
   assert.equal(bearingIconSvg("spinner", 10), "");
   assert.equal(bearingIconSvg("arrow", NaN), "");
   assert.deepEqual([...BEARING_ICONS], ["arrow", "filled", "needle"]);
+});
+
+test("auto tries the config's place first, free places next, taken ones last", () => {
+  const order = compassCandidates("badge", ["top-right", "top-left", "top-center"]);
+  assert.equal(order[0], "bottom-right");
+  assert.deepEqual(order.slice(-3).sort(), ["top-center", "top-left", "top-right"]);
+  assert.equal(new Set(order).size, 6);
+  assert.ok(!order.includes("auto"));
+  // Nothing taken: the home corner first.
+  assert.equal(compassCandidates("arrow")[0], "bottom-left");
+});
+
+test("a 100 % chip area fills its row", () => {
+  assert.ok(isFullWidth("100%"));
+  assert.ok(isFullWidth(" 100 % "));
+  assert.ok(!isFullWidth("34%"));
+  assert.ok(!isFullWidth(undefined));
+  assert.deepEqual(wholeRow("bottom-left"), ["bottom-left", "bottom-center", "bottom-right"]);
+  assert.deepEqual(wholeRow("right"), []);
 });

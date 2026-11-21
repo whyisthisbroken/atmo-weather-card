@@ -4,13 +4,22 @@
  */
 import { LitElement, html, css, svg } from "lit";
 import {
+  AREA2_DEFAULT_POSITION,
   CONFIG_DEFAULTS,
   PERF_PRESETS,
+  chipArea,
+  hasOwnImage,
+  HOUSE_PLACEMENT,
+  houseImages,
+  layoutDefaults,
   migrateConfig,
   perfPreset,
+  usesBundledHouse,
 } from "./atmo-weather-config.js";
 import { editorLanguage, makeTranslator } from "./atmo-weather-i18n.js";
 import { isBearingChip } from "./atmo-weather-compass.js";
+import { checkConditions } from "./atmo-weather-conditions.js";
+import { folderImageCandidates } from "./atmo-weather-folder.js";
 // Editor texts follow the Home Assistant language, see useLanguage().
 let t = makeTranslator("en");
 let tLang = "en";
@@ -21,8 +30,142 @@ function useLanguage(hass) {
   t = makeTranslator(lang);
 }
 const tOpts = (opts) => opts.map((o) => ({ ...o, label: t(o.label) }));
+// Chip visibility: the condition types the editor offers. and/or/not groups
+// work too, but only in YAML.
+const VIS_TYPES = [
+  { value: "state", label: "Entity state" },
+  { value: "numeric_state", label: "Entity value" },
+  { value: "screen", label: "Screen size" },
+  { value: "time", label: "Time and weekday" },
+  { value: "user", label: "User" },
+];
+// The same breakpoints as Home Assistant's own visibility editor.
+const VIS_SCREENS = [
+  { value: "mobile", label: "Phone", query: "(max-width: 767px)" },
+  { value: "tablet", label: "Tablet", query: "(min-width: 768px) and (max-width: 1023px)" },
+  { value: "desktop", label: "Desktop", query: "(min-width: 1024px) and (max-width: 1279px)" },
+  { value: "wide", label: "Wide screen", query: "(min-width: 1280px)" },
+];
+const VIS_WEEKDAYS = [
+  { value: "mon", label: "Monday" },
+  { value: "tue", label: "Tuesday" },
+  { value: "wed", label: "Wednesday" },
+  { value: "thu", label: "Thursday" },
+  { value: "fri", label: "Friday" },
+  { value: "sat", label: "Saturday" },
+  { value: "sun", label: "Sunday" },
+];
+const VIS_LABELS = {
+  condition: "Type of condition",
+  entity: "Entity",
+  attribute: "Attribute (optional)",
+  match: "Match",
+  state: "States",
+  above: "Greater than",
+  below: "Less than",
+  screens: "Screen sizes",
+  media_query: "Media query",
+  after: "From",
+  before: "Until",
+  weekdays: "Weekdays",
+  users: "Users",
+};
 // The documentation page; the help buttons link into it.
 const DOCS_URL = "https://whyisthisbroken.github.io/atmo-weather-card/";
+// Help for the sections that bring none of their own: text and the place in
+// the docs, or several places as [page#anchor, link text] pairs.
+const SECTION_HELP = {
+  colors: [
+    "Automatic follows your Home Assistant theme, or the theme entity if you pick one: with sun.sun the card turns dark at sunset. Light and dark lock the colors. The filters tint the clouds and the sun glow.",
+    "appearance.html#theme--filters",
+  ],
+  position: [
+    "Matters when cards overlap: a higher layer puts the card in front of others, the offset moves it like a CSS margin, for example to tuck it under a header.",
+    "guides.html#layout--layering",
+  ],
+  tap: [
+    "What a tap on the card does, for example open the weather details or another dashboard. Without an action nothing happens. Every chip has a tap action of its own.",
+    "appearance.html#card-style--layout",
+  ],
+  light: [
+    "Golden and blue hour follow the height of the sun, sun rays shine through a partly cloudy sky, haze and ground mist come from the visibility, humidity and dew point of your weather, frost from the temperature and humidity. All of it works on its own.",
+    [
+      ["weather-data.html#weather-data", "Weather data"],
+      ["weather-data.html#frost", "Frost"],
+    ],
+  ],
+  wind: [
+    "Wind lines and leaves follow the wind speed and direction of the weather entity and show in windy weather, and in rain, hail or snow from 40 km/h. The compass shows where the wind comes from.",
+    [
+      ["effects.html#wind", "Wind"],
+      ["effects.html#wind-compass", "Wind compass"],
+    ],
+  ],
+  precip: [
+    "The amount follows the weather state, or your rain sensor under Your own sensors, and grows with the size of the card. The sliders turn it up or down.",
+    "effects.html#rain--snow",
+  ],
+  night: [
+    "Shooting stars and comets appear on clear nights only; rain, snow, storms and fog hide them. They need Effect Quality 1 or higher under Performance.",
+    "effects.html#night-sky",
+  ],
+  fauna: [
+    "Under Performance you set whether birds and planes may fly at all; here how often and how fast.",
+    "effects.html#birds--planes",
+  ],
+  image_time: [
+    "The night image comes with the sun, like the moon, or with the dark theme. The fade sets how many seconds one image takes to blend into the next; 0 switches at once.",
+    [
+      ["images.html#custom-images", "Day and night"],
+      ["images.html#image-transition", "Blending between images"],
+    ],
+  ],
+  image_place: [
+    "The alignment picks the corner, the size scales the image and the offsets move it, in pixels or percent.",
+    "images.html#custom-images",
+  ],
+};
+// The same for the tabs of a chip.
+const CHIP_TAB_HELP = {
+  data: [
+    "Pick an entity and, if you like, one of its attributes. With a weather entity the chip can also show the forecast for a later hour or day.",
+    "chips.html#forecast-chips",
+  ],
+  text: [
+    "Name, value and unit as the chip writes them. Dates and times take codes like %a or %H:%M, wind directions can show as WSW.",
+    [
+      ["chips.html#date-format", "Date format"],
+      ["chips.html#per-chip-options", "All chip options"],
+    ],
+  ],
+  icon: [
+    "An icon like mdi:thermometer, the icon of the entity, or the weather icon of a forecast. Your own SVG icons work too.",
+    "guides.html#weather-icons",
+  ],
+  look: [
+    "Ring and bar show the value as a gauge. Sun path draws the arc of the sun and is offered for sun entities. The layout sets how icon, label and value sit.",
+    [
+      ["chips.html#ring--bar-gauges", "Ring & bar gauges"],
+      ["chips.html#sun-path", "Sun path"],
+      ["chips.html#per-chip-styling", "Per-chip styling"],
+    ],
+  ],
+  position: [
+    "A chip sits in a chip area. Free positioning takes it out and puts it anywhere on the card.",
+    [
+      ["chips.html#chip-area-2", "Two chip areas"],
+      ["chips.html#free-positioning", "Free positioning"],
+    ],
+  ],
+  tap: [
+    "Without an action a tap opens the details of the entity.",
+    "chips.html#per-chip-options",
+  ],
+  visibility: [
+    "Shows the chip only while all conditions hold, like the visibility of Home Assistant cards.",
+    "chips.html#chip-visibility",
+  ],
+};
 // Rain rate units the precipitation picker accepts.
 function isRainRateUnit(unit) {
   const u = String(unit || "").replace(/\s+/g, "").toLowerCase();
@@ -67,6 +210,7 @@ const LABELS = Object.freeze({
   card_offset: "Card Offset",
   card_stack_order: "Layer Order",
   card_tap_action: "Tap Action",
+  css: "Own CSS",
   card_filter_clouds: "Cloud Filter",
   card_filter_sun: "Sun Filter",
   card_full_width: "Full Width",
@@ -83,7 +227,12 @@ const LABELS = Object.freeze({
   image_night: "Night Image URL",
   image_night_source: "Night image shows",
   image_transition: "Fade time (s)",
+  image_folder: "Picture folder",
+  forecast_curve: "Temperature curve",
+  forecast_curve_height: "Curve height (px)",
+  image_folder_type: "File type",
   image_scale: "Image Scale (%)",
+  image_max_width: "Max width (%)",
   image_alignment: "Image Position",
   image_x: "Horizontal Offset",
   image_y: "Vertical Offset",
@@ -132,6 +281,7 @@ const LABELS = Object.freeze({
   effect_sun_rays: "Sun rays",
   effect_haze: "Haze",
   effect_ground_mist: "Ground mist",
+  effect_frost: "Frost",
   effect_cloud_coverage: "Cloud amount from data",
   effect_shooting_stars: "Shooting stars",
   effect_comets: "Comets",
@@ -155,7 +305,7 @@ const LABELS = Object.freeze({
 const HELPERS = Object.freeze({
   weather_entity: "",
   sun_entity: "Used for the day/night cycle.",
-  moon_phase_entity: "Your moon phase sensor.",
+  moon_phase_entity: "Optional. Without a sensor the card works out the moon phase from the date.",
   precipitation_entity:
     "Optional. Current rain intensity in mm/h or in/h, so rain and snow follow the measured amount. Only sensors with these units are listed.",
   wind_speed_entity: "Moves the sky, the wind lines and the compass. Sensors in km/h, mph, m/s, kn, ft/s or Beaufort.",
@@ -170,6 +320,7 @@ const HELPERS = Object.freeze({
   card_padding: "Inner padding, e.g. 16px or 12px 20px.",
   card_offset: "",
   card_tap_action: "What happens when the card is tapped.",
+  css: "Styles inside the card, without card_mod. Classes and variables are listed in the docs.",
   card_full_width: "Removes side margins so the card fills edge to edge.",
   card_mask_vertical: "Adds a soft fade to the top and bottom edges.",
   card_mask_horizontal: "Adds a soft fade to the left and right edges.",
@@ -184,7 +335,12 @@ const HELPERS = Object.freeze({
     "Applies to every image of the card, the state images too. Without a sun entity the color mode decides.",
   image_transition:
     "How long one image blends into the next when it changes, for example at sunset. 0 switches at once.",
+  image_folder: "A folder like /local/house/ with one picture per weather: sunny.webp, rainy.webp, rainy-night.webp and so on.",
+  image_folder_type: "The file ending of all pictures in the folder.",
+  forecast_curve: "Drawn over the forecast chips in the chip area that show the temperature, at least two.",
+  forecast_curve_height: "Room the curve takes above the chips.",
   image_scale: "Image height as a percentage of the card height.",
+  image_max_width: "The most of the card width the image may take; on a narrower card it shrinks. 0 = no limit.",
   image_alignment: "",
   image_x: "Fine-tune horizontal position. Pixels or CSS, e.g. -20 or 10%.",
   image_y: "Fine-tune vertical position. Pixels or CSS, e.g. 10 or -5%.",
@@ -211,6 +367,7 @@ const HELPERS = Object.freeze({
   effect_sun_rays: "Beams of light through broken clouds.",
   effect_haze: "A veil with poor visibility or high humidity.",
   effect_ground_mist: "Mist near the dew point, at night and in the morning.",
+  effect_frost: "Rime on the card below 0 °C, or just above it in very humid air. Colder air lets it reach further in.",
   effect_cloud_coverage:
     "The cloud cover of the weather entity sets the amount of clouds. Off: a fixed amount per weather state.",
   comet_rate:
@@ -229,7 +386,7 @@ const HELPERS = Object.freeze({
     "A soft veil behind the chip row keeps the text readable on any sky.",
   wind_compass:
     "Shows where the wind comes from, read from wind_bearing of the weather entity. The arrow points where it blows to.",
-  wind_compass_position: "Automatic puts each style in its usual corner and moves it away from chips.",
+  wind_compass_position: "Automatic puts each style in its usual corner and moves it to a free place. With no free place, as in the Panel layout, the compass stays hidden: pick a position to show it anyway.",
   wind_compass_background: "A frosted box behind the compass, readable on any sky.",
 });
 const CHIP_LABELS = Object.freeze({
@@ -252,6 +409,7 @@ const CHIP_LABELS = Object.freeze({
   icon_path: "Icon folder",
   tap_action: "Tap Action",
   unit_format: "Custom unit",
+  date_format: "Date format",
   bearing_format: "Wind direction as",
   bearing_icon: "Wind direction icon",
   text_size: "Value text size",
@@ -267,6 +425,7 @@ const CHIP_HELPERS = Object.freeze({
   icon: "MDI icon, or type 'weather' for a dynamic icon.",
   icon_path: "e.g. /local/weather-icons/",
   forecast_offset: "0 = today/now, 1 = tomorrow/next hour, etc.",
+  date_format: "Codes like %a (day), %d.%m. (date) or %H:%M (time). Empty shows the usual text.",
 });
 const KEY_ORDER = Object.freeze([
   "type",
@@ -300,7 +459,10 @@ const KEY_ORDER = Object.freeze([
   "image_night",
   "image_night_source",
   "image_transition",
+  "image_folder",
+  "image_folder_type",
   "image_scale",
+  "image_max_width",
   "image_alignment",
   "status_entity",
   "status_day",
@@ -373,6 +535,7 @@ const KEY_ORDER = Object.freeze([
   "effect_sun_rays",
   "effect_haze",
   "effect_ground_mist",
+  "effect_frost",
   "effect_cloud_coverage",
   "effect_shooting_stars",
   "shooting_star_rate",
@@ -384,7 +547,11 @@ const KEY_ORDER = Object.freeze([
   "effect_snow_edge",
   "effect_spill",
   "effect_text_scrim",
+  "forecast_curve",
+  "forecast_curve_height",
+  "chip_area_2",
   "chips",
+  "css",
   "custom_cards",
 ]);
 const CHIP_STYLE_OVERRIDE_KEYS = Object.freeze([
@@ -415,7 +582,9 @@ const TOP_LEVEL_NUMBER_FIELDS = Object.freeze([
   "celestial_x",
   "celestial_y",
   "image_scale",
+  "image_max_width",
   "image_transition",
+  "forecast_curve_height",
   "chip_area_columns",
   "chip_area_scroll_count",
   "perf_fps",
@@ -456,6 +625,7 @@ const TOP_LEVEL_BOOLEAN_FIELDS = Object.freeze([
   "effect_sun_rays",
   "effect_haze",
   "effect_ground_mist",
+  "effect_frost",
   "effect_cloud_coverage",
   "effect_shooting_stars",
   "effect_comets",
@@ -514,6 +684,8 @@ const OPT = Object.freeze({
     { value: "pill", label: "Compass chip" },
     { value: "band", label: "Compass band" },
     { value: "vane", label: "Wind vane" },
+    { value: "ticks", label: "Tick ring" },
+    { value: "badge", label: "Wind badge" },
   ],
   wind_compass_position: [
     { value: "auto", label: "Automatic" },
@@ -527,6 +699,14 @@ const OPT = Object.freeze({
   image_night_source: [
     { value: "sun", label: "From sunset to sunrise" },
     { value: "theme", label: "While the card is dark (Color mode)" },
+  ],
+  image_folder_type: ["webp", "png", "jpg", "svg"].map((v) => ({ value: v, label: `.${v}` })),
+  forecast_curve: [
+    { value: "off", label: "Off" },
+    { value: "line", label: "Line" },
+    { value: "soft", label: "Soft line" },
+    { value: "band", label: "Band from low to high" },
+    { value: "color", label: "Colored by temperature" },
   ],
   card_filter_clouds: [
     { value: "none", label: "None" },
@@ -641,7 +821,9 @@ const PREPARED_POSITION_GRIDS = Object.freeze(
 // Runtime defaults of number options outside the performance presets.
 const SLIDER_DEFAULTS = Object.freeze({
   image_scale: 100,
+  image_max_width: 0,
   image_transition: CONFIG_DEFAULTS.image_transition,
+  forecast_curve_height: 46,
   // The card sits at layer 1 when no order is set.
   card_stack_order: 1,
   // Sun and moon are drawn with a radius of 31 px when no size is set.
@@ -667,6 +849,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
       _expandedImageRule: { type: Number, state: true },
       _expandedChip: { type: Number, state: true },
       _openPanel: { type: String, state: true },
+      _openSection: { type: String, state: true },
       _cardHeightError: { type: String, state: true },
     };
   }
@@ -1451,6 +1634,18 @@ class AtmosphericWeatherCardEditor extends LitElement {
           --mdc-icon-size: 13px;
         }
       }
+      .chip-badge-area {
+        font-size: 11px;
+        font-weight: 700;
+        &.a1 {
+          background: color-mix(in srgb, var(--primary-color, #03a9f4) 18%, transparent);
+          color: var(--primary-color, #03a9f4);
+        }
+        &.a2 {
+          background: color-mix(in srgb, var(--warning-color, #ff9800) 22%, transparent);
+          color: var(--warning-color, #ff9800);
+        }
+      }
       .chip-badge-free {
         display: inline-flex;
         align-items: center;
@@ -1639,6 +1834,64 @@ class AtmosphericWeatherCardEditor extends LitElement {
       .chip-nudge.info {
         background: color-mix(in srgb, var(--primary-text-color, #212121) 4%, transparent);
         border: 1px solid color-mix(in srgb, var(--primary-text-color, #212121) 9%, transparent);
+      }
+      /* ── Values a layout brings ── */
+      .from-layout,
+      .from-layout-area {
+        opacity: 0.55;
+        transition: opacity 0.15s;
+      }
+      .from-layout:hover,
+      .from-layout-area:hover,
+      .from-layout:focus-within {
+        opacity: 0.9;
+      }
+      /* ── Chip visibility ── */
+      .vis-status {
+        display: flex;
+        align-items: center;
+        gap: var(--awc-e-s2);
+        margin: var(--awc-e-s2) 0;
+        font-size: var(--awc-e-f-label);
+        font-weight: 500;
+        --mdc-icon-size: 18px;
+        &.on {
+          color: var(--success-color, #43a047);
+        }
+        &.off {
+          color: var(--secondary-text-color);
+        }
+      }
+      .vis-cond {
+        margin: var(--awc-e-s2) 0;
+        padding: var(--awc-e-s2) var(--awc-e-s3) var(--awc-e-s3);
+        border: 1px solid color-mix(in srgb, var(--primary-text-color, #212121) 10%, transparent);
+        border-radius: var(--awc-e-r-ctrl);
+        background: color-mix(in srgb, var(--primary-text-color, #212121) 3%, transparent);
+      }
+      .vis-cond-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: var(--awc-e-f-meta);
+        font-weight: 600;
+        color: var(--secondary-text-color);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-bottom: var(--awc-e-s1);
+        & .clear-btn {
+          display: inline-flex;
+          border: 0;
+          background: none;
+          padding: 4px;
+          border-radius: 50%;
+          cursor: pointer;
+          color: var(--secondary-text-color);
+          --mdc-icon-size: 18px;
+          &:hover {
+            color: var(--error-color);
+          }
+        }
       }
       /* ── Chip color picker ── */
       .chip-color-box {
@@ -2049,6 +2302,151 @@ class AtmosphericWeatherCardEditor extends LitElement {
         font-weight: 400;
         color: var(--secondary-text-color);
       }
+      /* ── Sections inside a panel ── */
+      details.section {
+        border-radius: var(--awc-e-r-box);
+        & + details.section {
+          margin-top: 2px;
+        }
+        & > summary {
+          display: flex;
+          align-items: center;
+          gap: var(--awc-e-s3);
+          padding: var(--awc-e-s2);
+          border-radius: var(--awc-e-r-box);
+          cursor: pointer;
+          list-style: none;
+          user-select: none;
+          &::-webkit-details-marker {
+            display: none;
+          }
+          &:hover {
+            background: var(--awc-e-field-fill);
+          }
+        }
+        & > summary .chevron {
+          margin-left: auto;
+          flex-shrink: 0;
+          --mdc-icon-size: 20px;
+          color: var(--secondary-text-color);
+          transition: transform var(--awc-e-t);
+        }
+        &[open] {
+          background: var(--awc-e-field-fill);
+          & > summary .chevron {
+            transform: rotate(180deg);
+          }
+        }
+      }
+      .section-icon,
+      .layout-art {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        border-radius: var(--awc-e-r-ctrl);
+        background: rgba(var(--rgb-primary-color, 0, 120, 212), 0.12);
+        color: var(--primary-color);
+      }
+      .section-icon {
+        width: 36px;
+        height: 36px;
+        & ha-icon {
+          --mdc-icon-size: 20px;
+        }
+      }
+      .section-text,
+      .layout-text {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        line-height: 1.3;
+        text-align: start;
+      }
+      .section-name,
+      .layout-name {
+        font-size: var(--awc-e-f-body);
+        font-weight: 500;
+        color: var(--primary-text-color);
+      }
+      .section-sub,
+      .layout-desc {
+        font-size: var(--awc-e-f-meta);
+        color: var(--secondary-text-color);
+      }
+      .section-body {
+        padding: var(--awc-e-s1) var(--awc-e-s3) var(--awc-e-s3);
+        & > * + * {
+          margin-top: var(--awc-e-s2);
+        }
+        & > .help-row:first-child {
+          margin-top: 0;
+        }
+        & .editor-group:first-child {
+          margin-top: 0;
+          padding-top: 0;
+          border-top: 0;
+        }
+      }
+      /* ── Layout tiles ── */
+      .layout-tiles {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        margin-top: var(--awc-e-s2);
+      }
+      .layout-tile {
+        display: flex;
+        align-items: center;
+        gap: var(--awc-e-s3);
+        width: 100%;
+        padding: var(--awc-e-s2);
+        border: 1px solid transparent;
+        border-radius: var(--awc-e-r-box);
+        background: none;
+        color: inherit;
+        font: inherit;
+        cursor: pointer;
+        &:hover {
+          background: var(--awc-e-field-fill);
+        }
+        &.active {
+          border-color: var(--primary-color);
+          background: rgba(var(--rgb-primary-color, 0, 120, 212), 0.08);
+        }
+      }
+      .layout-art {
+        width: 56px;
+        height: 42px;
+        & svg {
+          width: 44px;
+          height: 33px;
+          fill: currentColor;
+        }
+        & .lt-card {
+          fill: currentColor;
+          fill-opacity: 0.14;
+          stroke: currentColor;
+          stroke-opacity: 0.5;
+          stroke-width: 1;
+        }
+        & .lt-dashed {
+          fill-opacity: 0;
+          stroke-dasharray: 3 2;
+        }
+        & .lt-sun {
+          fill: #f5b000;
+        }
+      }
+      .layout-tiles + .tip-box {
+        margin-bottom: var(--awc-e-s2);
+      }
+      .layout-check {
+        margin-left: auto;
+        flex-shrink: 0;
+        --mdc-icon-size: 20px;
+        color: var(--primary-color);
+      }
       /* ── Help ── */
       .help-row {
         display: flex;
@@ -2402,7 +2800,8 @@ class AtmosphericWeatherCardEditor extends LitElement {
     ) {
       return this._cachedFormData;
     }
-    const c = { ...CONFIG_DEFAULTS, ...(this._config || {}) };
+    // What the card shows: defaults, then the layout's values, then your own.
+    const c = { ...CONFIG_DEFAULTS, ...this._layoutValues(), ...(this._config || {}) };
     c._color_mode =
       this._colorModeState ||
       (c.card_color_mode === "light"
@@ -2416,6 +2815,31 @@ class AtmosphericWeatherCardEditor extends LitElement {
     this._cachedFormConfig = this._config;
     this._cachedFormColorMode = this._colorModeState;
     return c;
+  }
+  // The values the chosen layout brings (without its chips), for showing them.
+  _layoutValues() {
+    const cfg = this._config || {};
+    if (this._layoutValuesFor === cfg) return this._layoutValuesCache;
+    const base =
+      layoutDefaults(
+        String(cfg.card_layout || "").trim().toLowerCase(),
+        cfg.weather_entity || "",
+        cfg.sun_entity || "sun.sun",
+      ) || {};
+    const { chips, ...rest } = base;
+    // The bundled house sits smaller and lower than an own picture.
+    const values = usesBundledHouse(cfg) ? { ...rest, ...HOUSE_PLACEMENT } : rest;
+    this._layoutValuesFor = cfg;
+    this._layoutValuesCache = values;
+    return values;
+  }
+  // True while a field shows the layout's value, not one of your own.
+  _fromLayout(field) {
+    return (
+      !!field &&
+      Object.prototype.hasOwnProperty.call(this._layoutValues(), field) &&
+      !Object.prototype.hasOwnProperty.call(this._config || {}, field)
+    );
   }
   _colorModeSchema() {
     const c = this._formData,
@@ -2679,7 +3103,10 @@ class AtmosphericWeatherCardEditor extends LitElement {
   };
   _computeHelper = (schema) => {
     if (!schema || !schema.name) return undefined;
-    return HELPERS[schema.name] ? t(HELPERS[schema.name]) : undefined;
+    const own = HELPERS[schema.name] ? t(HELPERS[schema.name]) : undefined;
+    if (!this._fromLayout(schema.name)) return own;
+    const note = t("From the layout. Pick a value to set your own.");
+    return own ? `${note} ${own}` : note;
   };
   _isValidCardHeight(value) {
     if (value === null || value === undefined) return true;
@@ -2811,6 +3238,11 @@ class AtmosphericWeatherCardEditor extends LitElement {
       }
     }
     delete incoming._color_mode;
+    // A form sends all its shown values back; the layout's stay unsaved
+    // until you change them.
+    const layout = this._layoutValues();
+    for (const [k, v] of Object.entries(layout))
+      if (!Object.prototype.hasOwnProperty.call(prev, k) && incoming[k] === v) delete incoming[k];
     if (incoming.status_entity && !prev.status_entity) {
       if (!incoming.status_day && incoming.image_day)
         incoming.status_day = incoming.image_day;
@@ -2837,6 +3269,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
       out.add("theme_entity");
     const chipLayout = c.chip_area_layout || "wrap";
     if (chipLayout !== "grid") out.add("chip_area_columns");
+    if (!c.forecast_curve || c.forecast_curve === "off") out.add("forecast_curve_height");
     if (chipLayout !== "horizontal-scroll" && chipLayout !== "vertical-scroll")
       out.add("chip_area_scroll_count");
     const isScroll =
@@ -3153,36 +3586,6 @@ class AtmosphericWeatherCardEditor extends LitElement {
       ${current === "standalone"
         ? html`<div class="toggle-group">${this._renderSwitch("effect_text_scrim", true)}</div>`
         : ""}
-    </div>`;
-  }
-  _renderLayoutSegmented() {
-    const current = this._formData.card_layout || "";
-    const opts = [
-      { value: "", label: "Free" },
-      { value: "standard", label: "Standard" },
-      { value: "compact", label: "Compact" },
-      { value: "wide", label: "Wide" },
-    ];
-    return html`<div class="settings-group">
-      <div class="segmented" role="radiogroup" aria-label=${t(LABELS.card_layout)}>
-        ${opts.map(
-          (o) =>
-            html`<button
-              type="button"
-              role="radio"
-              class=${current === o.value ? "active" : ""}
-              data-field="card_layout"
-              data-value=${o.value}
-              data-value-type=${o.value ? "string" : "empty"}
-              @click=${this._onSegmentedFieldSelect}
-            >
-              ${t(o.label)}
-            </button>`,
-        )}
-      </div>
-      <div class="composite-helper">
-        ${current ? t("A finished look. Your own chips and values still win; without chips the layout brings its own.") : t("Your own chips and sizes, set below.")}
-      </div>
     </div>`;
   }
   _onCardStyleSelect(e) {
@@ -3643,6 +4046,8 @@ class AtmosphericWeatherCardEditor extends LitElement {
       delete out.forecast_precision;
     }
     if (out.forecast_offset === 0) delete out.forecast_offset;
+    // Only the second area is written; a freely placed chip sits in none.
+    if (Number(out.area) !== 2 || String(out.position || "").toLowerCase() === "custom") delete out.area;
     // Degrees is the default. Drop the format when the chip no longer shows a
     // wind direction, but keep it while a sensor's state is not loaded yet.
     const bearingKnown =
@@ -3907,6 +4312,13 @@ class AtmosphericWeatherCardEditor extends LitElement {
     }
     this._patch({ chips: list });
   }
+  // A chip whose value is a point in time, like the next sunrise.
+  _chipShowsTimestamp(chip) {
+    const st = this.hass && this.hass.states && this.hass.states[chip.entity];
+    if (!st) return false;
+    const raw = chip.attribute ? (st.attributes || {})[chip.attribute] : st.state;
+    return typeof raw === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(raw);
+  }
   _chipLabel = (schema) => {
     if (!schema || !schema.name) return "";
     return t(CHIP_LABELS[schema.name] || schema.name);
@@ -3915,18 +4327,276 @@ class AtmosphericWeatherCardEditor extends LitElement {
     if (!schema || !schema.name) return undefined;
     return CHIP_HELPERS[schema.name] ? t(CHIP_HELPERS[schema.name]) : undefined;
   };
+  /* ── Chip visibility ── */
+  _visScreens(query) {
+    const parts = String(query || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const found = parts.map((p) => VIS_SCREENS.find((s) => s.query === p));
+    return found.every(Boolean) ? found.map((s) => s.value) : null;
+  }
+  // Form data for one condition: lists for the multi selects, is / is not.
+  _visFormData(c) {
+    const list = (v) => (v === undefined || v === null || v === "" ? [] : [].concat(v).map(String));
+    if (c.condition === "state" || !("condition" in c))
+      return {
+        condition: "state",
+        entity: c.entity || c.entity_id || "",
+        attribute: c.attribute || "",
+        match: c.state_not != null && c.state == null ? "not" : "is",
+        state: list(c.state != null ? c.state : c.state_not),
+      };
+    if (c.condition === "screen")
+      return { ...c, screens: this._visScreens(c.media_query) || [] };
+    return { ...c, weekdays: list(c.weekdays), users: list(c.users) };
+  }
+  _visSchema(c) {
+    const type = { name: "condition", selector: { select: { mode: "dropdown", options: tOpts(VIS_TYPES) } } };
+    const entityFields = (data) => [
+      { name: "entity", selector: { entity: {} } },
+      ...(data.entity
+        ? [{ name: "attribute", selector: { attribute: {} }, context: { filter_entity: "entity" } }]
+        : []),
+    ];
+    const data = this._visFormData(c);
+    switch (data.condition) {
+      case "state":
+        return [
+          type,
+          ...entityFields(data),
+          ...(data.entity
+            ? [
+                {
+                  name: "match",
+                  selector: {
+                    select: {
+                      mode: "box",
+                      options: tOpts([
+                        { value: "is", label: "Is" },
+                        { value: "not", label: "Is not" },
+                      ]),
+                    },
+                  },
+                },
+                {
+                  name: "state",
+                  selector: {
+                    select: {
+                      multiple: true,
+                      custom_value: true,
+                      mode: "dropdown",
+                      options: this._imageRuleStateOptions({ entity: data.entity, attribute: data.attribute, state: data.state }),
+                    },
+                  },
+                },
+              ]
+            : []),
+        ];
+      case "numeric_state":
+        return [
+          type,
+          ...entityFields(data),
+          {
+            type: "grid",
+            name: "",
+            schema: [
+              { name: "above", selector: { number: { mode: "box", step: "any" } } },
+              { name: "below", selector: { number: { mode: "box", step: "any" } } },
+            ],
+          },
+        ];
+      case "screen":
+        return [
+          type,
+          { name: "screens", selector: { select: { multiple: true, mode: "list", options: tOpts(VIS_SCREENS) } } },
+          { name: "media_query", selector: { text: {} } },
+        ];
+      case "time":
+        return [
+          type,
+          {
+            type: "grid",
+            name: "",
+            schema: [
+              { name: "after", selector: { time: {} } },
+              { name: "before", selector: { time: {} } },
+            ],
+          },
+          { name: "weekdays", selector: { select: { multiple: true, mode: "list", options: tOpts(VIS_WEEKDAYS) } } },
+        ];
+      case "user":
+        return [
+          type,
+          {
+            name: "users",
+            selector: {
+              select: {
+                multiple: true,
+                mode: "list",
+                options: this._visUserOptions(),
+              },
+            },
+          },
+        ];
+      default:
+        return [type];
+    }
+  }
+  // Users come from Home Assistant (admins only); otherwise just you.
+  _visUserOptions() {
+    if (this._haUsers === undefined && this.hass && this.hass.callWS) {
+      this._haUsers = null;
+      this.hass
+        .callWS({ type: "config/auth/list" })
+        .then((users) => {
+          this._haUsers = (Array.isArray(users) ? users : [])
+            .filter((u) => u && !u.system_generated && u.is_active !== false)
+            .map((u) => ({ value: u.id, label: u.name || u.username || u.id }));
+          this.requestUpdate();
+        })
+        .catch(() => {
+          this._haUsers = [];
+          this.requestUpdate();
+        });
+    }
+    const opts = [...(this._haUsers || [])];
+    const me = this.hass && this.hass.user;
+    if (me && me.id && !opts.some((o) => o.value === me.id))
+      opts.unshift({ value: me.id, label: me.name || me.id });
+    return opts;
+  }
+  // Back from the form: the condition as Home Assistant writes it.
+  _visFromForm(old, v) {
+    const text = (x) => (typeof x === "string" ? x.trim() : "");
+    const type = v.condition || "state";
+    const prevType = old.condition || "state";
+    if (type !== prevType) return { condition: type };
+    const out = { condition: type };
+    if (type === "state" || type === "numeric_state") {
+      if (text(v.entity)) out.entity = text(v.entity);
+      const sameEntity = out.entity === (old.entity || old.entity_id || undefined);
+      if (sameEntity && text(v.attribute)) out.attribute = text(v.attribute);
+      if (type === "state") {
+        const states = sameEntity
+          ? [].concat(v.state ?? []).map((x) => String(x).trim()).filter(Boolean)
+          : [];
+        const key = v.match === "not" ? "state_not" : "state";
+        if (states.length) out[key] = states.length === 1 ? states[0] : [...new Set(states)];
+      } else {
+        for (const k of ["above", "below"])
+          if (v[k] !== undefined && v[k] !== null && v[k] !== "" && Number.isFinite(Number(v[k])))
+            out[k] = Number(v[k]);
+      }
+    } else if (type === "screen") {
+      const before = this._visScreens(old.media_query) || [];
+      const picked = [].concat(v.screens || []);
+      const changed = picked.length !== before.length || picked.some((x) => !before.includes(x));
+      const query = changed
+        ? VIS_SCREENS.filter((s) => picked.includes(s.value)).map((s) => s.query).join(", ")
+        : text(v.media_query);
+      if (query) out.media_query = query;
+    } else if (type === "time") {
+      // The time picker writes seconds; minutes are enough here.
+      const hm = (x) => text(x).replace(/^(\d{1,2}:\d{2}):00$/, "$1");
+      if (hm(v.after)) out.after = hm(v.after);
+      if (hm(v.before)) out.before = hm(v.before);
+      const days = VIS_WEEKDAYS.map((d) => d.value).filter((d) => [].concat(v.weekdays || []).includes(d));
+      if (days.length) out.weekdays = days;
+    } else if (type === "user") {
+      const users = [].concat(v.users || []).filter(Boolean);
+      if (users.length) out.users = users;
+    } else return { ...old };
+    return out;
+  }
+  _renderChipVisibility(chip, update) {
+    const list = Array.isArray(chip.visibility) ? chip.visibility : [];
+    const write = (next) => {
+      const n = { ...chip };
+      if (next.length) n.visibility = next;
+      else delete n.visibility;
+      update(n);
+    };
+    const shown = checkConditions(list, this.hass);
+    return html`<div class="chip-nudge info">
+        <ha-icon icon="mdi:eye-outline" style="--mdc-icon-size:14px;flex-shrink:0"></ha-icon>
+        ${t("Show this chip only when all conditions are met.")}
+      </div>
+      ${list.length
+        ? html`<div class="vis-status ${shown ? "on" : "off"}">
+            <ha-icon icon=${shown ? "mdi:eye" : "mdi:eye-off"}></ha-icon>
+            <span>${shown ? t("Shown right now") : t("Hidden right now")}</span>
+          </div>`
+        : ""}
+      ${list.map((c, i) => {
+        const cond = c && typeof c === "object" ? c : {};
+        const group = ["and", "or", "not"].includes(cond.condition);
+        return html`<div class="vis-cond">
+          <div class="vis-cond-head">
+            <span>${group ? t("Group of conditions") : t("Visibility condition")} ${i + 1}</span>
+            <button
+              type="button"
+              class="clear-btn"
+              title=${t("Remove")}
+              @click=${() => write(list.filter((_, j) => j !== i))}
+            >
+              <ha-icon icon="mdi:delete-outline"></ha-icon>
+            </button>
+          </div>
+          ${group
+            ? html`<div class="chip-nudge info">
+                ${t("This group (and, or, not) can be changed in the YAML editor.")}
+              </div>`
+            : html`<ha-form
+                .hass=${this.hass}
+                .data=${this._visFormData(cond)}
+                .schema=${this._visSchema(cond)}
+                .computeLabel=${(s) => (s && s.name ? t(VIS_LABELS[s.name] || s.name) : "")}
+                .computeHelper=${(s) =>
+                  s && s.name === "media_query"
+                    ? t("Filled in from the sizes above, or write your own CSS media query.")
+                    : s && s.name === "state"
+                      ? t("Pick one or more states, or type any value.")
+                      : undefined}
+                @value-changed=${(e) => {
+                  e.stopPropagation();
+                  const v = (e.detail && e.detail.value) || {};
+                  write(list.map((x, j) => (j === i ? this._visFromForm(cond, v) : x)));
+                }}
+              ></ha-form>`}
+        </div>`;
+      })}
+      <button
+        type="button"
+        class="add-card-btn"
+        @click=${() => {
+          // A new condition starts on the chip's own entity.
+          const c = { condition: "state" };
+          if (chip.entity && !chip.forecast) c.entity = chip.entity;
+          write([...list, c]);
+        }}
+      >
+        <ha-icon icon="mdi:plus"></ha-icon>
+        <span>${t("Add condition")}</span>
+      </button>`;
+  }
   _renderChipRow(chip, idx, total) {
     const expanded = this._expandedChip === idx;
     const isFree = (chip.position || "").toString().toLowerCase() === "custom";
     const isFc = !!chip.forecast;
     const chipType = chip.type || "";
+    const area = chipArea(chip);
     const posBadge = isFree
       ? html`<span class="chip-badge-free"
           ><ha-icon icon="mdi:cursor-move"></ha-icon
         ></span>`
-      : html`<span class="chip-badge-row"
-          ><ha-icon icon="mdi:view-grid-outline"></ha-icon
-        ></span>`;
+      : this._hasAreaTwo()
+        ? html`<span class="chip-badge-row chip-badge-area a${area}" title=${t("Chip area {n}", { n: area })}
+            >${area}</span
+          >`
+        : html`<span class="chip-badge-row"
+            ><ha-icon icon="mdi:view-grid-outline"></ha-icon
+          ></span>`;
     const badge = posBadge;
     if (!expanded) {
       return this._renderListRow({
@@ -4249,6 +4919,9 @@ class AtmosphericWeatherCardEditor extends LitElement {
                     }}
                   ></ha-form>`
                 : ""}
+            ${isFc && !chip.name && !nameSensorId && !chip.name_attribute
+              ? chipForm([{ name: "date_format", selector: { text: {} } }])
+              : ""}
             <div class="css-field-row cols-2">
               ${cssField("label_size", "Size", "auto")}
             </div>
@@ -4378,7 +5051,9 @@ class AtmosphericWeatherCardEditor extends LitElement {
                     </div>`
                   : ""}`
               : ""}
-            ${chipForm([{ name: "unit_format", selector: { text: {} } }])}
+            ${!isFc && this._chipShowsTimestamp(chip)
+              ? chipForm([{ name: "date_format", selector: { text: {} } }])
+              : chipForm([{ name: "unit_format", selector: { text: {} } }])}
             ${!isFc && entityId
               ? html`${(() => {
                   const hasManualPrecision =
@@ -4964,6 +5639,10 @@ class AtmosphericWeatherCardEditor extends LitElement {
           { value: "", label: "Default" },
           { value: "ring", label: "Ring" },
           { value: "bar", label: "Bar" },
+          // The sun's arc needs the sun's rising and setting times.
+          ...(String(chip.entity || "").startsWith("sun.") || chipType === "sun_path"
+            ? [{ value: "sun_path", label: "Sun path" }]
+            : []),
         ].map(
           (o) =>
             html`<button
@@ -4975,7 +5654,9 @@ class AtmosphericWeatherCardEditor extends LitElement {
                 const prev = chipType;
                 if (o.value) n.type = o.value;
                 else delete n.type;
-                if (prev && o.value && prev !== o.value) {
+                // Ring and bar share their gauge settings; the sun path has none.
+                const gauges = ["ring", "bar"];
+                if (gauges.includes(prev) && gauges.includes(o.value) && prev !== o.value) {
                   for (const s of GAUGE_SUFFIXES) {
                     const src = prev + "_" + s,
                       dst = o.value + "_" + s;
@@ -5005,28 +5686,46 @@ class AtmosphericWeatherCardEditor extends LitElement {
       "bottom-right",
     ];
     const currentAnchor = chip.position_anchor || "top-left";
-    const positionSection = html`<div class="toggle-group">
-        <label class="toggle-row">
-          <span>${t("Free positioning")}</span>
-          <ha-switch
-            .checked=${isFree}
-            @change=${(e) => {
-              const n = { ...chip };
-              if (e.target.checked) {
-                n.position = "custom";
-                if (!n.position_anchor) n.position_anchor = "top-left";
-              } else {
-                [
-                  "position",
-                  "position_anchor",
-                  "position_x",
-                  "position_y",
-                ].forEach((k) => delete n[k]);
-              }
-              update(n);
-            }}
-          ></ha-switch
-        ></label>
+    // Where the chip sits: in the first or second chip area, or freely.
+    const place = isFree ? "free" : String(chipArea(chip));
+    const setPlace = (value) => {
+      const n = { ...chip };
+      if (value === "free") {
+        n.position = "custom";
+        if (!n.position_anchor) n.position_anchor = "top-left";
+        delete n.area;
+      } else {
+        ["position", "position_anchor", "position_x", "position_y"].forEach(
+          (k) => delete n[k],
+        );
+        if (value === "2") n.area = 2;
+        else delete n.area;
+      }
+      update(n);
+    };
+    const positionSection = html`<div class="settings-group">
+        <div class="settings-group-label">${t("Where the chip sits")}</div>
+        <div class="segmented" role="radiogroup" aria-label=${t("Where the chip sits")}>
+          ${[
+            ["1", "Chip area 1"],
+            ["2", "Chip area 2"],
+            ["free", "Free positioning"],
+          ].map(
+            ([value, label]) =>
+              html`<button
+                type="button"
+                role="radio"
+                aria-checked=${place === value ? "true" : "false"}
+                class=${place === value ? "active" : ""}
+                data-place=${value}
+                @click=${() => setPlace(value)}
+              >
+                ${t(label)}
+              </button>`,
+          )}
+        </div>
+      </div>
+      <div class="toggle-group">
         <label class="toggle-row">
           <span>${t("Behind animations")}</span>
           <ha-switch
@@ -5231,6 +5930,11 @@ class AtmosphericWeatherCardEditor extends LitElement {
       },
       { key: "position", title: "Position", body: positionSection },
       { key: "tap", title: "Tap", body: tapSection },
+      {
+        key: "visibility",
+        title: "Conditions",
+        body: this._renderChipVisibility(chip, update),
+      },
     ];
     const activeTab = TABS.find((x) => x.key === accOpen) || TABS[0];
     const body = html`<div class="chip-tabs" role="tablist">
@@ -5250,7 +5954,11 @@ class AtmosphericWeatherCardEditor extends LitElement {
             </button>`,
         )}
       </div>
-      <div class="chip-tab-body">${activeTab.body}</div>
+      <div class="chip-tab-body">
+        ${CHIP_TAB_HELP[activeTab.key]
+          ? this._renderIntro(`chip_${activeTab.key}`, ...CHIP_TAB_HELP[activeTab.key])
+          : ""}${activeTab.body}
+      </div>
     ${hasStyleOverrides
       ? html`<button
           type="button"
@@ -5352,6 +6060,12 @@ class AtmosphericWeatherCardEditor extends LitElement {
     });
   }
   _renderSlider(field, label, min, max, step, helper) {
+    const markup = this._renderSliderInner(field, label, min, max, step, helper);
+    return this._fromLayout(field)
+      ? html`<div class="from-layout" title=${t("From the layout")}>${markup}</div>`
+      : markup;
+  }
+  _renderSliderInner(field, label, min, max, step, helper) {
     // Without a saved value the slider shows what the card uses.
     const preset = perfPreset(this._config);
     const raw =
@@ -5819,7 +6533,50 @@ class AtmosphericWeatherCardEditor extends LitElement {
             )}
           </div>`
         : ""}
-      ${this._renderGroup("Chip area", areaContent)}
+      ${this._renderGroup(
+        this._hasAreaTwo() ? "Chip area 1" : "Chip area",
+        html`${this._renderIntro(
+            "chip_area",
+            "Where the chips sit and how they line up: in a row, in a grid with columns or as a strip that scrolls. Style, size and background apply to all chips; single chips can change them under Look.",
+            "chips.html#row-options",
+          )}${areaContent}`,
+      )}
+      ${this._hasAreaTwo()
+        ? this._renderGroup(
+            "Chip area 2",
+            html`${this._renderIntro(
+                "chip_area_2",
+                "A second place for chips with its own position and layout, for example the values at the top and the forecast at the bottom. A chip moves here under Position.",
+                "chips.html#chip-area-2",
+              )}${this._renderAreaTwo(layoutIcon)}`,
+          )
+        : html`<button type="button" class="add-card-btn add-area-two" @click=${this._addAreaTwo}>
+            <ha-icon icon="mdi:plus"></ha-icon>
+            <span>${t("Add second chip area")}</span>
+          </button>`}
+      ${this._renderGroup(
+        "Temperature curve",
+        html`${this._renderIntro(
+            "forecast_curve",
+            "Draws the temperature as a curve over the forecast chips of a chip area that show the temperature, at least two of them.",
+            "chips.html#forecast-curve",
+          )}${this._renderForm([
+            {
+              name: "forecast_curve",
+              selector: { select: { mode: "dropdown", options: tOpts(OPT.forecast_curve) } },
+            },
+          ])}
+          ${this._formData.forecast_curve
+            ? this._renderSlider(
+                "forecast_curve_height",
+                t(LABELS.forecast_curve_height),
+                24,
+                120,
+                2,
+                t(HELPERS.forecast_curve_height),
+              )
+            : ""}`,
+      )}
       ${this._renderDisclosure("Fine tuning (gaps, sizes, colors)", fineContent)}
       <div class="tip-box">
         <ha-icon icon="mdi:lightbulb-outline"></ha-icon>
@@ -5926,14 +6683,9 @@ class AtmosphericWeatherCardEditor extends LitElement {
         ${desc ? html`<div class="composite-helper">${t(desc)}</div>` : ""}
       </div>`;
     };
-    const effectsOff = val("perf_effects") < 1;
-    const fauna = val("perf_fauna");
-    const birdsOn = fauna >= 1 && cfg.fauna_birds !== false;
-    const planesOn = fauna >= 2 && cfg.fauna_planes !== false;
-    const c = this._formData;
     return html`${this._renderIntro(
         "performance",
-        "“Low” saves battery and helps older tablets, “Ultra” shows everything at full quality. Every effect can be switched off on its own; anything that is off costs nothing.",
+        "“Low” saves battery and helps older tablets, “Ultra” shows everything at full quality. Every effect can be switched off on its own under Sky & weather; anything that is off costs nothing.",
         "effects.html#performance",
       )}
       <div class="grid-picker">
@@ -5986,11 +6738,676 @@ class AtmosphericWeatherCardEditor extends LitElement {
         ])}`,
       )}
       ${this._renderGroup(
-        "Sky & light",
+        "Animation",
+        this._renderSlider(
+          "animation_speed",
+          t(LABELS.animation_speed),
+          0.0,
+          3.0,
+          0.1,
+          t(HELPERS.animation_speed),
+        ),
+      )}`;
+  }
+  // Birds and planes: perf_fauna sets what may fly at all, fauna_birds and
+  // fauna_planes switch each one off on its own.
+  _onFaunaToggle(e) {
+    const which = this._ds(e, "fauna");
+    const on = e.target.checked === true;
+    const cfg = this._config || {};
+    const raw = parseInt(cfg.perf_fauna, 10);
+    const level = Number.isFinite(raw) ? raw : perfPreset(cfg).perf_fauna;
+    const birdsOn = level >= 1 && cfg.fauna_birds !== false;
+    const changes = {},
+      strip = [];
+    if (which === "birds") {
+      if (on) {
+        strip.push("fauna_birds");
+        if (level < 1) changes.perf_fauna = 1;
+      } else changes.fauna_birds = false;
+    } else if (which === "planes") {
+      if (on) {
+        strip.push("fauna_planes");
+        if (level < 2) {
+          changes.perf_fauna = 2;
+          if (!birdsOn) changes.fauna_birds = false;
+        }
+      } else changes.fauna_planes = false;
+    } else return;
+    this._patch(changes, { strip });
+  }
+  _renderSwitch(key, defaultOn) {
+    const v = this._formData[key];
+    const checked = defaultOn ? v !== false : v === true;
+    const helper = HELPERS[key];
+    return html`<label class="toggle-row">
+      <span class="toggle-text"
+        ><span>${t(LABELS[key] || key)}</span>${helper
+          ? html`<span class="toggle-helper">${t(helper)}</span>`
+          : ""}</span
+      >
+      <ha-switch
+        data-key=${key}
+        .checked=${checked}
+        @change=${this._onToggleGroupChange}
+      ></ha-switch>
+    </label>`;
+  }
+  /* ── Second chip area ── */
+  // A copy: Home Assistant freezes the config it hands to the editor.
+  _areaTwo() {
+    const a = this._config && this._config.chip_area_2;
+    return a && typeof a === "object" && !Array.isArray(a) ? { ...a } : {};
+  }
+  _hasAreaTwo() {
+    if (this._config && this._config.chip_area_2) return true;
+    // The layout's second area, while the layout's chips are in use.
+    if (this._layoutValues().chip_area_2 && this._getChips().length === 0) return true;
+    return this._getChips().some(
+      (c) => chipArea(c) === 2 && String(c.position || "").toLowerCase() !== "custom",
+    );
+  }
+  _setAreaTwo(key, value) {
+    // The first own change starts from the layout's second area.
+    const a = this._config && this._config.chip_area_2 ? this._areaTwo() : { ...(this._layoutValues().chip_area_2 || {}) };
+    if (value === undefined || value === null || value === "" || value === false) delete a[key];
+    else a[key] = value;
+    // Kept while chips use it, even with nothing set.
+    this._patch({ chip_area_2: Object.keys(a).length ? a : { position: AREA2_DEFAULT_POSITION } });
+  }
+  _addAreaTwo = () => {
+    this._patch({ chip_area_2: { position: AREA2_DEFAULT_POSITION } });
+  };
+  // Removes the second area; its chips go back to the first.
+  _removeAreaTwo = () => {
+    const chips = this._getChips().map((c) => {
+      if (c.area === undefined) return c;
+      const n = { ...c };
+      delete n.area;
+      return n;
+    });
+    this._patch(chips.length ? { chips } : {}, { strip: ["chip_area_2"] });
+  };
+  _renderAreaTwo(layoutIcon) {
+    const fromLayout = !(this._config && this._config.chip_area_2) && !!this._layoutValues().chip_area_2;
+    const a = fromLayout ? { ...this._layoutValues().chip_area_2 } : this._areaTwo();
+    const grid = PREPARED_POSITION_GRIDS.chip_area_position;
+    const pos = String(a.position || AREA2_DEFAULT_POSITION);
+    const current = grid.reverseMap[pos] || pos;
+    const layout = String(a.layout || CONFIG_DEFAULTS.chip_area_layout);
+    const style = String(a.style || this._formData.chip_style || CONFIG_DEFAULTS.chip_style);
+    const bgMode = a.background === true
+      ? String(a.background_style || this._formData.card_background_style || CONFIG_DEFAULTS.card_background_style)
+      : "off";
+    const field = (key, label, placeholder, type = "text") =>
+      html`<div class="css-field">
+        <span class="css-field-label">${t(label)}</span>
+        <input
+          type=${type}
+          min="1"
+          placeholder=${placeholder}
+          data-area-key=${key}
+          .value=${a[key] !== undefined ? String(a[key]) : ""}
+          @change=${(e) => {
+            const v = e.target.value.trim();
+            const n = type === "number" ? parseInt(v, 10) : v;
+            this._setAreaTwo(key, type === "number" ? (Number.isFinite(n) && n > 0 ? n : undefined) : v);
+          }}
+        />
+      </div>`;
+    return html`<div class="composite-helper">
+        ${t("Chips with Chip area 2 in their Position tab sit here, with this place and look.")}
+        ${fromLayout ? html` ${t("Grey values come from the layout.")}` : ""}
+      </div>
+      <div class=${fromLayout ? "from-layout-area" : ""}>
+      <div class="chip-area-top">
+        <div class="grid-picker">
+          <div class="grid-picker-label">${t(LABELS.chip_area_position)}</div>
+          <div class="grid-3x3 area-two-grid" role="radiogroup" aria-label=${t(LABELS.chip_area_position)}>
+            ${grid.cellsFlat.map((val) =>
+              val === null
+                ? html`<div class="grid-cell empty"></div>`
+                : html`<button
+                    type="button"
+                    role="radio"
+                    class="grid-cell ${current === val ? "active" : ""}"
+                    ?disabled=${grid.disabledSet.has(val)}
+                    title=${val}
+                    aria-label=${val}
+                    data-value=${grid.valueMap[val] || val}
+                    @click=${() => this._setAreaTwo("position", grid.valueMap[val] || val)}
+                  ></button>`,
+            )}
+          </div>
+        </div>
+        <div class="chip-area-layout">
+          <div class="grid-picker-label">${t(LABELS.chip_area_layout)}</div>
+          <div class="layout-picker area-two-layout" role="radiogroup">
+            ${OPT.chip_area_layout.map(
+              (o) =>
+                html`<button
+                  type="button"
+                  role="radio"
+                  class=${layout === o.value ? "active" : ""}
+                  data-value=${o.value}
+                  @click=${() => this._setAreaTwo("layout", o.value === CONFIG_DEFAULTS.chip_area_layout ? undefined : o.value)}
+                >
+                  <svg viewBox="0 0 44 24" aria-hidden="true">${layoutIcon[o.value]}</svg>
+                  <span>${t(o.label)}</span>
+                </button>`,
+            )}
+          </div>
+        </div>
+      </div>
+      <div class="css-field-row cols-2">
+        ${layout === "grid" ? field("columns", "Columns", "1", "number") : ""}
+        ${layout.endsWith("scroll") ? field("scroll_count", "Visible chips", "auto", "number") : ""}
+        ${field("gap", "Gap", "8px")}
+      </div>
+      <div class="settings-group">
+        <div class="settings-group-label">${t(LABELS.chip_style)}</div>
+        <div class="segmented area-two-style" role="radiogroup" aria-label=${t("Chip style")}>
+          ${[
+            { value: "inline", label: "Inline" },
+            { value: "stacked", label: "Stacked" },
+            { value: "vertical", label: "Vertical" },
+          ].map(
+            (o) =>
+              html`<button
+                type="button"
+                role="radio"
+                class=${style === o.value ? "active" : ""}
+                data-value=${o.value}
+                @click=${() => this._setAreaTwo("style", o.value)}
+              >
+                ${t(o.label)}
+              </button>`,
+          )}
+        </div>
+      </div>
+      <div class="settings-group">
+        <div class="settings-group-label">${t("Chip background")}</div>
+        <div class="segmented area-two-bg" role="radiogroup" aria-label=${t("Background")}>
+          ${[
+            { value: "off", label: "Off" },
+            { value: "frosted", label: "Frosted" },
+            { value: "contrast", label: "Contrast" },
+            { value: "theme", label: "Theme" },
+          ].map(
+            (o) =>
+              html`<button
+                type="button"
+                role="radio"
+                class=${bgMode === o.value ? "active" : ""}
+                data-value=${o.value}
+                @click=${() => {
+                  const n = this._config && this._config.chip_area_2 ? this._areaTwo() : { ...(this._layoutValues().chip_area_2 || {}) };
+                  if (o.value === "off") {
+                    delete n.background;
+                    delete n.background_style;
+                  } else {
+                    n.background = true;
+                    n.background_style = o.value;
+                  }
+                  this._patch({ chip_area_2: Object.keys(n).length ? n : { position: AREA2_DEFAULT_POSITION } });
+                }}
+              >
+                ${t(o.label)}
+              </button>`,
+          )}
+        </div>
+      </div>
+      </div>
+      <button type="button" class="add-card-btn remove-area-two" @click=${this._removeAreaTwo}>
+        <ha-icon icon="mdi:minus"></ha-icon>
+        <span>${t("Remove second chip area")}</span>
+      </button>`;
+  }
+  _renderGroup(title, body) {
+    return html`<div class="editor-group">
+      <div class="editor-group-title">${t(title)}</div>
+      ${body}
+    </div>`;
+  }
+  // A short help text behind an (i) button, with a link into the documentation.
+  _renderIntro(id, text, anchor) {
+    const open = !!(this._helpOpen && this._helpOpen[id]);
+    return html`<div class="help-row">
+        <button
+          type="button"
+          class="help-btn ${open ? "active" : ""}"
+          data-help=${id}
+          aria-expanded=${open ? "true" : "false"}
+          @click=${this._onHelpToggle}
+        >
+          <ha-icon icon="mdi:information-outline"></ha-icon>
+          <span>${t("Help")}</span>
+        </button>
+      </div>
+      ${open
+        ? html`<div class="help-box">
+            ${t(text)}
+            ${(Array.isArray(anchor) ? anchor : anchor ? [[anchor, "More in the docs"]] : []).map(
+              ([href, label]) =>
+                html` <a href="${DOCS_URL}docs/${href}" target="_blank" rel="noopener"
+                    >${t(label)} →</a
+                  >`,
+            )}
+          </div>`
+        : ""}`;
+  }
+  _onHelpToggle(e) {
+    const id = this._ds(e, "help");
+    if (!id) return;
+    this._helpOpen = { ...(this._helpOpen || {}), [id]: !this._helpOpen?.[id] };
+    this.requestUpdate();
+  }
+  // A topic inside a panel: a row with icon, title and a line about what is
+  // in it, open one at a time so the panel stays short.
+  _section(id, icon, title, sub, body) {
+    return html`<details
+      class="section"
+      data-section=${id}
+      ?open=${this._openSection === id}
+      @toggle=${this._onSectionToggle}
+    >
+      <summary>
+        <span class="section-icon"><ha-icon icon=${icon}></ha-icon></span>
+        <span class="section-text">
+          <span class="section-name">${t(title)}</span>
+          <span class="section-sub">${t(sub)}</span>
+        </span>
+        <ha-icon class="chevron" icon="mdi:chevron-down"></ha-icon>
+      </summary>
+      <div class="section-body">
+        ${SECTION_HELP[id] ? this._renderIntro(id, ...SECTION_HELP[id]) : ""}${body}
+      </div>
+    </details>`;
+  }
+  _onSectionToggle(e) {
+    const id = this._ds(e, "section");
+    if (!id) return;
+    if (e.currentTarget.open) this._openSection = id;
+    else if (this._openSection === id) this._openSection = null;
+  }
+  _renderLayoutsPanel() {
+    const current = this._formData.card_layout || "";
+    const TILES = [
+      {
+        value: "standard",
+        title: "Standard",
+        desc: "A big temperature, the condition and a quiet row with humidity, wind and tomorrow",
+        art: svg`<rect class="lt-card" x="2" y="4" width="44" height="28" rx="4"/><circle class="lt-sun" cx="37" cy="11" r="3.5"/><rect x="7" y="9" width="14" height="6" rx="1.5"/><rect x="7" y="17" width="10" height="2.5" rx="1"/><rect x="7" y="25" width="9" height="3" rx="1.5"/><rect x="18" y="25" width="9" height="3" rx="1.5"/><rect x="29" y="25" width="9" height="3" rx="1.5"/>`,
+      },
+      {
+        value: "compact",
+        title: "Compact",
+        desc: "One slim strip with the temperature, the condition and two values",
+        art: svg`<rect class="lt-card" x="2" y="11" width="44" height="14" rx="4"/><circle class="lt-sun" cx="9" cy="18" r="3"/><rect x="15" y="15" width="10" height="6" rx="1.5"/><rect x="29" y="16.5" width="6" height="3" rx="1.5"/><rect x="37" y="16.5" width="6" height="3" rx="1.5"/>`,
+      },
+      {
+        value: "wide",
+        title: "Wide",
+        desc: "The weather now on the left, values and tomorrow in two columns on the right. Needs a wide spot",
+        art: svg`<rect class="lt-card" x="1" y="7" width="46" height="22" rx="4"/><circle class="lt-sun" cx="8" cy="13" r="2.5"/><rect x="5" y="18" width="11" height="5" rx="1.5"/><rect x="22" y="12" width="4" height="12" rx="1.5"/><rect x="28" y="12" width="4" height="12" rx="1.5"/><rect x="34" y="12" width="4" height="12" rx="1.5"/><rect x="40" y="12" width="4" height="12" rx="1.5"/>`,
+      },
+      {
+        value: "home",
+        title: "Home",
+        desc: "A house with the weather beside it, the bundled one or yours, a wind ring and a frosted bar for values like your rooms",
+        art: svg`<rect class="lt-card" x="2" y="4" width="44" height="28" rx="4"/><path class="lt-sun" d="M26 21 L33 14 L40 21 L40 27 L26 27 Z"/><circle cx="40" cy="9" r="3.2" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="1 1"/><rect x="6" y="18" width="10" height="6" rx="1.5"/><rect x="6" y="26" width="7" height="2" rx="1"/><rect x="24" y="28.5" width="18" height="2.5" rx="1.25"/>`,
+      },
+      {
+        value: "panel",
+        title: "Panel",
+        desc: "A tall card: the weather on top, tiles with values and the next hours under a soft curve. Needs a tall spot",
+        art: svg`<rect class="lt-card" x="11" y="1" width="26" height="34" rx="3.5"/><rect x="14" y="4" width="7" height="4" rx="1"/><rect x="28" y="4" width="6" height="2" rx="1"/><rect x="14" y="11" width="9.5" height="5" rx="1.2"/><rect x="24.5" y="11" width="9.5" height="5" rx="1.2"/><rect x="14" y="17.5" width="9.5" height="5" rx="1.2"/><rect x="24.5" y="17.5" width="9.5" height="5" rx="1.2"/><path d="M15 27 Q20 25 24 27 T33 27" fill="none" stroke="currentColor" stroke-width="0.9"/><rect x="14" y="29.5" width="3" height="3" rx="1"/><rect x="19.5" y="29.5" width="3" height="3" rx="1"/><rect x="25" y="29.5" width="3" height="3" rx="1"/><rect x="30.5" y="29.5" width="3" height="3" rx="1"/>`,
+      },
+      {
+        value: "",
+        title: "Free",
+        desc: "No finished look: you choose chips, sizes and positions yourself",
+        art: svg`<rect class="lt-card lt-dashed" x="2" y="4" width="44" height="28" rx="4"/><rect x="10" y="11" width="28" height="2" rx="1"/><circle cx="17" cy="12" r="2.5"/><rect x="10" y="17" width="28" height="2" rx="1"/><circle cx="30" cy="18" r="2.5"/><rect x="10" y="23" width="28" height="2" rx="1"/><circle cx="22" cy="24" r="2.5"/>`,
+      },
+    ];
+    return html`${this._renderIntro(
+        "layouts",
+        "Each layout is a finished look for one kind of spot: Standard for a normal column, Compact as a slim strip, Wide for a broad spot, Home with a house, the bundled one or yours, Panel as a tall wall panel with the next hours.",
+        "appearance.html#card-layouts",
+      )}
+      <div class="layout-tiles" role="radiogroup" aria-label=${t(LABELS.card_layout)}>
+        ${TILES.map(
+          (o) =>
+            html`<button
+              type="button"
+              role="radio"
+              aria-checked=${current === o.value ? "true" : "false"}
+              class="layout-tile ${current === o.value ? "active" : ""}"
+              data-field="card_layout"
+              data-value=${o.value}
+              data-value-type=${o.value ? "string" : "empty"}
+              @click=${this._onSegmentedFieldSelect}
+            >
+              <span class="layout-art"
+                ><svg viewBox="0 0 48 36" aria-hidden="true">${o.art}</svg></span
+              >
+              <span class="layout-text">
+                <span class="layout-name">${t(o.title)}</span>
+                <span class="layout-desc">${t(o.desc)}</span>
+              </span>
+              ${current === o.value
+                ? html`<ha-icon class="layout-check" icon="mdi:check-circle"></ha-icon>`
+                : ""}
+            </button>`,
+        )}
+      </div>
+      <div class="tip-box">
+        <ha-icon icon="mdi:lightbulb-outline"></ha-icon>
+        <span
+          >${t(
+            "A layout is a starting point: values and chips you set yourself always win. Without own chips the layout brings its own.",
+          )}</span
+        >
+      </div>`;
+  }
+  _panel(id, icon, title, sub, body) {
+    return html`<ha-expansion-panel
+      outlined
+      data-panel=${id}
+      .expanded=${this._openPanel === id}
+      @expanded-changed=${this._onPanelExpandedChanged}
+    >
+      <div slot="header" class="panel-header">
+        <ha-icon icon=${icon}></ha-icon>
+        <div class="panel-title">
+          <span>${t(title)}</span>
+          <span class="panel-sub">${t(sub)}</span>
+        </div>
+      </div>
+      ${body}
+    </ha-expansion-panel>`;
+  }
+  // Sensors that report a rain rate (mm/h or in/h). The picker shows only these.
+  _precipitationSensors() {
+    const states = (this.hass && this.hass.states) || {};
+    const current = (this._config && this._config.precipitation_entity) || "";
+    const cache = this._precipCache;
+    if (cache && cache.states === states && cache.current === current)
+      return cache.list;
+    const list = Object.keys(states).filter(
+      (id) =>
+        id.startsWith("sensor.") &&
+        isRainRateUnit(
+          states[id] &&
+            states[id].attributes &&
+            states[id].attributes.unit_of_measurement,
+        ),
+    );
+    if (current && !list.includes(current)) list.push(current);
+    this._precipCache = { states, current, list };
+    return list;
+  }
+  // Sensors that fit one of your own readings. The current choice always stays
+  // in the list, so a sensor that changed its unit can still be cleared.
+  _ownSensors(field) {
+    const states = (this.hass && this.hass.states) || {};
+    const current = (this._config && this._config[field]) || "";
+    this._ownSensorCache = this._ownSensorCache || {};
+    const cache = this._ownSensorCache[field];
+    if (cache && cache.states === states && cache.current === current)
+      return cache.list;
+    const fits = OWN_SENSOR_FILTERS[field];
+    const list = Object.keys(states).filter((id) => {
+      if (!id.startsWith("sensor.")) return false;
+      const a = (states[id] && states[id].attributes) || {};
+      return fits(String(a.unit_of_measurement || "").trim(), a.device_class || "", states[id] && states[id].state);
+    });
+    if (current && !list.includes(current)) list.push(current);
+    this._ownSensorCache[field] = { states, current, list };
+    return list;
+  }
+  _renderOwnSensors() {
+    const fields = ["precipitation_entity", ...Object.keys(OWN_SENSOR_FILTERS)];
+    const open = fields.some((f) => this._config && this._config[f]);
+    const picker = (name, include) => ({
+      name,
+      selector: { entity: { domain: "sensor", include_entities: include } },
+    });
+    return html`<details class="disclosure own-sensors" ?open=${open}>
+      <summary>
+        <ha-icon class="chevron" icon="mdi:chevron-right"></ha-icon>
+        <ha-icon icon="mdi:weather-cloudy-arrow-right"></ha-icon>
+        <span>${t("Your own sensors (optional)")}</span>
+      </summary>
+      <div class="disclosure-body">
+        ${this._renderIntro(
+          "own_sensors",
+          "Each sensor replaces one value of the weather entity: rain sets the amount of rain and snow, wind moves the sky and the compass, temperature, humidity and dew point bring mist, cloud cover and visibility shape the clouds and the haze.",
+          "weather-data.html#your-own-sensors",
+        )}
+        <div class="info">
+          ${t("Empty fields and unavailable sensors use the weather entity. The weather itself (sunny, rain, storm) always comes from it.")}
+        </div>
+        ${this._renderForm(
+          fields.map((f) =>
+            picker(f, f === "precipitation_entity" ? this._precipitationSensors() : this._ownSensors(f)),
+          ),
+        )}
+      </div>
+    </details>`;
+  }
+  _setColorMode(mode) {
+    this._valueChanged({
+      stopPropagation() {},
+      detail: { value: { ...this._formData, _color_mode: mode } },
+    });
+  }
+  _renderSunMoonPanel() {
+    const mode = this._formData.celestial_position || "fixed";
+    return html`${this._renderIntro(
+        "sun_moon",
+        "The sun entity (sun.sun) decides between day and night and provides the elevation for twilight, blue hour and sun rays. With “Fixed” the sun or moon stays where you put it.",
+        "appearance.html#sun--moon",
+      )}
+      ${this._renderForm([
+        { name: "sun_entity", selector: { entity: { domain: "sun" } } },
+        {
+          name: "moon_phase_entity",
+          selector: { entity: { domain: "sensor" } },
+        },
+      ])}
+      ${this._renderGroup(
+        "Position & size",
+        html`<div class="settings-group">
+            <div class="segmented" role="radiogroup">
+              ${[
+                { v: "fixed", l: "Fixed" },
+                { v: "dynamic_sun", l: "Moving sun" },
+                { v: "dynamic_both", l: "Moving sun & moon" },
+              ].map(
+                (o) =>
+                  html`<button
+                    type="button"
+                    role="radio"
+                    class=${mode === o.v ? "active" : ""}
+                    data-field="celestial_position"
+                    data-value=${o.v}
+                    @click=${this._onSegmentedFieldSelect}
+                  >
+                    ${t(o.l)}
+                  </button>`,
+              )}
+            </div>
+            <div class="composite-helper">
+              ${t(
+                "“Moving” follows the real position of the sun throughout the day.",
+              )}
+            </div>
+          </div>
+          ${mode === "fixed" || mode === "dynamic_sun"
+            ? html`<div class="field-group">
+                ${this._renderPositionGrid(
+                  "celestial_alignment",
+                  POSITION_GRIDS.celestial_alignment,
+                )}
+                ${this._renderCelestialOffsetPicker()}
+              </div>`
+            : ""}
+          ${this._renderSlider(
+            "celestial_size",
+            t(LABELS.celestial_size),
+            20,
+            200,
+            1,
+          )}`,
+      )}`;
+  }
+  _renderCardPanel() {
+    const c = this._formData;
+    const immersive = (c.card_style || "standalone") !== "standalone";
+    return html`${this._section(
+        "style",
+        "mdi:card-outline",
+        "Style & size",
+        "With its own sky or as a header, height and padding",
+        html`${this._renderIntro(
+            "appearance",
+            "In the “Immersive” style the card has no sky or background of its own and works as a dashboard header. Full width and edge fades are only available there.",
+            "appearance.html#appearance",
+          )}
+          ${this._renderCardStyleSegmented()}
+          ${this._renderToggleGroup([
+            { key: "card_square", label: LABELS.card_square },
+            { key: "card_hide_text", label: LABELS.card_hide_text },
+          ])}`,
+      )}
+      ${this._section(
+        "colors",
+        "mdi:palette-outline",
+        "Colors",
+        "Light or dark look and color filters",
+        html`<div class="settings-group">
+            <div class="settings-group-label">${t("Color mode")}</div>
+            <div class="segmented" role="radiogroup" aria-label=${t("Color mode")}>
+              ${OPT.color_mode.map(
+                (o) =>
+                  html`<button
+                    type="button"
+                    role="radio"
+                    class=${c._color_mode === o.value ? "active" : ""}
+                    @click=${() => this._setColorMode(o.value)}
+                  >
+                    ${t(o.short)}
+                  </button>`,
+              )}
+            </div>
+            <div class="composite-helper">
+              ${t(
+                (OPT.color_mode.find((o) => o.value === c._color_mode) || {})
+                  .label || "",
+              )}
+            </div>
+          </div>
+          ${c._color_mode === "entity"
+            ? this._renderForm([
+                { name: "theme_entity", selector: { entity: {} } },
+              ])
+            : ""}
+          ${this._renderForm([
+            {
+              name: "card_filter_clouds",
+              selector: {
+                select: { mode: "dropdown", options: tOpts(OPT.card_filter_clouds) },
+              },
+            },
+            {
+              name: "card_filter_sun",
+              selector: {
+                select: { mode: "dropdown", options: tOpts(OPT.card_filter_sun) },
+              },
+            },
+          ])}`,
+      )}
+      ${this._section(
+        "position",
+        "mdi:arrange-bring-forward",
+        "Position & layers",
+        immersive
+          ? "Full width, edge fades, stacking and offset"
+          : "Stacking order and offset",
+        html`${immersive
+            ? this._renderToggleGroup([
+                { key: "card_full_width", label: LABELS.card_full_width },
+                { key: "card_mask_vertical", label: LABELS.card_mask_vertical },
+                {
+                  key: "card_mask_horizontal",
+                  label: LABELS.card_mask_horizontal,
+                },
+              ])
+            : ""}
+          ${this._renderSlider(
+            "card_stack_order",
+            t(LABELS.card_stack_order),
+            -10,
+            10,
+            1,
+            t(HELPERS.card_stack_order),
+          )}
+          ${this._renderOffsetPicker()}`,
+      )}
+      ${this._section(
+        "tap",
+        "mdi:gesture-tap",
+        "Tap action",
+        "What happens when the card is tapped",
+        this._renderForm([
+          { name: "card_tap_action", selector: { ui_action: {} } },
+        ]),
+      )}
+      ${this._section(
+        "css",
+        "mdi:language-css3",
+        "Own CSS",
+        "Your own styles inside the card",
+        html`${this._renderIntro(
+            "css",
+            "Works like card_mod, but built in: the styles go straight into the card. Use :host for the whole card, CSS variables such as --awc-bottom-font-size, or the parts like .chip and #chips-row.",
+            "appearance.html#own-css",
+          )}
+          ${this._renderForm([
+            { name: "css", selector: { text: { multiline: true } } },
+          ])}`,
+      )}`;
+  }
+  // Everything drawn in the sky, one section per topic.
+  _renderSkyPanel() {
+    const cfg = this._config || {};
+    const c = this._formData;
+    const preset = perfPreset(cfg);
+    const num = (k) => {
+      const n = typeof cfg[k] === "number" ? cfg[k] : parseFloat(cfg[k]);
+      return Number.isFinite(n) ? n : preset[k];
+    };
+    const effectsOff = num("perf_effects") < 1;
+    const fauna = num("perf_fauna");
+    const birdsOn = fauna >= 1 && cfg.fauna_birds !== false;
+    const planesOn = fauna >= 2 && cfg.fauna_planes !== false;
+    return html`${this._section(
+        "sun_moon",
+        "mdi:theme-light-dark",
+        "Sun & moon",
+        "Day and night, moon phase, position and size",
+        this._renderSunMoonPanel(),
+      )}
+      ${this._section(
+        "light",
+        "mdi:weather-sunset-up",
+        "Light & clouds",
+        "Blue and golden hour, sun rays, haze, mist and frost",
         html`${effectsOff
             ? html`<div class="info">
                 ${t(
-                  "Effect Quality is Off: sun rays, haze and ground mist are not drawn. Blue hour, golden hour and cloud amount still work.",
+                  "Effect Quality is Off: sun rays, haze, ground mist and frost are not drawn. Blue hour, golden hour and cloud amount still work.",
                 )}
               </div>`
             : ""}
@@ -6001,12 +7418,16 @@ class AtmosphericWeatherCardEditor extends LitElement {
               "effect_sun_rays",
               "effect_haze",
               "effect_ground_mist",
+              "effect_frost",
               "effect_cloud_coverage",
             ].map((k) => this._renderSwitch(k, true))}
           </div>`,
       )}
-      ${this._renderGroup(
+      ${this._section(
+        "wind",
+        "mdi:weather-windy",
         "Wind",
+        "Wind lines, leaves and the compass",
         html`<div class="settings-group">
             <div class="settings-group-label">${t(LABELS.wind_style)}</div>
             <div
@@ -6085,8 +7506,11 @@ class AtmosphericWeatherCardEditor extends LitElement {
             )}
           </div>`,
       )}
-      ${this._renderGroup(
+      ${this._section(
+        "precip",
+        "mdi:weather-snowy-rainy",
         "Rain & snow",
+        "How much falls, splashes and snow on the edge",
         html`${this._renderSlider(
             "rain_density",
             t(LABELS.rain_density),
@@ -6111,8 +7535,11 @@ class AtmosphericWeatherCardEditor extends LitElement {
             ${this._renderSwitch("effect_spill", false)}
           </div>`,
       )}
-      ${this._renderGroup(
+      ${this._section(
+        "night",
+        "mdi:weather-night",
         "Night sky",
+        "Stars, shooting stars and comets",
         html`${effectsOff
             ? html`<div class="info">
                 ${t(
@@ -6157,8 +7584,11 @@ class AtmosphericWeatherCardEditor extends LitElement {
             0.1,
           )}`,
       )}
-      ${this._renderGroup(
+      ${this._section(
+        "fauna",
+        "mdi:bird",
         "Birds & planes",
+        "How often they fly and how fast",
         html`<div class="sub-box">
             <label class="toggle-row sub-box-head">
               <span
@@ -6228,340 +7658,19 @@ class AtmosphericWeatherCardEditor extends LitElement {
               : ""}
           </div>`,
       )}
-      ${this._renderGroup(
-        "Animation",
-        this._renderSlider(
-          "animation_speed",
-          t(LABELS.animation_speed),
-          0.0,
-          3.0,
-          0.1,
-          t(HELPERS.animation_speed),
-        ),
-      )}`;
-  }
-  // Birds and planes: perf_fauna sets what may fly at all, fauna_birds and
-  // fauna_planes switch each one off on its own.
-  _onFaunaToggle(e) {
-    const which = this._ds(e, "fauna");
-    const on = e.target.checked === true;
-    const cfg = this._config || {};
-    const raw = parseInt(cfg.perf_fauna, 10);
-    const level = Number.isFinite(raw) ? raw : perfPreset(cfg).perf_fauna;
-    const birdsOn = level >= 1 && cfg.fauna_birds !== false;
-    const changes = {},
-      strip = [];
-    if (which === "birds") {
-      if (on) {
-        strip.push("fauna_birds");
-        if (level < 1) changes.perf_fauna = 1;
-      } else changes.fauna_birds = false;
-    } else if (which === "planes") {
-      if (on) {
-        strip.push("fauna_planes");
-        if (level < 2) {
-          changes.perf_fauna = 2;
-          if (!birdsOn) changes.fauna_birds = false;
-        }
-      } else changes.fauna_planes = false;
-    } else return;
-    this._patch(changes, { strip });
-  }
-  _renderSwitch(key, defaultOn) {
-    const v = this._formData[key];
-    const checked = defaultOn ? v !== false : v === true;
-    const helper = HELPERS[key];
-    return html`<label class="toggle-row">
-      <span class="toggle-text"
-        ><span>${t(LABELS[key] || key)}</span>${helper
-          ? html`<span class="toggle-helper">${t(helper)}</span>`
-          : ""}</span
-      >
-      <ha-switch
-        data-key=${key}
-        .checked=${checked}
-        @change=${this._onToggleGroupChange}
-      ></ha-switch>
-    </label>`;
-  }
-  _renderGroup(title, body) {
-    return html`<div class="editor-group">
-      <div class="editor-group-title">${t(title)}</div>
-      ${body}
-    </div>`;
-  }
-  // A short help text behind an (i) button, with a link into the documentation.
-  _renderIntro(id, text, anchor) {
-    const open = !!(this._helpOpen && this._helpOpen[id]);
-    return html`<div class="help-row">
-        <button
-          type="button"
-          class="help-btn ${open ? "active" : ""}"
-          data-help=${id}
-          aria-expanded=${open ? "true" : "false"}
-          @click=${this._onHelpToggle}
-        >
-          <ha-icon icon="mdi:information-outline"></ha-icon>
-          <span>${t("Help")}</span>
-        </button>
-      </div>
-      ${open
-        ? html`<div class="help-box">
-            ${t(text)}
-            ${anchor
-              ? html` <a
-                  href="${DOCS_URL}docs/${anchor}"
-                  target="_blank"
-                  rel="noopener"
-                  >${t("More in the docs")} →</a
-                >`
-              : ""}
-          </div>`
-        : ""}`;
-  }
-  _onHelpToggle(e) {
-    const id = this._ds(e, "help");
-    if (!id) return;
-    this._helpOpen = { ...(this._helpOpen || {}), [id]: !this._helpOpen?.[id] };
-    this.requestUpdate();
-  }
-  _panel(id, icon, title, sub, body) {
-    return html`<ha-expansion-panel
-      outlined
-      data-panel=${id}
-      .expanded=${this._openPanel === id}
-      @expanded-changed=${this._onPanelExpandedChanged}
-    >
-      <div slot="header" class="panel-header">
-        <ha-icon icon=${icon}></ha-icon>
-        <div class="panel-title">
-          <span>${t(title)}</span>
-          <span class="panel-sub">${t(sub)}</span>
-        </div>
-      </div>
-      ${body}
-    </ha-expansion-panel>`;
-  }
-  // Sensors that report a rain rate (mm/h or in/h). The picker shows only these.
-  _precipitationSensors() {
-    const states = (this.hass && this.hass.states) || {};
-    const current = (this._config && this._config.precipitation_entity) || "";
-    const cache = this._precipCache;
-    if (cache && cache.states === states && cache.current === current)
-      return cache.list;
-    const list = Object.keys(states).filter(
-      (id) =>
-        id.startsWith("sensor.") &&
-        isRainRateUnit(
-          states[id] &&
-            states[id].attributes &&
-            states[id].attributes.unit_of_measurement,
-        ),
-    );
-    if (current && !list.includes(current)) list.push(current);
-    this._precipCache = { states, current, list };
-    return list;
-  }
-  // Sensors that fit one of your own readings. The current choice always stays
-  // in the list, so a sensor that changed its unit can still be cleared.
-  _ownSensors(field) {
-    const states = (this.hass && this.hass.states) || {};
-    const current = (this._config && this._config[field]) || "";
-    this._ownSensorCache = this._ownSensorCache || {};
-    const cache = this._ownSensorCache[field];
-    if (cache && cache.states === states && cache.current === current)
-      return cache.list;
-    const fits = OWN_SENSOR_FILTERS[field];
-    const list = Object.keys(states).filter((id) => {
-      if (!id.startsWith("sensor.")) return false;
-      const a = (states[id] && states[id].attributes) || {};
-      return fits(String(a.unit_of_measurement || "").trim(), a.device_class || "", states[id] && states[id].state);
-    });
-    if (current && !list.includes(current)) list.push(current);
-    this._ownSensorCache[field] = { states, current, list };
-    return list;
-  }
-  _renderOwnSensors() {
-    const fields = ["precipitation_entity", ...Object.keys(OWN_SENSOR_FILTERS)];
-    const open = fields.some((f) => this._config && this._config[f]);
-    const picker = (name, include) => ({
-      name,
-      selector: { entity: { domain: "sensor", include_entities: include } },
-    });
-    return html`<details class="disclosure own-sensors" ?open=${open}>
-      <summary>
-        <ha-icon class="chevron" icon="mdi:chevron-right"></ha-icon>
-        <ha-icon icon="mdi:weather-cloudy-arrow-right"></ha-icon>
-        <span>${t("Your own sensors (optional)")}</span>
-      </summary>
-      <div class="disclosure-body">
-        <div class="info">
-          ${t("Use readings from your own weather station instead of the weather entity. Empty fields use the weather entity, and so does a sensor that is unavailable. The weather itself (sunny, rain, storm) always comes from the weather entity.")}
-        </div>
-        ${this._renderForm(
-          fields.map((f) =>
-            picker(f, f === "precipitation_entity" ? this._precipitationSensors() : this._ownSensors(f)),
-          ),
-        )}
-      </div>
-    </details>`;
-  }
-  _setColorMode(mode) {
-    this._valueChanged({
-      stopPropagation() {},
-      detail: { value: { ...this._formData, _color_mode: mode } },
-    });
-  }
-  _renderSunMoonPanel() {
-    const mode = this._formData.celestial_position || "fixed";
-    return html`${this._renderIntro(
-        "sun_moon",
-        "The sun entity (sun.sun) decides between day and night and provides the elevation for twilight, blue hour and sun rays. With “Fixed” the sun or moon stays where you put it.",
-        "appearance.html#sun--moon",
-      )}
-      ${this._renderForm([
-        { name: "sun_entity", selector: { entity: { domain: "sun" } } },
-        {
-          name: "moon_phase_entity",
-          selector: { entity: { domain: "sensor" } },
-        },
-      ])}
-      ${this._renderGroup(
-        "Position & size",
-        html`<div class="settings-group">
-            <div class="segmented" role="radiogroup">
-              ${[
-                { v: "fixed", l: "Fixed" },
-                { v: "dynamic_sun", l: "Moving sun" },
-                { v: "dynamic_both", l: "Moving sun & moon" },
-              ].map(
-                (o) =>
-                  html`<button
-                    type="button"
-                    role="radio"
-                    class=${mode === o.v ? "active" : ""}
-                    data-field="celestial_position"
-                    data-value=${o.v}
-                    @click=${this._onSegmentedFieldSelect}
-                  >
-                    ${t(o.l)}
-                  </button>`,
-              )}
-            </div>
-            <div class="composite-helper">
-              ${t(
-                "“Moving” follows the real position of the sun throughout the day.",
-              )}
-            </div>
-          </div>
-          ${mode === "fixed" || mode === "dynamic_sun"
-            ? html`<div class="field-group">
-                ${this._renderPositionGrid(
-                  "celestial_alignment",
-                  POSITION_GRIDS.celestial_alignment,
-                )}
-                ${this._renderCelestialOffsetPicker()}
-              </div>`
-            : ""}
-          ${this._renderSlider(
-            "celestial_size",
-            t(LABELS.celestial_size),
-            20,
-            200,
-            1,
-          )}`,
-      )}`;
-  }
-  _renderAppearancePanel() {
-    const c = this._formData;
-    const immersive = (c.card_style || "standalone") !== "standalone";
-    return html`${this._renderIntro(
-        "appearance",
-        "In the “Immersive” style the card has no sky or background of its own and works as a dashboard header. Full width and edge fades are only available there.",
-        "appearance.html#appearance",
-      )}
-      ${this._renderGroup(
-        "Color mode",
-        html`<div class="segmented" role="radiogroup">
-            ${OPT.color_mode.map(
-              (o) =>
-                html`<button
-                  type="button"
-                  role="radio"
-                  class=${c._color_mode === o.value ? "active" : ""}
-                  @click=${() => this._setColorMode(o.value)}
-                >
-                  ${t(o.short)}
-                </button>`,
-            )}
-          </div>
-          <div class="composite-helper">
-            ${t(
-              (OPT.color_mode.find((o) => o.value === c._color_mode) || {})
-                .label || "",
-            )}
-          </div>
-          ${c._color_mode === "entity"
-            ? this._renderForm([
-                { name: "theme_entity", selector: { entity: {} } },
-              ])
-            : ""}`,
-      )}
-      ${this._renderGroup("Layout", this._renderLayoutSegmented())}
-      ${this._renderGroup("Card style", this._renderCardStyleSegmented())}
-      ${this._renderGroup(
-        "Frame & layers",
-        html`${this._renderToggleGroup([
-          { key: "card_hide_text", label: LABELS.card_hide_text },
-          { key: "card_square", label: LABELS.card_square },
-          ...(immersive
-            ? [
-                { key: "card_full_width", label: LABELS.card_full_width },
-                { key: "card_mask_vertical", label: LABELS.card_mask_vertical },
-                {
-                  key: "card_mask_horizontal",
-                  label: LABELS.card_mask_horizontal,
-                },
-              ]
-            : []),
-        ])}
-        ${this._renderSlider(
-          "card_stack_order",
-          t(LABELS.card_stack_order),
-          -10,
-          10,
-          1,
-          t(HELPERS.card_stack_order),
-        )}
-        ${this._renderOffsetPicker()}`,
-      )}
-      ${this._renderGroup(
-        "Color filters",
-        this._renderForm([
-          {
-            name: "card_filter_clouds",
-            selector: {
-              select: { mode: "dropdown", options: tOpts(OPT.card_filter_clouds) },
-            },
-          },
-          {
-            name: "card_filter_sun",
-            selector: {
-              select: { mode: "dropdown", options: tOpts(OPT.card_filter_sun) },
-            },
-          },
-        ]),
-      )}`;
+`;
   }
   _renderImagePanel() {
     const c = this._formData;
+    // image_day: none means no picture, not a file called none.
+    const pic = (v) => (v && String(v).trim().toLowerCase() !== "none" ? v : "");
     const thumb = (field) =>
       html`<div class="image-thumb">
         <div
-          class="image-thumb-pic ${c[field] ? "has" : ""}"
-          style=${c[field] ? `background-image:url("${cssUrl(c[field])}")` : ""}
+          class="image-thumb-pic ${pic(c[field]) ? "has" : ""}"
+          style=${pic(c[field]) ? `background-image:url("${cssUrl(c[field])}")` : ""}
         >
-          ${c[field] ? "" : t("No image")}
+          ${pic(c[field]) ? "" : t("No image")}
         </div>
         ${this._renderClearableText(field)}
       </div>`;
@@ -6570,38 +7679,58 @@ class AtmosphericWeatherCardEditor extends LitElement {
     const hPos = (h || v) === "left" ? "left" : (h || v) === "right" ? "right" : "center";
     const rawScale = parseFloat(c.image_scale);
     const scale = Math.max(0, Math.min(200, Number.isFinite(rawScale) ? rawScale : 100));
-    const src = c.image_day || c.image_night;
+    // Home without an own picture shows the bundled house: its placement and
+    // blend can be set like for an own picture.
+    const src =
+      pic(c.image_day) ||
+      pic(c.image_night) ||
+      (c.image_folder
+        ? folderImageCandidates(c.image_folder, c.image_folder_type, "sunny", false)[0]
+        : "") ||
+      (usesBundledHouse(this._config) ? houseImages("").image_day : "");
     return html`${this._renderIntro(
         "image",
         "Put your images in /config/www/ and enter them as /local/house-day.png. Transparent PNGs look best. Without a night image the day image is used.",
-        "appearance.html#custom-images",
+        "images.html#custom-images",
       )}
+      ${String(c.card_layout || "").toLowerCase() === "home" &&
+      !hasOwnImage(c) &&
+      String(c.image_day || "").trim().toLowerCase() !== "none"
+        ? html`<div class="info">${t("Home shows the house that comes with the card, wet in the rain and snowy in the snow, until you enter your own picture. Enter none as the day image for no picture.")}</div>`
+        : ""}
       <div class="image-thumbs">
         ${thumb("image_day")} ${thumb("image_night")}
       </div>
       ${src
-        ? this._renderForm([
-            {
-              name: "image_night_source",
-              selector: {
-                select: { mode: "dropdown", options: tOpts(OPT.image_night_source) },
-              },
-            },
-          ])
-        : ""}
-      ${src
-        ? this._renderSlider(
-            "image_transition",
-            t(LABELS.image_transition),
-            0,
-            5,
-            0.1,
-            t(HELPERS.image_transition),
+        ? this._section(
+            "image_time",
+            "mdi:theme-light-dark",
+            "Day & night",
+            "When the night image shows, and the fade between images",
+            html`${this._renderForm([
+                {
+                  name: "image_night_source",
+                  selector: {
+                    select: { mode: "dropdown", options: tOpts(OPT.image_night_source) },
+                  },
+                },
+              ])}
+              ${this._renderSlider(
+                "image_transition",
+                t(LABELS.image_transition),
+                0,
+                5,
+                0.1,
+                t(HELPERS.image_transition),
+              )}`,
           )
         : ""}
       ${src
-        ? this._renderGroup(
+        ? this._section(
+            "image_place",
+            "mdi:image-move",
             "Placement",
+            "Where the image sits and how big it is",
             html`<div class="image-place">
                 ${this._renderPositionGrid(
                   "image_alignment",
@@ -6624,9 +7753,46 @@ class AtmosphericWeatherCardEditor extends LitElement {
                 1,
                 t(HELPERS.image_scale),
               )}
+              ${this._renderSlider(
+                "image_max_width",
+                t(LABELS.image_max_width),
+                0,
+                100,
+                1,
+                t(HELPERS.image_max_width),
+              )}
               ${this._renderImageOffsetPicker()}`,
           )
         : ""}
+      ${this._section(
+        "image_folder",
+        "mdi:folder-image",
+        "Pictures by weather",
+        "A folder with one picture per weather state",
+        html`${this._renderIntro(
+            "image_folder",
+            "Name the pictures after the weather state: sunny, partlycloudy, cloudy, fog, rainy, pouring, lightning, lightning-rainy, snowy, snowy-rainy, hail, windy, clear-night, exceptional. Add -night for the night picture, like rainy-night. A missing picture falls back to a close one (pouring to rainy) and then to the images above. Every missing file shows once as a 404 in the browser console.",
+            "images.html#image-folder",
+          )}
+          ${this._renderForm([
+            { name: "image_folder", selector: { text: {} } },
+            ...(c.image_folder
+              ? [
+                  {
+                    name: "image_folder_type",
+                    selector: { select: { mode: "dropdown", options: OPT.image_folder_type } },
+                  },
+                ]
+              : []),
+          ])}`,
+      )}
+      ${this._section(
+        "image_states",
+        "mdi:image-multiple-outline",
+        "Images by state",
+        "Other pictures for snow, rain or an open door",
+        this._renderImageStatesPanel(),
+      )}
 `;
   }
   _renderImageStatesPanel() {
@@ -6647,7 +7813,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
     return html`${this._renderIntro(
         "image_states",
         "Show another picture while an entity has a certain state, for example snow on the roof, a wet house in the rain or the open garage door. The first entry that matches wins; without a match the normal images stay.",
-        "appearance.html#image-conditions",
+        "images.html#image-conditions",
       )}
       ${legacy}
       ${this._renderImageConditions()}`;
@@ -6674,7 +7840,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
       return html`<div class="info inline-action">
         <span
           >${t(
-            "Chips are hidden by Hide all text in Appearance. Your settings are kept.",
+            "Chips are hidden by Hide all text under Card, Style & size. Your settings are kept.",
           )}</span
         >
         <button
@@ -6693,6 +7859,29 @@ class AtmosphericWeatherCardEditor extends LitElement {
       )}
       ${this._renderChipsEditor()}`;
   }
+  // A chip's tab row scrolls sideways on a narrow editor; keep the open tab
+  // in view (Visibility is the last one).
+  updated() {
+    // Controls that show a layout's value turn grey.
+    for (const el of this.renderRoot.querySelectorAll("[data-field]")) {
+      const from = this._fromLayout(el.dataset.field);
+      if (el.classList.contains("from-layout") !== from) el.classList.toggle("from-layout", from);
+      if (from) el.title = el.title || t("From the layout");
+    }
+    const reveal = () => {
+      for (const tab of this.renderRoot.querySelectorAll(".chip-tabs .chip-tab.active")) {
+        const row = tab.parentElement;
+        const tabBox = tab.getBoundingClientRect(),
+          rowBox = row.getBoundingClientRect();
+        if (!rowBox.width) continue;
+        if (tabBox.left < rowBox.left) row.scrollLeft -= rowBox.left - tabBox.left;
+        else if (tabBox.right > rowBox.right) row.scrollLeft += tabBox.right - rowBox.right;
+      }
+    };
+    reveal();
+    // Inside a dialog that is still opening the sizes settle a frame later.
+    if (typeof requestAnimationFrame === "function") requestAnimationFrame(reveal);
+  }
   render() {
     if (!this.hass || !this._config) return html``;
     useLanguage(this.hass);
@@ -6701,18 +7890,18 @@ class AtmosphericWeatherCardEditor extends LitElement {
       ])}
       ${this._renderOwnSensors()}
       ${this._panel(
-        "sun_moon",
-        "mdi:theme-light-dark",
-        "Sun & Moon",
-        "Day and night, moon phase, position and size",
-        this._renderSunMoonPanel(),
+        "layouts",
+        "mdi:view-dashboard-outline",
+        "Layouts",
+        "A finished look with one tap",
+        this._renderLayoutsPanel(),
       )}
       ${this._panel(
-        "appearance",
-        "mdi:palette-outline",
-        "Appearance",
-        "Color mode, card style, edges and filters",
-        this._renderAppearancePanel(),
+        "card",
+        "mdi:card-outline",
+        "Card",
+        "Style, size, colors, position and tap action",
+        this._renderCardPanel(),
       )}
       ${this._panel(
         "chips",
@@ -6722,18 +7911,18 @@ class AtmosphericWeatherCardEditor extends LitElement {
         this._renderChipsPanel(),
       )}
       ${this._panel(
-        "image",
-        "mdi:image-outline",
-        "Image",
-        "Your own picture for day and night, e.g. your house",
-        this._renderImagePanel(),
+        "sky",
+        "mdi:weather-partly-cloudy",
+        "Sky & weather",
+        "Sun and moon, light, wind, rain and snow, night sky, birds",
+        this._renderSkyPanel(),
       )}
       ${this._panel(
-        "image_states",
-        "mdi:image-multiple-outline",
-        "Images by state",
-        "Other pictures for snow, rain or an open door",
-        this._renderImageStatesPanel(),
+        "image",
+        "mdi:image-outline",
+        "Images",
+        "Your own picture for day and night, also by state",
+        this._renderImagePanel(),
       )}
       ${this._panel(
         "cards",
@@ -6745,18 +7934,9 @@ class AtmosphericWeatherCardEditor extends LitElement {
       ${this._panel(
         "performance",
         "mdi:speedometer",
-        "Performance & effects",
-        "Preset, frame rate, effects, birds and planes",
+        "Performance",
+        "Preset, frame rate, detail and speed",
         this._renderPerformancePanel(),
-      )}
-      ${this._panel(
-        "card_tap_action",
-        "mdi:gesture-tap",
-        "Tap action",
-        "What happens when the card is tapped",
-        this._renderForm([
-          { name: "card_tap_action", selector: { ui_action: {} } },
-        ]),
       )}`;
   }
 }

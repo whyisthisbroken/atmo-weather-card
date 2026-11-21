@@ -38,13 +38,25 @@ import {
 } from "./atmo-weather-atmosphere.js";
 import {
   applyCardLayout,
-  CARD_LAYOUTS,
+  areaTwoConfig,
+  chipArea,
   WIDE_MIN_WIDTH,
   CONFIG_DEFAULTS,
   migrateConfig,
   readFlag,
   readNumber,
 } from "./atmo-weather-config.js";
+import { checkConditions, conditionNeeds } from "./atmo-weather-conditions.js";
+import { FOLDER_BASE, folderImageCandidates } from "./atmo-weather-folder.js";
+import {
+  FrostLayer,
+  frostLevel,
+  FROST_GROW_PER_S,
+  FROST_REDRAW_MS,
+  FROST_THAW_PER_S,
+} from "./atmo-weather-frost.js";
+import { curveHeight, curveMarkup, curveMode, toCelsius } from "./atmo-weather-curve.js";
+let _curveIds = 0;
 import {
   ATMOSPHERE_CSS,
   BAD_WEATHER_TYPES,
@@ -73,6 +85,7 @@ import {
   STAR_PALETTE_GOLDEN,
   STAR_TIER_PROPS,
   STORM_TYPES,
+  SUN_LIGHT,
   TRAIL_CAP_COMET,
   TRAIL_CAP_PLANE,
   TRAIL_CAP_SHOOTING_STAR,
@@ -95,9 +108,14 @@ import {
   formatBearingValue,
   isBearingChip,
   resolveCompassPosition,
+  compassCandidates,
+  COMPASS_POSITIONS,
+  isFullWidth,
+  wholeRow,
   unwrapAngle,
 } from "./atmo-weather-compass.js";
-import { editorLanguage } from "./atmo-weather-i18n.js";
+import { editorLanguage, makeTranslator } from "./atmo-weather-i18n.js";
+import { sunPathState, sunPathSvg, sunPathTime } from "./atmo-weather-sunpath.js";
 import {
   buildImageRules,
   computeGauge,
@@ -106,8 +124,13 @@ import {
   fcFilterPast,
   fcFingerprint,
   fcLabel,
+  formatDateCodes,
+  hasDateCodes,
+  moonPhaseAt,
   timeFormatOptions,
   forecastUnavailableText,
+  imageMaxWidth,
+  layoutChipLabel,
   imageRuleMatches,
   imageRuleValue,
   loadFigtreeFont,
@@ -172,6 +195,10 @@ const CLOUD_BREATH_AMOUNT = 0.04;
 const CLOUD_REBAKE_PUFFS_PER_FRAME = 120;
 // Forecast helpers
 const _fcCache = new Map(); // module-level: survives HA editor destroy/recreate cycles
+// Picture folder: which files exist (true/false), and probes still loading.
+// Shared by all cards, each file is asked once per page load.
+const _folderSeen = new Map();
+const _folderWait = new Map();
 class AtmosphericWeatherCard extends HTMLElement {
   // CONSTRUCTOR & LIFECYCLE
   constructor() {
@@ -287,6 +314,8 @@ class AtmosphericWeatherCard extends HTMLElement {
         }
         this._layoutWidth = inlineSize;
         const changed = this._updateCanvasDimensions(inlineSize, blockSize);
+        this._scheduleCurve();
+        this._scheduleCompassFit();
         if (!this._initializationComplete) {
           this._tryInitialize();
         } else if (changed) {
@@ -316,6 +345,55 @@ class AtmosphericWeatherCard extends HTMLElement {
     }
     // disconnectedCallback ends all forecast subscriptions.
     this._syncFc();
+    this._watchVisibility();
+  }
+  // Chip conditions on the screen size or the clock change without a state
+  // change, so the card listens to those itself.
+  _watchVisibility() {
+    this._unwatchVisibility();
+    const needs = this._visNeeds;
+    if (!needs) return;
+    const refresh = () => {
+      if (!this._hass) return;
+      const vis = this._chipVisibility(this._hass).join();
+      if (this._chipVis && vis === this._chipVis.join()) return;
+      this._lastSnapshot = null;
+      this.hass = this._hass;
+    };
+    this._visQueries = [];
+    if (typeof matchMedia === "function") {
+      for (const q of needs.queries) {
+        try {
+          const mql = matchMedia(q);
+          if (mql && mql.addEventListener) {
+            mql.addEventListener("change", refresh);
+            this._visQueries.push(mql);
+          }
+        } catch (e) {
+          // A broken media query simply never matches.
+        }
+      }
+    }
+    this._visRefresh = refresh;
+    if (needs.time) {
+      // Every full minute, the way time conditions are written.
+      const tick = () => {
+        refresh();
+        this._visTimer = setTimeout(tick, 60000 - (Date.now() % 60000) + 50);
+      };
+      this._visTimer = setTimeout(tick, 60000 - (Date.now() % 60000) + 50);
+    }
+    // The screen or the clock may have changed while the card was away (Home
+    // Assistant moves cards between columns when the window is resized).
+    if (this._visQueries.length || needs.time) refresh();
+  }
+  _unwatchVisibility() {
+    if (this._visQueries)
+      for (const mql of this._visQueries)
+        mql.removeEventListener("change", this._visRefresh);
+    this._visQueries = [];
+    if (this._visTimer) clearTimeout(this._visTimer);
+    this._visTimer = null;
   }
   disconnectedCallback() {
     this._stopAnimation();
@@ -334,6 +412,7 @@ class AtmosphericWeatherCard extends HTMLElement {
       this._resizeDebounceTimer = null;
     }
     this._clearCloudBreathingTimer();
+    this._unwatchVisibility();
     if (this._pendingBakeTimer) {
       clearTimeout(this._pendingBakeTimer);
       this._pendingBakeTimer = null;
@@ -358,7 +437,11 @@ class AtmosphericWeatherCard extends HTMLElement {
         previousConfig.card_filter_sun !== config.card_filter_sun);
     this._config = config;
     this._chips = this._deriveChips(this._config);
+    this._area2Config = areaTwoConfig(this._config);
+    this._visNeeds = conditionNeeds(this._chips.map((c) => c.visibility).filter(Boolean).flat());
+    if (this.isConnected) this._watchVisibility();
     this._initDOM();
+    this._applyOwnCss(config.css);
     if (config.card_stack_order !== undefined) {
       this.style.setProperty("--awc-stack-order", config.card_stack_order);
     } else {
@@ -402,6 +485,14 @@ class AtmosphericWeatherCard extends HTMLElement {
       const padV =
         "var(--_awc-pad-v, var(--awc-card-padding, var(--ha-space-4, 16px)))";
       const [v, h] = parseAnchor(align);
+      // image_max_width: the most of the card width the image may take. On a
+      // narrower card it shrinks and keeps its side and its bottom line.
+      const maxWidth = imageMaxWidth(config.image_max_width);
+      slot.style.maxWidth = maxWidth;
+      slot.style.setProperty(
+        "--_awc-img-pos",
+        maxWidth ? `${h === "left" ? "left" : h === "center" ? "center" : "right"} bottom` : "",
+      );
       const t = [];
       if (h === "left") {
         slot.style.left = padH;
@@ -536,6 +627,7 @@ class AtmosphericWeatherCard extends HTMLElement {
         null;
     this._nativeIconCache = null;
     this._prevHadVertVis = false;
+    this._area2Cache = {};
     this._syncFc();
     const preset =
       PERF_PRESETS[config.perf_mode] || PERF_PRESETS[CONFIG_DEFAULTS.perf_mode];
@@ -589,18 +681,19 @@ class AtmosphericWeatherCard extends HTMLElement {
     const compassStyle = String(
       config.wind_compass ?? CONFIG_DEFAULTS.wind_compass,
     );
+    const compassPosition = String(
+      config.wind_compass_position ?? CONFIG_DEFAULTS.wind_compass_position,
+    );
+    const compassTaken = this._chipCorners(config);
     this._compass = {
+      // "auto" (or an unknown value): the card measures the chips and moves
+      // the compass to a free place, or hides it when there is none.
+      auto: !COMPASS_POSITIONS.includes(compassPosition) || compassPosition === "auto",
+      candidates: compassCandidates(compassStyle, compassTaken),
       style: COMPASS_STYLES.includes(compassStyle)
         ? compassStyle
         : CONFIG_DEFAULTS.wind_compass,
-      position: resolveCompassPosition(
-        compassStyle,
-        String(
-          config.wind_compass_position ??
-            CONFIG_DEFAULTS.wind_compass_position,
-        ),
-        this._chipCorners(config),
-      ),
+      position: resolveCompassPosition(compassStyle, compassPosition, compassTaken),
       show: {
         cardinal: config.wind_compass_cardinal !== false,
         degrees: config.wind_compass_degrees === true,
@@ -609,6 +702,7 @@ class AtmosphericWeatherCard extends HTMLElement {
       background: config.wind_compass_background === true,
     };
     this._compassScale = null;
+    this._compassNoRoom = false;
     // Rebuild the compass markup with the next update.
     this._compassSig = null;
     const rawAnimSpeed =
@@ -674,6 +768,7 @@ class AtmosphericWeatherCard extends HTMLElement {
       sunRays: readFlag(config.effect_sun_rays, true),
       haze: readFlag(config.effect_haze, true),
       mist: readFlag(config.effect_ground_mist, true),
+      frost: readFlag(config.effect_frost, true),
       cloudCoverage: readFlag(config.effect_cloud_coverage, true),
       shootingStars: readFlag(config.effect_shooting_stars, true),
       comets: readFlag(config.effect_comets, true),
@@ -786,6 +881,15 @@ class AtmosphericWeatherCard extends HTMLElement {
           }
         }
       }
+      if (!changed && this._visNeeds && this._refVisEnts) {
+        for (const [id, obj] of this._refVisEnts)
+          if (hass.states[id] !== obj) {
+            changed = true;
+            break;
+          }
+      }
+      if (!changed && this._visNeeds && this._visNeeds.users && hass.user !== this._refUser)
+        changed = true;
       if (!changed) return;
     }
     this._refW = wObj;
@@ -804,6 +908,13 @@ class AtmosphericWeatherCard extends HTMLElement {
         refs.set(s.sub_value_entity, hass.states[s.sub_value_entity]);
     }
     this._refChipEnts = refs;
+    const visRefs = new Map();
+    if (this._visNeeds)
+      for (const id of this._visNeeds.entities) visRefs.set(id, hass.states[id]);
+    this._refVisEnts = visRefs;
+    this._refUser = hass.user;
+    // Chips whose visibility conditions fail are left out.
+    this._chipVis = this._chipVisibility(hass);
     if (
       this._moonRotationRad === undefined &&
       (hass.config && hass.config.latitude) !== undefined
@@ -829,8 +940,9 @@ class AtmosphericWeatherCard extends HTMLElement {
       ? hass.states[this._config.precipitation_entity]
       : null;
     const botSig = this._chips
-      .map((s) => {
+      .map((s, i) => {
         if (!s.entity) return "";
+        if (this._chipVis[i] === false) return "hidden";
         if (s.forecast) {
           const t = s.forecast === "hourly" ? "hourly" : "daily";
           const fd = this._fcData.get(`${s.entity}|${t}`);
@@ -908,11 +1020,7 @@ class AtmosphericWeatherCard extends HTMLElement {
         this._config.card_full_width === true,
       );
     if (!wEntity) return;
-    if (moonEntity && moonEntity.state !== this._moonPhaseState) {
-      this._moonPhaseState = moonEntity.state;
-      this._moonPhaseConfig =
-        MOON_PHASES[moonEntity.state] || MOON_PHASES["full_moon"];
-    }
+    this._updateMoonPhase(moonEntity);
     const axes = this._resolveAxes(sunEntity, themeEntity, sysDark),
       isTimeNight = axes.isTimeNight,
       isThemeDark = axes.isThemeDark;
@@ -952,7 +1060,24 @@ class AtmosphericWeatherCard extends HTMLElement {
       sunElev: Number.isFinite(sunElev) ? sunElev : null,
       effects: this._fx,
     });
+    // Rime on the card from temperature and humidity; the light it takes
+    // follows the weather: sun (clear or broken clouds), matte, or night.
+    const frost = frostLevel(weatherData.temperature, weatherData.humidity, weatherState);
+    const matte = newParams.overcast || weatherState === "fog";
+    this._frostTarget = {
+      ...frost,
+      night: isTimeNight,
+      mode: isTimeNight ? "night" : matte ? "matte" : "sun",
+      strength: isTimeNight
+        ? weatherState === "clear-night" ? 1 : 0.3
+        : weatherState === "sunny" ? 1 : 0.6,
+    };
     this._updateStandaloneStyles(isTimeNight, newParams);
+    this._updateSunLight(
+      sunEntity || hass.states["sun.sun"],
+      weatherState,
+      newParams.atmosphere,
+    );
     this._updateTextElements(hass, wEntity, lang, weatherState);
     const windSpeedRaw = this._getEntityAttribute(wEntity, "wind_speed", 0);
     const windSpeed =
@@ -979,7 +1104,7 @@ class AtmosphericWeatherCard extends HTMLElement {
         "",
     });
     const imageNight = axes.isImageNight;
-    this._updateImage(hass, imageNight);
+    this._updateImage(hass, imageNight, weatherState);
     // Golden hour: warm glow + ambient wash (after base styles are set)
     this._applyGoldenHour(sunEntity || hass.states["sun.sun"], newParams);
     if (!this._hasReceivedFirstHass) {
@@ -1024,6 +1149,11 @@ class AtmosphericWeatherCard extends HTMLElement {
     };
   }
   // CONFIGURATION HELPERS
+  _chipVisibility(hass) {
+    return this._chips.map(
+      (c) => !Array.isArray(c.visibility) || checkConditions(c.visibility, hass),
+    );
+  }
   _deriveChips(config) {
     const arr = config && config.chips;
     if (Array.isArray(arr) && arr.length > 0) {
@@ -1044,15 +1174,18 @@ class AtmosphericWeatherCard extends HTMLElement {
     ) {
       const area = String(config.chip_area_position || "bottom-left");
       taken.push(area);
-      if (config.chip_area_full_width === true) {
-        const row = area.split("-")[0];
-        if (row === "top" || row === "bottom")
-          taken.push(`${row}-left`, `${row}-center`, `${row}-right`);
-      }
+      if (config.chip_area_full_width === true || isFullWidth(config.chip_area_width))
+        taken.push(...wholeRow(area));
     }
     for (const c of chips)
       if (String(c.position || "").toLowerCase() === "custom")
         taken.push(String(c.position_anchor || "top-left"));
+    if (chips.some((c) => String(c.position || "").toLowerCase() !== "custom" && chipArea(c) === 2)) {
+      const two = areaTwoConfig(config);
+      const area = String(two.chip_area_position);
+      taken.push(area);
+      if (isFullWidth(two.chip_area_width)) taken.push(...wholeRow(area));
+    }
     return taken;
   }
   _resolveChipPosition() {
@@ -1140,6 +1273,56 @@ class AtmosphericWeatherCard extends HTMLElement {
     const value = entity.attributes[attribute];
     return value !== undefined && value !== null ? value : defaultValue;
   }
+  // A moon sensor wins; without one, or while it reports nothing useful, the
+  // card works out the phase from today's date.
+  _updateMoonPhase(moonEntity, now = new Date()) {
+    const known = moonEntity && MOON_PHASES[moonEntity.state];
+    if (known) {
+      if (moonEntity.state === this._moonPhaseState && !this._moonPhaseAuto)
+        return;
+      this._moonPhaseAuto = false;
+      this._moonPhaseState = moonEntity.state;
+      this._moonPhaseConfig = known;
+      return;
+    }
+    const p = moonPhaseAt(now);
+    const prev = this._moonPhaseConfig;
+    if (
+      this._moonPhaseAuto &&
+      prev &&
+      prev.illumination === p.illumination &&
+      prev.direction === p.direction
+    )
+      return;
+    this._moonPhaseAuto = true;
+    this._moonPhaseState = p.state;
+    this._moonPhaseConfig = { illumination: p.illumination, direction: p.direction };
+  }
+  // Where the sun stands and how strong its light is, as CSS variables and
+  // attributes on the card, for card_mod styles such as a shadow under your
+  // own house image that follows the sun.
+  _updateSunLight(sunEntity, weatherState, atmosphere) {
+    if (!this.style || !this.dataset) return;
+    const a = (sunEntity && sunEntity.attributes) || {};
+    const elev = parseFloat(a.elevation);
+    const az = (parseFloat(a.azimuth) * Math.PI) / 180;
+    const known = Number.isFinite(elev) && Number.isFinite(az);
+    const up = known && elev > 0;
+    const light = up
+      ? Math.min(1, elev / 10) * (SUN_LIGHT[atmosphere] ?? 0.5)
+      : 0;
+    const shadow = up ? Math.min(3, 1 / Math.tan((elev * Math.PI) / 180)) : 0;
+    const fmt = (v) => (known ? v.toFixed(3) : "");
+    this._cssVar(this, "--awc-sun-x", fmt(Math.sin(az)), "_prevSunX");
+    this._cssVar(this, "--awc-sun-y", fmt(Math.cos(az)), "_prevSunY");
+    this._cssVar(this, "--awc-sun-elevation", known ? elev.toFixed(1) : "", "_prevSunElev");
+    this._cssVar(this, "--awc-sun-shadow", fmt(shadow), "_prevSunShadow");
+    this._cssVar(this, "--awc-sun-light", fmt(light), "_prevSunLight");
+    if (this.dataset.condition !== weatherState)
+      this.dataset.condition = weatherState;
+    const daytime = this._isTimeNight ? "night" : "day";
+    if (this.dataset.daytime !== daytime) this.dataset.daytime = daytime;
+  }
   _trackEntityError(entityId, errorType) {
     const now = Date.now(),
       existing = this._entityErrors.get(entityId);
@@ -1151,7 +1334,7 @@ class AtmosphericWeatherCard extends HTMLElement {
       }
     }
   }
-  _resolveSensorValue(hass, entityId, attribute) {
+  _resolveSensorValue(hass, entityId, attribute, dateFormat) {
     let value,
       haFormatted = false,
       rawNumeric = null;
@@ -1181,7 +1364,14 @@ class AtmosphericWeatherCard extends HTMLElement {
       /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(isoSource)
     ) {
       const d = new Date(isoSource);
-      if (!isNaN(d)) {
+      if (!isNaN(d) && hasDateCodes(dateFormat)) {
+        formatted = formatDateCodes(
+          d,
+          dateFormat,
+          (hass.locale && hass.locale.language) || undefined,
+        );
+        haFormatted = true;
+      } else if (!isNaN(d)) {
         const locale = (hass.locale && hass.locale.language) || undefined;
         const now = new Date();
         const todayStart = new Date(
@@ -1842,6 +2032,7 @@ class AtmosphericWeatherCard extends HTMLElement {
     if (sig !== this._compassSig) {
       this._compassSig = sig;
       el.innerHTML = compassMarkup(cfg.style, cfg.position, lang, cfg.background);
+      this._scheduleCompassFit();
       // A new compass starts at the current bearing instead of turning to it.
       angle = d.bearing;
     } else if (Math.abs(angle) > 360) {
@@ -1869,12 +2060,19 @@ class AtmosphericWeatherCard extends HTMLElement {
       const text = parts.join("|");
       if (label.dataset.text !== text) {
         label.dataset.text = text;
+        const span = (txt, cls) => {
+          const s = document.createElement("span");
+          s.textContent = txt;
+          if (cls) s.className = cls;
+          return s;
+        };
+        // The tick ring shows the speed as a number with its unit below.
         label.replaceChildren(
-          ...parts.map((p) => {
-            const s = document.createElement("span");
-            s.textContent = p;
-            return s;
-          }),
+          ...parts.flatMap((p) =>
+            cfg.style === "ticks" && /^[\d.,]+ \S+$/.test(p)
+              ? [span(p.split(" ")[0]), span(p.split(" ")[1], "cmp-unit")]
+              : [span(p)],
+          ),
         );
       }
     }
@@ -1885,7 +2083,55 @@ class AtmosphericWeatherCard extends HTMLElement {
         `${compassPoint(d.bearing, lang)} ${Math.round(d.bearing)}°`,
       );
     this._updateCompassScale();
+    el.hidden = this._compassNoRoom;
+  }
+  // wind_compass_position "auto": after the chips are laid out, try the
+  // places in order and keep the first where the compass covers no chip.
+  // With none free (a card full of chips, like the panel layout) the compass
+  // stays hidden; a position you pick yourself is always kept.
+  _scheduleCompassFit() {
+    if (this._compassFitFrame || !this._compass || !this._compass.auto) return;
+    this._compassFitFrame = requestAnimationFrame(() => {
+      this._compassFitFrame = null;
+      this._fitCompass();
+    });
+  }
+  _fitCompass() {
+    const el = this._elements && this._elements.compass;
+    const cfg = this._compass;
+    const box = el && el.firstElementChild;
+    if (!box || !cfg || !cfg.auto || !this.shadowRoot) return;
+    const d = this._compassData;
+    if (cfg.style === "off" || !d || d.bearing == null) return;
+    const pad = 2;
+    const chips = [...this.shadowRoot.querySelectorAll(".chip, .chip-ring-wrap")]
+      .filter((c) => !el.contains(c))
+      .map((c) => c.getBoundingClientRect())
+      .filter((r) => r.width > 0 && r.height > 0);
+    const covers = (r) =>
+      chips.some((c) => r.left < c.right - pad && r.right > c.left + pad && r.top < c.bottom - pad && r.bottom > c.top + pad);
+    const place = (pos) => {
+      for (const cls of [...box.classList]) if (cls.startsWith("cmp-pos-")) box.classList.remove(cls);
+      box.classList.add(`cmp-pos-${pos}`);
+    };
     el.hidden = false;
+    let found = null;
+    for (const pos of cfg.candidates) {
+      place(pos);
+      const r = box.getBoundingClientRect();
+      // Nothing to measure (no layout yet): keep the place from the config.
+      if (!r.width || !r.height) {
+        found = cfg.position;
+        break;
+      }
+      if (!covers(r)) {
+        found = pos;
+        break;
+      }
+    }
+    place(found || cfg.position);
+    this._compassNoRoom = !found;
+    el.hidden = this._compassNoRoom;
   }
   // The compass grows with the card height, within limits.
   _updateCompassScale() {
@@ -1902,6 +2148,25 @@ class AtmosphericWeatherCard extends HTMLElement {
     }
   }
   // DOM & STYLES
+  // The `css` option: own styles inside the card, without card_mod. They come
+  // last, so they win over the card's own rules of the same weight.
+  _applyOwnCss(css) {
+    const text = typeof css === "string" ? css.trim() : "";
+    let el = this._ownCssEl;
+    if (!text) {
+      if (el) el.remove();
+      this._ownCssEl = null;
+      return;
+    }
+    if (!el) {
+      el = document.createElement("style");
+      el.id = "awc-own-css";
+      this._ownCssEl = el;
+    }
+    if (el.textContent !== text) el.textContent = text;
+    if (el.parentNode !== this.shadowRoot || el !== this.shadowRoot.lastElementChild)
+      this.shadowRoot.append(el);
+  }
   _initDOM() {
     if (this._initialized) return;
     this._initialized = true;
@@ -1910,7 +2175,7 @@ class AtmosphericWeatherCard extends HTMLElement {
     style.textContent = buildStyles();
     const root = document.createElement("div");
     root.id = "card-root";
-    root.innerHTML = `<canvas id="bg-canvas"></canvas><canvas id="mid-canvas"></canvas><div id="image-slot"><img /></div><canvas id="fg-canvas"></canvas><div id="text-scrim"></div><div id="wind-compass" hidden></div><div id="text-wrapper"><div id="chips-group"><div id="chips-row"></div></div></div><div id="custom-cards-wrapper"></div>`;
+    root.innerHTML = `<canvas id="bg-canvas"></canvas><canvas id="mid-canvas"></canvas><div id="image-slot"><img /></div><canvas id="fg-canvas"></canvas><div id="frost"></div><div id="text-scrim"></div><div id="wind-compass" hidden></div><div id="text-wrapper"><div id="chips-group"><div id="chips-row"></div></div><div id="chips-group-2" style="display:none"><div id="chips-row-2"></div></div></div><div id="custom-cards-wrapper"></div>`;
     // Below the card, outside its rounded corners: rain and snow that fall
     // out of it (effect_spill).
     const spill = document.createElement("canvas");
@@ -1925,6 +2190,11 @@ class AtmosphericWeatherCard extends HTMLElement {
     this._wireImage(img);
     const chipsRow = q("#chips-row");
     chipsRow.addEventListener("click", (e) => this._handleChipClick(e));
+    // A scrolling chip row takes the curve along.
+    chipsRow.addEventListener("scroll", () => this._scheduleCurve(), { passive: true });
+    const chipsRow2 = q("#chips-row-2");
+    chipsRow2.addEventListener("click", (e) => this._handleChipClick(e));
+    chipsRow2.addEventListener("scroll", () => this._scheduleCurve(), { passive: true });
     this._elements = {
       root,
       bg,
@@ -1934,9 +2204,12 @@ class AtmosphericWeatherCard extends HTMLElement {
       imageSlot: q("#image-slot"),
       chipsGroup: q("#chips-group"),
       chipsRow,
+      chipsGroup2: q("#chips-group-2"),
+      chipsRow2,
       textWrapper: q("#text-wrapper"),
       customCardsWrapper: q("#custom-cards-wrapper"),
       compass: q("#wind-compass"),
+      frost: q("#frost"),
       spill,
     };
     const ctxOpts = { alpha: true, willReadFrequently: false };
@@ -2107,8 +2380,7 @@ class AtmosphericWeatherCard extends HTMLElement {
     if (!this._elements || !this._elements.chipsRow) return;
     const cfg = this._config;
     const showText = cfg.card_hide_text !== true;
-    const showBottom = cfg.chip_area_hide !== true,
-      showBottomBg = cfg.chip_area_background === true;
+    const showBottom = cfg.chip_area_hide !== true;
     const bgStyle = resolveBackgroundStyle(cfg);
     const root = this._elements.root;
     this._cssVar(
@@ -2148,9 +2420,43 @@ class AtmosphericWeatherCard extends HTMLElement {
       this._elements.chipsGroup.style.display = showBottom ? "" : "none";
     }
     for (const [prop, key, cache] of [
+      ["--awc-chips-padding", "chip_padding", "_prevChipPad"],
+      ["--awc-chip-gap", "chip_gap", "_prevChipGap"],
+      ["--awc-chip-text-gap", "chip_text_gap", "_prevChipTextGap"],
+      ["--awc-icon-size", "chip_icon_size", "_prevChipIconWidth"],
+      ["--awc-icon-padding", "chip_icon_padding", "_prevChipIconPad"],
+    ])
+      this._cssVar(root, prop, (cfg[key] || "").toString().trim(), cache);
+    // The first area keeps its values on the card, as before.
+    this._applyAreaStyles(
+      cfg,
+      this._elements.chipsRow,
+      this._elements.chipsGroup,
+      this,
+      (prop, val, key) => this._cssVar(root, prop, val, key),
+    );
+    // The second area sets its own; an unset value must not fall back to the
+    // first area's value on the card, so it becomes "initial".
+    const c2 = this._area2Cache || (this._area2Cache = {});
+    const cg2 = this._elements.chipsGroup2;
+    this._applyAreaStyles(
+      this._area2Config || areaTwoConfig(cfg),
+      this._elements.chipsRow2,
+      cg2,
+      c2,
+      (prop, val, key) => {
+        if (c2[key] === val) return;
+        c2[key] = val;
+        cg2.style.setProperty(prop, val || "initial");
+      },
+    );
+  }
+  // Layout and look of one chip area. c holds the values set last time (the
+  // card itself for the first area), setVar sets a CSS variable.
+  _applyAreaStyles(cfg, bt, cg, c, setVar) {
+    for (const [prop, key, cache] of [
       ["--awc-row-width", "chip_area_width", "_prevRowWidth"],
       ["--awc-row-height", "chip_area_height", "_prevRowHeight"],
-      ["--awc-chips-padding", "chip_padding", "_prevChipPad"],
       ["--awc-container-padding", "chip_area_padding", "_prevContainerPad"],
       [
         "--awc-container-bg-color",
@@ -2158,27 +2464,22 @@ class AtmosphericWeatherCard extends HTMLElement {
         "_prevContainerBgColor",
       ],
       ["--awc-bottom-gap", "chip_area_gap", "_prevChipsGap"],
-      ["--awc-chip-gap", "chip_gap", "_prevChipGap"],
-      ["--awc-chip-text-gap", "chip_text_gap", "_prevChipTextGap"],
-      ["--awc-icon-size", "chip_icon_size", "_prevChipIconWidth"],
-      ["--awc-icon-padding", "chip_icon_padding", "_prevChipIconPad"],
     ])
-      this._cssVar(root, prop, (cfg[key] || "").toString().trim(), cache);
+      setVar(prop, (cfg[key] || "").toString().trim(), cache);
     const cols = parseInt(cfg.chip_area_columns, 10);
-    this._cssVar(
-      root,
+    setVar(
       "--awc-row-columns",
       Number.isFinite(cols) && cols > 0 ? String(cols) : "",
       "_prevRowCols",
     );
+    const showBottomBg = cfg.chip_area_background === true;
+    const bgStyle = resolveBackgroundStyle(cfg);
     let rowLayout = (cfg.chip_area_layout || CONFIG_DEFAULTS.chip_area_layout)
       .toString()
       .toLowerCase();
-    const isGrouped = cfg.chip_area_grouped === true,
-      bt = this._elements.chipsRow,
-      cg = this._elements.chipsGroup;
-    if (this._prevRowOverflow !== rowLayout) {
-      this._prevRowOverflow = rowLayout;
+    const isGrouped = cfg.chip_area_grouped === true;
+    if (c._prevRowOverflow !== rowLayout) {
+      c._prevRowOverflow = rowLayout;
       for (const m of ["horizontal-scroll", "wrap", "grid", "vertical-scroll"])
         bt.classList.toggle("row-" + m, rowLayout === m);
       for (const m of ["horizontal-scroll", "wrap", "vertical-scroll"])
@@ -2187,8 +2488,8 @@ class AtmosphericWeatherCard extends HTMLElement {
     const visCount = parseInt(cfg.chip_area_scroll_count, 10),
       hasVis = Number.isFinite(visCount) && visCount > 0;
     const visKey = `${hasVis}|${visCount}|${rowLayout}`;
-    if (this._prevVisKey !== visKey) {
-      this._prevVisKey = visKey;
+    if (c._prevVisKey !== visKey) {
+      c._prevVisKey = visKey;
       bt.classList.toggle("has-visible-count", hasVis);
       if (hasVis) {
         const gapVal = (cfg.chip_area_gap || "8px").toString().trim() || "8px";
@@ -2209,15 +2510,15 @@ class AtmosphericWeatherCard extends HTMLElement {
         bt.style.removeProperty("--awc-chip-basis-v");
       }
       if (!hasVis && rowLayout === "vertical-scroll") {
-        requestAnimationFrame(() => this._computeVerticalVisHeight());
+        requestAnimationFrame(() => this._computeVerticalVisHeight(bt, cfg));
       } else if (rowLayout !== "vertical-scroll" || hasVis) {
         bt.style.removeProperty("--awc-row-max-height");
       }
     }
     const hasSeparator = cfg.chip_area_separator === true;
     const groupedKey = `${isGrouped}|${showBottomBg}|${bgStyle}|${hasSeparator}`;
-    if (this._prevGrouped !== groupedKey) {
-      this._prevGrouped = groupedKey;
+    if (c._prevGrouped !== groupedKey) {
+      c._prevGrouped = groupedKey;
       cg.classList.toggle("grouped", isGrouped);
       bt.classList.toggle("has-separator", hasSeparator);
       if (isGrouped && showBottomBg) {
@@ -2229,29 +2530,29 @@ class AtmosphericWeatherCard extends HTMLElement {
       }
     }
     const fullWidth = cfg.chip_area_full_width === true;
-    if (this._prevFullWidth !== fullWidth) {
-      this._prevFullWidth = fullWidth;
+    if (c._prevFullWidth !== fullWidth) {
+      c._prevFullWidth = fullWidth;
       bt.classList.toggle("full-width", fullWidth);
     }
     const align = (cfg.chip_area_align || CONFIG_DEFAULTS.chip_area_align)
       .toString()
       .toLowerCase();
-    if (this._prevChipAlign !== align) {
-      this._prevChipAlign = align;
+    if (c._prevChipAlign !== align) {
+      c._prevChipAlign = align;
       for (const a of ["start", "center", "end", "spread"])
         bt.classList.toggle(`align-${a}`, align === a);
     }
   }
-  _patchRowChipsIncremental(container, rowChips) {
+  _patchRowChipsIncremental(container, rowChips, c = this) {
     const nextSigs = rowChips.map((r) => r.sig);
-    const prevSigs = this._lastRowSigs;
+    const prevSigs = c._lastRowSigs;
     const canPatch =
       Array.isArray(prevSigs) &&
       prevSigs.length === nextSigs.length &&
       container.children.length === nextSigs.length;
     if (!canPatch) {
       container.innerHTML = rowChips.map((r) => r.html).join("");
-      this._lastRowSigs = nextSigs;
+      c._lastRowSigs = nextSigs;
       return true;
     }
     let changed = false;
@@ -2263,64 +2564,29 @@ class AtmosphericWeatherCard extends HTMLElement {
       const prevEl = container.children[i];
       if (!nextEl || !prevEl) {
         container.innerHTML = rowChips.map((r) => r.html).join("");
-        this._lastRowSigs = nextSigs;
+        c._lastRowSigs = nextSigs;
         return true;
       }
       container.replaceChild(nextEl, prevEl);
       changed = true;
     }
-    this._lastRowSigs = nextSigs;
+    c._lastRowSigs = nextSigs;
     return changed;
   }
-  _updateTextElements(hass, wEntity, lang, weatherState = "default") {
-    if (!wEntity) return;
-    if (!this._elements || !this._elements.chipsRow) return;
-    this._applyConfigStyles();
-    const cfg = this._config,
-      showBottomBg = cfg.chip_area_background === true;
-    const bgStyle = resolveBackgroundStyle(cfg);
-    const chipFormatRaw = (
-      cfg.chip_style || CONFIG_DEFAULTS.chip_style
-    ).toLowerCase();
-    const chipFormat =
-      chipFormatRaw === "stacked"
-        ? "stacked"
-        : chipFormatRaw === "vertical"
-          ? "vertical"
-          : CONFIG_DEFAULTS.chip_style;
-    let rowLayout = (cfg.chip_area_layout || CONFIG_DEFAULTS.chip_area_layout)
+  // Puts one area's chips into its row. True when the row was rebuilt.
+  _renderAreaRow(a, rowChips) {
+    const { cfg, bt, c } = a;
+    const rowLayout = (cfg.chip_area_layout || CONFIG_DEFAULTS.chip_area_layout)
       .toString()
       .toLowerCase();
     const visCount = parseInt(cfg.chip_area_scroll_count, 10),
-      hasVis = Number.isFinite(visCount) && visCount > 0,
-      bt = this._elements.chipsRow;
-    if (this._numFmtLang !== lang) {
-      this._numFmtLang = lang;
-      this._numFmt = new Intl.NumberFormat(lang, {
-        maximumFractionDigits: 1,
-        minimumFractionDigits: 0,
-      });
-    }
-    const rendered = this._chips.map((chip, idx) =>
-      this._renderChip(
-        chip,
-        idx,
-        hass,
-        weatherState,
-        lang,
-        showBottomBg,
-        bgStyle,
-        chipFormat,
-      ),
-    );
-    const rowChips = rendered.filter((r) => !r.isFree),
-      freeChips = rendered.filter((r) => r.isFree),
-      rowSig = rowChips.map((r) => r.sig).join("§");
-    const rowRebuilt = this._lastLocStr !== rowSig;
+      hasVis = Number.isFinite(visCount) && visCount > 0;
+    const rowSig = rowChips.map((r) => r.sig).join("§");
+    const rowRebuilt = c._lastLocStr !== rowSig;
     if (rowRebuilt) {
-      this._lastLocStr = rowSig;
-      this._patchRowChipsIncremental(bt, rowChips);
-      this._animateRings(bt);
+      c._lastLocStr = rowSig;
+      this._patchRowChipsIncremental(bt, rowChips, c);
+      this._animateRings(bt, a.n === 2 ? "a2" : "");
       const hasEnhanced = rowChips.some(
         (r) =>
           r.html.includes("format-stacked") ||
@@ -2328,18 +2594,87 @@ class AtmosphericWeatherCard extends HTMLElement {
       );
       bt.classList.toggle("has-enhanced-child", hasEnhanced);
       if (!hasVis && rowLayout === "vertical-scroll") {
-        requestAnimationFrame(() => this._computeVerticalVisHeight());
+        requestAnimationFrame(() => this._computeVerticalVisHeight(bt, cfg));
       }
       this._nativeIconCache = null;
     }
     if (rowLayout !== "vertical-scroll" || hasVis) {
-      if (this._prevHadVertVis) {
+      if (c._prevHadVertVis) {
         bt.style.removeProperty("--awc-row-max-height");
-        this._prevHadVertVis = false;
+        c._prevHadVertVis = false;
       }
     } else {
-      this._prevHadVertVis = true;
+      c._prevHadVertVis = true;
     }
+    return rowRebuilt;
+  }
+  _updateTextElements(hass, wEntity, lang, weatherState = "default") {
+    if (!wEntity) return;
+    if (!this._elements || !this._elements.chipsRow) return;
+    this._applyConfigStyles();
+    const cfg = this._config;
+    const bt = this._elements.chipsRow;
+    // Each area brings its own background and chip style.
+    const areaArgs = (acfg) => {
+      const raw = (acfg.chip_style || CONFIG_DEFAULTS.chip_style).toLowerCase();
+      return {
+        rowBg: acfg.chip_area_background === true,
+        bgStyle: resolveBackgroundStyle(acfg),
+        chipFormat:
+          raw === "stacked" ? "stacked" : raw === "vertical" ? "vertical" : CONFIG_DEFAULTS.chip_style,
+      };
+    };
+    const areas = [
+      { n: 1, cfg, bt, cg: this._elements.chipsGroup, c: this },
+      {
+        n: 2,
+        cfg: this._area2Config || areaTwoConfig(cfg),
+        bt: this._elements.chipsRow2,
+        cg: this._elements.chipsGroup2,
+        c: this._area2Cache || (this._area2Cache = {}),
+      },
+    ];
+    for (const a of areas) a.args = areaArgs(a.cfg);
+    if (this._numFmtLang !== lang) {
+      this._numFmtLang = lang;
+      this._numFmt = new Intl.NumberFormat(lang, {
+        maximumFractionDigits: 1,
+        minimumFractionDigits: 0,
+      });
+    }
+    // A layout can offer more tiles than it shows (_layoutMax): the first ones
+    // with a value fill the places, so a missing value leaves no gap.
+    const shownInGroup = {};
+    const rendered = this._chips.map((chip, idx) => {
+      const a = areas[chipArea(chip) - 1].args;
+      const render = (c) =>
+        this._renderChip(c, idx, hass, weatherState, lang, a.rowBg, a.bgStyle, a.chipFormat);
+      const r = render(chip);
+      const group = chip._layoutGroup;
+      if (group && r.html) {
+        shownInGroup[group] = (shownInGroup[group] || 0) + 1;
+        if (shownInGroup[group] > chip._layoutMax) return render({ ...chip, entity: "" });
+      }
+      return r;
+    });
+    const freeChips = rendered.filter((r) => r.isFree);
+    let rowRebuilt = false;
+    for (const a of areas) {
+      a.rowChips = rendered.filter(
+        (r, i) => !r.isFree && chipArea(this._chips[i]) === a.n,
+      );
+      if (a.n === 2) {
+        // The second area shows only while it holds a chip.
+        const show =
+          a.rowChips.some((r) => r.html) &&
+          a.cfg.chip_area_hide !== true &&
+          cfg.chip_area_hide !== true;
+        const display = show ? "" : "none";
+        if (a.cg.style.display !== display) a.cg.style.display = display;
+      }
+      rowRebuilt = this._renderAreaRow(a, a.rowChips) || rowRebuilt;
+    }
+    const rowChips = areas[0].rowChips;
     const freeSig = freeChips.map((r) => r.sig).join("§"),
       freeRebuilt = this._lastFreeSig !== freeSig;
     if (freeRebuilt) {
@@ -2388,6 +2723,7 @@ class AtmosphericWeatherCard extends HTMLElement {
       if (!this._nativeIconCache || rowRebuilt || freeRebuilt) {
         const allContainers = [
           bt,
+          this._elements.chipsRow2,
           ...this._elements.textWrapper.querySelectorAll(".chip-free"),
         ];
         this._nativeIconCache = [];
@@ -2409,6 +2745,28 @@ class AtmosphericWeatherCard extends HTMLElement {
           entry.el.hass = hass;
           entry.el.stateObj = r.sensorObj;
         }
+      }
+    }
+    const curveOf = (list) =>
+      list
+        .filter((r) => r.fcEntry && r.attribute === "temperature")
+        .map((r) => ({
+          idx: r.idx,
+          hi: Number(r.fcEntry.temperature),
+          lo: r.fcEntry.templow == null ? NaN : Number(r.fcEntry.templow),
+          unit: r.fcUnit,
+        }));
+    const firstCurve = curveOf(rowChips);
+    this._curveArea = firstCurve.length >= 2 ? areas[0] : areas[1];
+    this._curvePoints = firstCurve.length >= 2 ? firstCurve : curveOf(areas[1].rowChips);
+    this._scheduleCurve();
+    this._scheduleCompassFit();
+    const pos2 = String(areas[1].cfg.chip_area_position);
+    if (this._prevPos2 !== pos2) {
+      this._prevPos2 = pos2;
+      for (const el of [areas[1].bt, areas[1].cg]) {
+        el.classList.remove(...POS_CLASSES);
+        el.classList.add(`pos-${pos2}`);
       }
     }
     const chipsPos = this._resolveChipPosition();
@@ -2470,6 +2828,66 @@ class AtmosphericWeatherCard extends HTMLElement {
       }
     }
   }
+  // forecast_curve: a temperature curve over the forecast chips of the chip
+  // area. Drawn a frame later, once the chips have their size.
+  _scheduleCurve() {
+    if (this._curveFrame || !this._elements) return;
+    this._curveFrame = requestAnimationFrame(() => {
+      this._curveFrame = null;
+      this._drawCurve();
+    });
+  }
+  _drawCurve() {
+    const els = this._elements;
+    if (!els || !els.chipsGroup || !this._config) return;
+    const area = this._curveArea || { cg: els.chipsGroup, bt: els.chipsRow, cfg: this._config };
+    const group = area.cg;
+    const mode = curveMode(this._config.forecast_curve);
+    const pts = mode ? this._curvePoints || [] : [];
+    let svg = this._curveSvg;
+    const gb = group.getBoundingClientRect();
+    const xs = [];
+    for (const p of pts) {
+      const el = area.bt.querySelector(`[data-idx="${p.idx}"]`);
+      if (!el) continue;
+      const b = el.getBoundingClientRect();
+      xs.push(b.left + b.width / 2 - gb.left);
+    }
+    const height = curveHeight(this._config.forecast_curve_height);
+    const below = String(area.cfg.chip_area_position || "bottom").startsWith("top");
+    const sig = `${mode}|${height}|${below}|${gb.width.toFixed(0)}|${xs.map((x) => x.toFixed(0)).join(",")}|${pts.map((p) => `${p.hi}/${p.lo}/${p.unit}`).join(",")}`;
+    if (sig === this._curveSig && (!svg || svg.isConnected)) return;
+    this._curveSig = sig;
+    if (!this._curveId) this._curveId = `awc-curve-${++_curveIds}`;
+    const markup =
+      gb.width && xs.length === pts.length
+        ? curveMarkup({
+            mode,
+            xs,
+            his: pts.map((p) => p.hi),
+            los: pts.map((p) => p.lo),
+            celsius: pts.map((p) => toCelsius(p.hi, p.unit)),
+            height,
+            id: this._curveId,
+          })
+        : "";
+    if (!markup) {
+      if (svg) svg.remove();
+      this._curveSvg = null;
+      return;
+    }
+    if (!svg) {
+      svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.id = "forecast-curve";
+      svg.setAttribute("aria-hidden", "true");
+      this._curveSvg = svg;
+    }
+    if (svg.parentNode !== group) group.appendChild(svg);
+    svg.classList.toggle("below", below);
+    svg.setAttribute("height", String(height));
+    svg.setAttribute("viewBox", `0 0 ${gb.width.toFixed(1)} ${height}`);
+    svg.innerHTML = markup;
+  }
   _animateRings(container, prefix) {
     if (!this._ringPrevPct) this._ringPrevPct = new Map();
     const pfx = prefix || "";
@@ -2511,6 +2929,24 @@ class AtmosphericWeatherCard extends HTMLElement {
       const raw = st && st.attributes ? st.attributes[chip.attribute] : undefined;
       if (raw === undefined || raw === null) chip = { ...chip, entity: "" };
     }
+    if (chip.entity && chip.forecast) {
+      const type = chip.forecast === "hourly" ? "hourly" : "daily";
+      const fc = this._fcData.get(`${chip.entity}|${type}`);
+      const list = fc && fc.processed;
+      if (list && list.length) {
+        const offset = Math.max(0, parseInt(chip.forecast_offset, 10) || 0);
+        // A forecast shorter than the chip asks for has no entry for it: the
+        // chip stays away instead of showing the last entry a second time.
+        if (offset >= list.length) chip = { ...chip, entity: "" };
+        // A layout's forecast value stays away too when the weather service
+        // does not send it, like the rain probability.
+        else if (chip._layoutOptional && chip.attribute) {
+          const v = list[offset][chip.attribute];
+          if (v === undefined || v === null) chip = { ...chip, entity: "" };
+        }
+      }
+    }
+    if (this._chipVis && this._chipVis[idx] === false) chip = { ...chip, entity: "" };
     if (!chip.entity)
       return {
         html: "",
@@ -2523,7 +2959,9 @@ class AtmosphericWeatherCard extends HTMLElement {
         posX: "0",
         posY: "0",
       };
-    const showIcon = chip.hide_icon !== true,
+    // type: sun_path draws the sun's arc; the arc is its icon.
+    const isSunPath = chip.type === "sun_path";
+    const showIcon = chip.hide_icon !== true && !isSunPath,
       showLabel = chip.hide_label !== true,
       showValue = chip.hide_value !== true;
     const effectiveFormatRaw = (chip.style ? chip.style : chipFormat)
@@ -2568,6 +3006,7 @@ class AtmosphericWeatherCard extends HTMLElement {
         hass,
         chip.entity,
         chip.attribute,
+        chip.date_format,
       );
       mainHaFormatted = resolved.haFormatted === true;
       mainRawNumeric = resolved.rawNumeric;
@@ -2733,15 +3172,32 @@ class AtmosphericWeatherCard extends HTMLElement {
       nameSig = name;
     if (!name && chip._layoutLabel) {
       const st = hass && hass.states && hass.states[chip.entity];
-      name =
-        (st && typeof hass.formatEntityAttributeName === "function"
+      name = layoutChipLabel(
+        st && typeof hass.formatEntityAttributeName === "function"
           ? hass.formatEntityAttributeName(st, chip.attribute)
-          : "") || chip._layoutLabel;
+          : "",
+        chip.attribute,
+        chip._layoutLabel,
+        lang,
+        makeTranslator(lang),
+      );
       nameSig = name;
     }
+    const sunPath =
+      isSunPath && hass && hass.states ? sunPathState(hass.states[chip.entity]) : null;
+    if (sunPath && !name) {
+      name = makeTranslator(lang)(sunPath.night ? "Night" : "Daylight");
+      nameSig = `sp:${name}`;
+    }
     if (!name && !chip.name_sensor && isForecast && fcDatetime) {
-      name = fcLabel(fcDatetime, chip.forecast !== "hourly", lang, hass && hass.locale);
-      nameSig = `fc:${fcDatetime}`;
+      name = fcLabel(
+        fcDatetime,
+        chip.forecast !== "hourly",
+        lang,
+        hass && hass.locale,
+        chip.date_format,
+      );
+      nameSig = `fc:${fcDatetime}|${chip.date_format || ""}`;
     }
     if (chip.name_sensor) {
       const nameResolved = this._resolveSensorValue(
@@ -2946,9 +3402,14 @@ class AtmosphericWeatherCard extends HTMLElement {
         subBelowHtml = `<span class="chip-sub">${safeSubValue}</span>`;
       }
     }
+    const sunPathHtml = sunPath
+      ? `<span class="chip-val chip-sunpath">${sunPathSvg(sunPath.t, sunPath.night)}<span class="sp-times"><span>${escapeHtml(sunPathTime(sunPath.from, chip.date_format, hass.locale))}</span><span>${escapeHtml(sunPathTime(sunPath.to, chip.date_format, hass.locale))}</span></span></span>`
+      : "";
     const valHtml = !showValue
       ? ""
-      : isValueMarquee
+      : sunPathHtml
+        ? sunPathHtml
+        : isValueMarquee
         ? `<span class="chip-val awc-marquee-host" data-speed="${marqueeSpeed}" data-rtl="${marqueeRtl ? 1 : 0}"><span class="awc-marquee-track"><span class="awc-marquee-text">${inner}</span></span></span>`
         : `<span class="chip-val">${inner}${subBelowHtml}</span>`;
     const isFree = (chip.position || "").toString().toLowerCase() === "custom";
@@ -2972,6 +3433,7 @@ class AtmosphericWeatherCard extends HTMLElement {
     if (effectiveFormat === "stacked") classes.push("format-stacked");
     else if (effectiveFormat === "vertical") classes.push("format-vertical");
     if (isRingType) classes.push("chip-ring");
+    if (sunPath) classes.push("chip-sunpath-type");
     const iconBg =
       chip.icon_background !== undefined
         ? chip.icon_background
@@ -3144,7 +3606,7 @@ class AtmosphericWeatherCard extends HTMLElement {
     if (isRingType) {
       chipHtml = `<div class="chip-ring-wrap${hasSegments ? " has-segments" : ""}${fcLoading ? " chip-loading" : ""}" data-idx="${idx}" style="${escapeHtmlAttr(ringWrapStyle)}">${ringHtml}${chipHtml}</div>`;
     }
-    const sig = `${idx}|${formatted}|${unit}|${iconValue}|${iconStrategy}|${showIcon}|${showLabel}|${showValue}|${overflowMode}|${labelOverflow}|${marqueeSpeed}|${marqueeRtl}|${width}|${height}|${nameSig}|${effectiveBg}|${bgStyle}|${effectiveFormat}|${iconBg != null ? iconBg : ""}|${isFree}|${posAnchor}|${posX}|${posY}|${effectiveBgColor}|${effectiveIconBgColor}|${chip.padding != null ? chip.padding : ""}|${chip.text_size || ""}|${chip.label_size || ""}|${chip.inner_gap || ""}|${chip.text_gap || ""}|${chip.icon_size || ""}|${chip.icon_padding || ""}|${chipAlignClass}|${subValueSig}|${chip.sub_value_position || ""}|${chip.sub_value_format != null ? chip.sub_value_format : ""}|${chip.sub_value_size || ""}|${chip.sub_value_weight || ""}|${chip.sub_value_overflow || ""}|${chip.hide_sub_value || ""}|${isBehind}|${useFancyUnit}|${chip.value_weight || ""}|${chip.label_weight || ""}|${chip.chip_round || ""}|${chip.type || ""}|${chip.ring_min != null ? chip.ring_min : ""}|${chip.ring_max != null ? chip.ring_max : ""}|${chip.ring_color || ""}|${chip.ring_width || ""}|${chip.ring_gap || ""}|${chip.ring_threshold_mode || ""}|${thresholdSig(chip.ring_thresholds)}|${chip.bar_min != null ? chip.bar_min : ""}|${chip.bar_max != null ? chip.bar_max : ""}|${chip.bar_color || ""}|${chip.bar_height || ""}|${chip.bar_gap || ""}|${chip.bar_threshold_mode || ""}|${thresholdSig(chip.bar_thresholds)}|${gaugeSig}`;
+    const sig = `${idx}|${formatted}|${unit}|${iconValue}|${iconStrategy}|${showIcon}|${showLabel}|${showValue}|${overflowMode}|${labelOverflow}|${marqueeSpeed}|${marqueeRtl}|${width}|${height}|${nameSig}|${effectiveBg}|${bgStyle}|${effectiveFormat}|${iconBg != null ? iconBg : ""}|${isFree}|${posAnchor}|${posX}|${posY}|${effectiveBgColor}|${effectiveIconBgColor}|${chip.padding != null ? chip.padding : ""}|${chip.text_size || ""}|${chip.label_size || ""}|${chip.inner_gap || ""}|${chip.text_gap || ""}|${chip.icon_size || ""}|${chip.icon_padding || ""}|${chipAlignClass}|${subValueSig}|${chip.sub_value_position || ""}|${chip.sub_value_format != null ? chip.sub_value_format : ""}|${chip.sub_value_size || ""}|${chip.sub_value_weight || ""}|${chip.sub_value_overflow || ""}|${chip.hide_sub_value || ""}|${isBehind}|${useFancyUnit}|${chip.value_weight || ""}|${chip.label_weight || ""}|${chip.chip_round || ""}|${chip.type || ""}|${chip.ring_min != null ? chip.ring_min : ""}|${chip.ring_max != null ? chip.ring_max : ""}|${chip.ring_color || ""}|${chip.ring_width || ""}|${chip.ring_gap || ""}|${chip.ring_threshold_mode || ""}|${thresholdSig(chip.ring_thresholds)}|${chip.bar_min != null ? chip.bar_min : ""}|${chip.bar_max != null ? chip.bar_max : ""}|${chip.bar_color || ""}|${chip.bar_height || ""}|${chip.bar_gap || ""}|${chip.bar_threshold_mode || ""}|${thresholdSig(chip.bar_thresholds)}|${gaugeSig}|${sunPath ? `sp:${sunPath.night}|${sunPath.t.toFixed(3)}|${+sunPath.from}|${+sunPath.to}|${chip.date_format || ""}` : ""}`;
     return {
       html: chipHtml,
       sig,
@@ -3157,14 +3619,68 @@ class AtmosphericWeatherCard extends HTMLElement {
       posX,
       posY,
       width,
+      idx,
+      // For the temperature curve over the forecast chips.
+      fcEntry: isForecast ? fcEntry : null,
+      fcUnit: isForecast ? unit : "",
+      attribute: chip.attribute || "",
     };
   }
-  _updateImage(hass, isNight) {
+  // image_folder: the first picture of the folder that exists for this
+  // weather. undefined while a file is still being asked for, null for none.
+  _folderImage(state, isNight) {
+    const cfg = this._config;
+    const list = folderImageCandidates(cfg.image_folder, cfg.image_folder_type, state, isNight);
+    for (const url of list) {
+      if (url === FOLDER_BASE) {
+        if (cfg.image_night) return null;
+        continue;
+      }
+      const seen = _folderSeen.get(url);
+      if (seen === true) return url;
+      if (seen === false) continue;
+      let wait = _folderWait.get(url);
+      if (!wait) {
+        wait = this._probeImage(url).then((ok) => {
+          _folderSeen.set(url, ok === true);
+          _folderWait.delete(url);
+        });
+        _folderWait.set(url, wait);
+      }
+      wait.then(() => {
+        const a = this._imageArgs;
+        if (a && this.isConnected) this._updateImage(this._hass || a[0], a[1], a[2]);
+      });
+      return undefined;
+    }
+    return null;
+  }
+  // True when the picture loads. A missing file shows up as a 404 in the
+  // browser console once; that is how a browser tells.
+  _probeImage(url) {
+    return new Promise((resolve) => {
+      const probe = new Image();
+      probe.onload = () => resolve(true);
+      probe.onerror = () => resolve(false);
+      probe.src = url;
+    });
+  }
+  _updateImage(hass, isNight, state) {
     if (!this._elements || !this._elements.img || !this._elements.imageSlot)
       return;
+    this._imageArgs = [hass, isNight, state];
     const img = this._elements.img;
     const slot = this._elements.imageSlot;
-    const statusSrc = this._calculateStatusImage(hass, isNight);
+    let statusSrc = this._calculateStatusImage(hass, isNight);
+    if (!statusSrc && this._config.image_folder) {
+      const found = this._folderImage(state || this._lastState || "", isNight);
+      // Still asking: the shown image stays until the answer is in.
+      if (found === undefined) {
+        if (!img.getAttribute("src")) slot.hidden = true;
+        return;
+      }
+      statusSrc = found;
+    }
     const baseSrc = isNight ? this._config.image_night : this._config.image_day;
     const src = statusSrc || baseSrc || this._config.image_day || "";
     if ((img.getAttribute("src") || "") === src) {
@@ -3291,8 +3807,8 @@ class AtmosphericWeatherCard extends HTMLElement {
       });
     }
     this._marqueeObserver.disconnect();
-    const bt = this._elements && this._elements.chipsRow;
-    if (bt) {
+    for (const bt of [this._elements && this._elements.chipsRow, this._elements && this._elements.chipsRow2]) {
+      if (!bt) continue;
       bt.querySelectorAll(".chip.overflow-marquee").forEach((chip) =>
         this._marqueeObserver.observe(chip),
       );
@@ -3338,10 +3854,12 @@ class AtmosphericWeatherCard extends HTMLElement {
       host.style.removeProperty("--awc-marquee-duration");
     }
   }
-  _computeVerticalVisHeight() {
-    const bt = this._elements && this._elements.chipsRow;
+  _computeVerticalVisHeight(
+    bt = this._elements && this._elements.chipsRow,
+    cfg = this._config,
+  ) {
     if (!bt || !bt.children.length) return;
-    const visCount = parseInt(this._config.chip_area_scroll_count, 10);
+    const visCount = parseInt(cfg.chip_area_scroll_count, 10);
     if (!Number.isFinite(visCount) || visCount < 1) return;
     const firstChip = bt.children[0];
     if (!firstChip || firstChip.offsetHeight < 1) return;
@@ -5673,8 +6191,8 @@ class AtmosphericWeatherCard extends HTMLElement {
   _drawHail(ctx, w, h, effectiveWind) {
     drawHail(this, ctx, w, h, effectiveWind);
   }
-  _drawLightning(ctx, w, h) {
-    drawLightning(this, ctx, w, h);
+  _drawLightning(ctx, w, h, boltCtx) {
+    drawLightning(this, ctx, w, h, boltCtx);
   }
   _drawFog(ctx, w) {
     drawFog(this, ctx, w);
@@ -5723,11 +6241,78 @@ class AtmosphericWeatherCard extends HTMLElement {
     const effectiveWind = advanceWindAndPulse(this);
     try {
       renderAnimationFrame(this, bg, mid, fg, w, h, dpr, effectiveWind);
+      this._tickFrost(timestamp);
     } catch (e) {
       // A single rendering error must never permanently stop the RAF loop.
       console.error("ATMO-WEATHER-CARD: render frame failed", e);
     }
     this._animID = requestAnimationFrame(this._boundAnimate);
+  }
+  // Rime on the card (effect_frost). Only on a card with its own background:
+  // the immersive style has no pane for it. It appears with a soft fade at
+  // the measured amount, then grows and thaws slowly when the readings
+  // change. Redrawn at most once a second, and when size or light change.
+  _tickFrost(now) {
+    const el = this._elements && this._elements.frost;
+    if (!el) return;
+    let f = this._frost;
+    // Switched off, no effects, or the immersive style: gone at once.
+    if (!this._fx.frost || this._perfEffects < 1 || this._isImmersive) {
+      if (f) f.layer.destroy();
+      this._frost = null;
+      return;
+    }
+    const target = this._frostTarget;
+    const on = !!target && target.amount > 0;
+    const goal = on ? target.amount : 0;
+    if (!f) {
+      if (!on) return;
+      f = this._frost = {
+        layer: new FrostLayer(el),
+        shown: goal,
+        drawn: -1,
+        key: "",
+        lastDraw: 0,
+        last: now,
+        fresh: true,
+      };
+    }
+    const dt = Math.max(0, Math.min(1, (now - f.last) / 1000));
+    f.last = now;
+    const d = goal - f.shown;
+    const step = (d > 0 ? FROST_GROW_PER_S : FROST_THAW_PER_S) * dt;
+    f.shown = Math.abs(d) <= step ? goal : f.shown + Math.sign(d) * step;
+    if (f.shown <= 0 && !on) {
+      f.layer.destroy();
+      this._frost = null;
+      return;
+    }
+    // The card size in CSS pixels, from the last resize (no layout read here).
+    const dims = this._cachedDimensions;
+    const dpr = dims.dpr || 1;
+    const resized = f.layer.resize(dims.width / dpr, dims.height / dpr);
+    if (!f.layer.w) return;
+    const t = target || { density: 0, night: false, mode: "matte", strength: 0 };
+    const sun = this._getCelestialPosition(f.layer.w, f.layer.h);
+    const light = {
+      mode: t.mode,
+      strength: t.strength,
+      x: Math.round(sun.x / 8) * 8,
+      y: Math.round(sun.y / 8) * 8,
+    };
+    const key = `${t.density.toFixed(2)}|${t.night}|${light.mode}|${light.strength}|${light.x}|${light.y}`;
+    const grown = Math.abs(f.shown - f.drawn) > 0.005 && now - f.lastDraw >= FROST_REDRAW_MS;
+    if (resized || key !== f.key || grown || f.drawn < 0) {
+      f.layer.draw(f.shown, t.density, t.night, light);
+      f.drawn = f.shown;
+      f.key = key;
+      f.lastDraw = now;
+    }
+    if (f.fresh) {
+      // Shown in the next frame, so the fade runs from 0.
+      f.fresh = false;
+      requestAnimationFrame(() => this._frost && this._frost.layer.setVisible(true));
+    }
   }
   _startAnimation() {
     if (this._animID === null && this._isVisible) {
@@ -5744,7 +6329,8 @@ class AtmosphericWeatherCard extends HTMLElement {
   }
 }
 const CARD_NAME = "atmo-weather-card";
-const LAYOUT_LABELS = Object.freeze({ standard: "Standard", compact: "Compact", wide: "Wide" });
+// Offered in the card picker. Home brings its own house until you add yours.
+const LAYOUT_LABELS = Object.freeze({ standard: "Standard", compact: "Compact", wide: "Wide", home: "Home", panel: "Panel" });
 window.customCards = window.customCards || [];
 
 if (!customElements.get(CARD_NAME)) {
@@ -5759,7 +6345,7 @@ if (!customElements.get(CARD_NAME)) {
     // Home Assistant suggests it for a weather entity, in each layout.
     getEntitySuggestion: (hass, entityId) =>
       typeof entityId === "string" && entityId.startsWith("weather.")
-        ? CARD_LAYOUTS.map((layout) => ({
+        ? Object.keys(LAYOUT_LABELS).map((layout) => ({
             label: LAYOUT_LABELS[layout],
             config: { type: `custom:${CARD_NAME}`, ...stubConfig(entityId, hass, layout) },
           }))

@@ -68,7 +68,7 @@ test("the editor shows German texts in a German Home Assistant", async () => {
   document.body.append(editor);
   await editor.updateComplete;
   const text = editor.shadowRoot.textContent;
-  assert.ok(text.includes("Leistung & Effekte"));
+  assert.ok(text.includes("Himmel & Wetter"));
   assert.ok(text.includes("Sonne & Mond"));
   const form = editor.shadowRoot.querySelector("ha-form");
   assert.equal(form.computeLabel({ name: "precipitation_entity" }), "Niederschlagssensor");
@@ -80,6 +80,6 @@ test("the editor shows German texts in a German Home Assistant", async () => {
   english.setConfig({ weather_entity: "weather.home" });
   document.body.append(english);
   await english.updateComplete;
-  assert.ok(english.shadowRoot.textContent.includes("Performance & effects"));
+  assert.ok(english.shadowRoot.textContent.includes("Sky & weather"));
   english.remove();
 });

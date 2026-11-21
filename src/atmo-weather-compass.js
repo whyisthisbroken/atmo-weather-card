@@ -10,6 +10,8 @@ export const COMPASS_STYLES = Object.freeze([
   "pill",
   "band",
   "vane",
+  "ticks",
+  "badge",
 ]);
 export const COMPASS_POSITIONS = Object.freeze([
   "auto",
@@ -31,6 +33,8 @@ const AUTO_POSITION = Object.freeze({
   pill: "top-right",
   band: "bottom-center",
   vane: "bottom-right",
+  ticks: "top-right",
+  badge: "top-right",
 });
 
 const POINTS = Object.freeze({
@@ -59,6 +63,37 @@ export function resolveCompassPosition(style, position, taken = []) {
   const flipCol = col === "left" ? "right" : col === "right" ? "left" : col;
   const options = [`${flipRow}-${col}`, `${row}-${flipCol}`, `${flipRow}-${flipCol}`];
   return options.find((p) => !taken.includes(p)) || home;
+}
+
+// A chip area set to 100 % wide fills its whole row.
+export const isFullWidth = (width) => /^100(\.0+)?\s*%$/.test(String(width ?? "").trim());
+// The three places of a top or bottom row ("bottom-left" -> bottom-left,
+// bottom-center, bottom-right); none for a side area like "right".
+export const wholeRow = (area) => {
+  const row = String(area).split("-")[0];
+  return row === "top" || row === "bottom" ? [`${row}-left`, `${row}-center`, `${row}-right`] : [];
+};
+
+// The places "auto" tries on the card, in order: the one picked from the
+// config first, then the other corners and edges that the config leaves free,
+// then the ones it marks as taken. The card measures each against the chips
+// and keeps the first one that covers none.
+export function compassCandidates(style, taken = []) {
+  const first = resolveCompassPosition(style, "auto", taken);
+  const home = AUTO_POSITION[style] || "bottom-right";
+  const [row, col] = home.split("-");
+  const flipRow = row === "top" ? "bottom" : "top";
+  const flipCol = col === "left" ? "right" : col === "right" ? "left" : col;
+  const order = [
+    first,
+    home,
+    `${flipRow}-${col}`,
+    `${row}-${flipCol}`,
+    `${flipRow}-${flipCol}`,
+    ...COMPASS_POSITIONS.filter((p) => p !== "auto"),
+  ];
+  const unique = [...new Set(order)].filter((p) => COMPASS_POSITIONS.includes(p) && p !== "auto");
+  return [...unique.filter((p) => !taken.includes(p)), ...unique.filter((p) => taken.includes(p))];
 }
 
 // Turns a new bearing into an angle that continues from the previous one, so a
@@ -206,6 +241,36 @@ function bandSvg(lang) {
 </svg>`;
 }
 
+// A ring of fine ticks; the long tick with its pointer marks where the wind
+// comes from, the speed sits in the middle.
+function ticksSvg() {
+  let d = "";
+  for (let i = 0; i < 36; i++) {
+    const a = (i * 10 * Math.PI) / 180;
+    const r1 = i % 9 === 0 ? 27 : 29.5;
+    const p = (r) => `${(38 + r * Math.sin(a)).toFixed(1)} ${(38 - r * Math.cos(a)).toFixed(1)}`;
+    d += `M${p(r1)}L${p(32)}`;
+  }
+  return `<svg class="cmp-svg" viewBox="0 0 76 76" width="76" height="76" aria-hidden="true">
+  <path class="cmp-thin cmp-glow" d="${d}" opacity=".6"/>
+  <g class="cmp-rot cmp-glow" data-cx="38" data-cy="38">
+    <path class="cmp-line" d="M38 1V9" style="stroke-width:3"/>
+    <path class="cmp-ink" d="M38 14L34.8 9H41.2Z"/>
+  </g>
+</svg>`;
+}
+
+// A frosted tile: an arrow in a circle that points where the wind blows,
+// next to the speed and the compass point.
+function badgeSvg() {
+  return `<svg class="cmp-svg" viewBox="0 0 30 30" width="30" height="30" aria-hidden="true">
+  <circle class="cmp-dot" cx="15" cy="15" r="14"/>
+  <g class="cmp-rot" data-cx="15" data-cy="15">
+    <path class="cmp-ink" d="M15 6L21 20L15 16.5L9 20Z"/>
+  </g>
+</svg>`;
+}
+
 function vaneSvg(lang) {
   const p = pointsFor(lang);
   return `<svg class="cmp-svg" viewBox="0 0 80 80" width="80" height="80" aria-hidden="true">
@@ -237,10 +302,14 @@ export function compassMarkup(style, position, lang, background = false) {
           ? pillSvg()
           : style === "band"
             ? bandSvg(lang)
-            : vaneSvg(lang);
+            : style === "ticks"
+              ? ticksSvg()
+              : style === "badge"
+                ? badgeSvg()
+                : vaneSvg(lang);
   const label = `<div class="cmp-label"></div>`;
   // The chip has its own frosted background already.
-  const bg = background && style !== "pill" ? " cmp-bg" : "";
+  const bg = background && style !== "pill" && style !== "badge" ? " cmp-bg" : "";
   return `<div class="cmp cmp-style-${style} cmp-pos-${position}${bg}">${svg}${label}</div>`;
 }
 
@@ -248,7 +317,8 @@ export function compassMarkup(style, position, lang, background = false) {
 // needles point into the wind, where it comes from. North is up, east right,
 // the same as the wind lines.
 export function styleRotation(style, angle) {
-  return style === "arrow" ? angle + 90 : angle;
+  // The badge arrow points where the wind blows, like the arrow style.
+  return style === "arrow" ? angle + 90 : style === "badge" ? angle + 180 : angle;
 }
 
 // Applies an unwrapped angle to the rotating parts of a built compass.

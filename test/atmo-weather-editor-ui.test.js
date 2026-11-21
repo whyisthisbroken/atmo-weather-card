@@ -19,6 +19,7 @@ const CHIPS = {
   forecast: { ...FORECAST, forecast_offset: 1, sub_value_attribute: "templow", sub_value_position: "beside" },
   hourly: { ...FORECAST, forecast: "hourly", icon: "weather", icon_path: "/local/icons/" },
   ring: { entity: "sensor.temperature", type: "ring", ring_min: 0, ring_max: 40, ring_thresholds: [{ value: 10, color: "red" }] },
+  sunPath: { entity: "sun.sun", type: "sun_path", date_format: "%H:%M" },
   bar: { entity: "sensor.temperature", type: "bar", bar_color: "#ff0000", bar_threshold_mode: "gradient", bar_thresholds: [{ value: 10, color: "red" }] },
   custom: { entity: "sensor.time", position: "custom", position_anchor: "top-left", position_x: "pad", position_y: "16px", background: true, behind_effects: true, fancy_unit: true },
   styled: { entity: "binary_sensor.door", style: "stacked", align: "center", label_overflow: "marquee", overflow: "wrap", tap_action: { action: "toggle" }, background_color: "rgba(10,20,30,0.5)" },
@@ -106,7 +107,7 @@ test("the editor renders nothing without hass", async () => {
   assert.equal(editor.shadowRoot.querySelector("ha-form"), null);
 });
 
-for (const openPanel of ["sun_moon", "appearance", "chips", "image", "cards", "performance"]) {
+for (const openPanel of ["layouts", "card", "chips", "sky", "image", "cards", "performance"]) {
   test(`every control in panel ${openPanel} leaves a valid config`, async () => {
     const { editor, emitted } = await mountEditor({
       weather_entity: "weather.home",
@@ -221,12 +222,12 @@ test("the wind display style can be picked in the editor", async () => {
 
 test("the layout picker writes a layout and Free removes it", async () => {
   const { editor, emitted } = await mountEditor({ weather_entity: "weather.home" });
-  editor._openPanel = "appearance";
+  editor._openPanel = "layouts";
   await settle(editor);
   const button = (value) => editor.shadowRoot.querySelector(`button[data-field="card_layout"][data-value="${value}"]`);
 
   assert.ok(button("").classList.contains("active"));
-  for (const layout of ["standard", "compact", "wide"]) {
+  for (const layout of ["standard", "compact", "wide", "home", "panel"]) {
     button(layout).click();
     await settle(editor);
     assert.equal(emitted.at(-1).card_layout, layout);
@@ -240,7 +241,7 @@ test("the layout picker writes a layout and Free removes it", async () => {
 
 test("leaves can be picked as wind style and bring their density slider", async () => {
   const { editor, emitted } = await mountEditor({ weather_entity: "weather.home", sun_entity: "sun.sun" });
-  editor._openPanel = "performance";
+  editor._openPanel = "sky";
   await settle(editor);
   editor.shadowRoot.querySelector('button[data-field="wind_style"][data-value="leaves"]').click();
   await settle(editor);
@@ -251,7 +252,7 @@ test("leaves can be picked as wind style and bring their density slider", async 
 
 test("rain and snow switches save only the changed value", async () => {
   const { editor, emitted } = await mountEditor({ weather_entity: "weather.home" });
-  editor._openPanel = "performance";
+  editor._openPanel = "sky";
   await settle(editor);
   const sw = (key) => editor.shadowRoot.querySelector(`ha-switch[data-key="${key}"]`);
   for (const [key, def] of [["effect_rain_splash", true], ["effect_snow_edge", true], ["effect_spill", false]]) {
@@ -352,7 +353,7 @@ test("a chosen precipitation sensor stays in the list", async () => {
 
 test("effect switches save only when turned off", async () => {
   const { editor, emitted } = await mountEditor({ weather_entity: "weather.home" });
-  editor._openPanel = "performance";
+  editor._openPanel = "sky";
   await settle(editor);
   const sw = (key) => editor.shadowRoot.querySelector(`ha-switch[data-key="${key}"]`);
   for (const key of [
@@ -379,7 +380,7 @@ test("effect switches save only when turned off", async () => {
 
 test("the frequency sliders follow their switches", async () => {
   const { editor } = await mountEditor({ weather_entity: "weather.home", effect_comets: false });
-  editor._openPanel = "performance";
+  editor._openPanel = "sky";
   await settle(editor);
   const labels = [...editor.shadowRoot.querySelectorAll(".indent .awc-slider-label")].map((el) => el.textContent);
   assert.deepEqual(labels, ["Frequency"]);
@@ -543,11 +544,11 @@ test("sliders without a saved value show what the card uses", async () => {
     );
     return Number(slider.querySelector(".awc-slider-num").value);
   };
-  assert.equal(await value("sun_moon", "Size (px)"), 62);
+  assert.equal(await value("sky", "Size (px)"), 62);
   // The card sits at z-index 1 without card_stack_order.
-  assert.equal(await value("appearance", "Layer Order"), 1);
+  assert.equal(await value("card", "Layer Order"), 1);
   assert.match(readFileSync(new URL("../src/atmo-weather-styles.js", import.meta.url), "utf8"),/#card-root \{[^}]*z-index: var\(--awc-stack-order, 1\)/);
-  assert.equal(await value("performance", "Star Twinkle Speed"), 0.5);
+  assert.equal(await value("sky", "Star Twinkle Speed"), 0.5);
   assert.equal(await value("performance", "Animation Speed"), 1);
 });
 
@@ -615,6 +616,35 @@ test("the fade time slider shows 1 s by default and keeps 0", async () => {
   assert.equal(fadeSlider(bare.editor), undefined);
 });
 
+test("home with the bundled house offers its placement, smaller and lower than an own picture", async () => {
+  const slider = (editor, label) =>
+    [...editor.shadowRoot.querySelectorAll(".awc-slider")].find((s) => s.textContent.includes(label));
+  const { editor, emitted } = await mountEditor({ weather_entity: "weather.home", card_layout: "home" });
+  editor._openPanel = "image";
+  await settle(editor);
+  // The preview shows the house, the sliders the values the card uses.
+  assert.match(editor.shadowRoot.querySelector(".image-preview-img").getAttribute("style"), /house-day.webp/);
+  assert.equal(slider(editor, "Image Scale").querySelector(".awc-slider-range").value, "55");
+  assert.equal(slider(editor, "Max width").querySelector(".awc-slider-range").value, "58");
+  assert.ok(slider(editor, "Fade time"));
+  // Making it bigger saves the own value.
+  const range = slider(editor, "Image Scale").querySelector(".awc-slider-range");
+  range.value = "70";
+  range.dispatchEvent(new Event("change"));
+  await settle(editor);
+  assert.equal(emitted.at(-1).image_scale, 70);
+  // An own picture: the layout values for own pictures.
+  const own = await mountEditor({ weather_entity: "weather.home", card_layout: "home", image_day: "/local/a.png" });
+  own.editor._openPanel = "image";
+  await settle(own.editor);
+  assert.equal(slider(own.editor, "Image Scale").querySelector(".awc-slider-range").value, "70");
+  // image_day: none: no picture, nothing to place.
+  const none = await mountEditor({ weather_entity: "weather.home", card_layout: "home", image_day: "none" });
+  none.editor._openPanel = "image";
+  await settle(none.editor);
+  assert.equal(slider(none.editor, "Image Scale"), undefined);
+});
+
 // Images by state: a hass whose formatEntityState names the state it is given, like Home Assistant.
 const ruleHass = () => {
   const hass = makeHass({ states: { "sensor.depth": { entity_id: "sensor.depth", state: "ok", attributes: { depth: 4, friendly_name: "Depth" } } } });
@@ -629,19 +659,21 @@ const RULES = [
 const ruleEvent = (value) => ({ stopPropagation() {}, detail: { value } });
 const openStates = async (config) => {
   const mounted = await mountEditor({ weather_entity: "weather.home", ...config }, ruleHass());
-  mounted.editor._openPanel = "image_states";
+  mounted.editor._openPanel = "image";
+  mounted.editor._openSection = "image_states";
   await settle(mounted.editor);
   return mounted;
 };
 
 test("images by state have a section of their own with one row per entry", async () => {
   const { editor } = await openStates({ image_conditions: RULES });
-  const panel = editor.shadowRoot.querySelector('ha-expansion-panel[data-panel="image_states"]');
+  const panel = editor.shadowRoot.querySelector('details.section[data-section="image_states"]');
   const rows = [...panel.querySelectorAll(".card-row")].map((r) => r.querySelector(".card-row-text").textContent.replace(/\s+/g, " ").trim());
   assert.deepEqual(rows, ["Dooron, open, home or active", "HomeRainy, Pouring"]);
   assert.ok(panel.querySelectorAll(".rule-thumb.has").length === 2);
-  // The image panel no longer holds the state images.
-  assert.ok(!editor.shadowRoot.querySelector('ha-expansion-panel[data-panel="image"] .card-row'));
+  // The state images sit in their own section, apart from the placement.
+  assert.ok(!editor.shadowRoot.querySelector('details.section[data-section="image_place"] .card-row'));
+  assert.ok(panel.open);
   // Open entry: previews for day and night above the image fields.
   editor._expandedImageRule = 1;
   await settle(editor);
@@ -692,7 +724,7 @@ test("the state choices fit the entity", async () => {
 
 test("the status entity block shows only for cards that already use it", async () => {
   const without = await openStates({});
-  const panel = (e) => e.shadowRoot.querySelector('ha-expansion-panel[data-panel="image_states"]');
+  const panel = (e) => e.shadowRoot.querySelector('details.section[data-section="image_states"]');
   assert.ok(!panel(without.editor).textContent.includes("Status entity"));
   assert.ok(panel(without.editor).textContent.includes("No images by state yet."));
   const legacy = await openStates({ status_entity: "binary_sensor.door", status_day: "/local/open.png" });
@@ -733,4 +765,282 @@ test("Home Assistant's card editors load through a stack card editor", async () 
     delete window.loadCardHelpers;
     delete HTMLDivElement.getConfigElement;
   }
+});
+
+test("the panels come in a fixed order, from layouts to performance", async () => {
+  const { editor } = await mountEditor({ weather_entity: "weather.home" });
+  const ids = [...editor.shadowRoot.querySelectorAll("ha-expansion-panel")].map((p) => p.dataset.panel);
+  assert.deepEqual(ids, ["layouts", "card", "chips", "sky", "image", "cards", "performance"]);
+});
+
+test("layout tiles show the current layout with a check mark", async () => {
+  const { editor, emitted } = await mountEditor({ weather_entity: "weather.home", card_layout: "compact" });
+  editor._openPanel = "layouts";
+  await settle(editor);
+  const tiles = [...editor.shadowRoot.querySelectorAll(".layout-tile")];
+  assert.deepEqual(tiles.map((t) => t.dataset.value), ["standard", "compact", "wide", "home", "panel", ""]);
+  const active = tiles.filter((t) => t.classList.contains("active"));
+  assert.equal(active.length, 1);
+  assert.equal(active[0].dataset.value, "compact");
+  assert.equal(active[0].getAttribute("aria-checked"), "true");
+  assert.ok(active[0].querySelector(".layout-check"));
+  assert.ok(tiles.every((t) => t.querySelector("svg") && t.querySelector(".layout-desc").textContent.trim()));
+  tiles[2].click();
+  await settle(editor);
+  assert.equal(emitted.at(-1).card_layout, "wide");
+});
+
+test("only one section is open at a time, and it stays open on re-render", async () => {
+  const { editor } = await mountEditor({ weather_entity: "weather.home" });
+  editor._openPanel = "sky";
+  await settle(editor);
+  const section = (id) => editor.shadowRoot.querySelector(`details.section[data-section="${id}"]`);
+  const ids = [...editor.shadowRoot.querySelectorAll('ha-expansion-panel[data-panel="sky"] details.section')].map((d) => d.dataset.section);
+  assert.deepEqual(ids, ["sun_moon", "light", "wind", "precip", "night", "fauna"]);
+  assert.ok(ids.every((id) => !section(id).open));
+
+  section("wind").open = true;
+  section("wind").dispatchEvent(new Event("toggle"));
+  await settle(editor);
+  assert.equal(editor._openSection, "wind");
+  section("night").open = true;
+  section("night").dispatchEvent(new Event("toggle"));
+  await settle(editor);
+  assert.ok(section("night").open);
+  assert.ok(!section("wind").open);
+  // The closed one reports its toggle late; the open one stays.
+  section("wind").dispatchEvent(new Event("toggle"));
+  await settle(editor);
+  assert.equal(editor._openSection, "night");
+  editor.requestUpdate();
+  await settle(editor);
+  assert.ok(section("night").open);
+  section("night").open = false;
+  section("night").dispatchEvent(new Event("toggle"));
+  await settle(editor);
+  assert.equal(editor._openSection, null);
+});
+
+test("a chip showing a point in time offers a date format instead of a unit", async () => {
+  const hass = makeHass();
+  hass.states["sun.sun"].attributes.next_rising = new Date().toISOString();
+  const { editor, emitted } = await mountEditor(
+    { weather_entity: "weather.home", chips: [{ entity: "sun.sun", attribute: "next_rising" }, { entity: "sensor.temperature" }, { ...FORECAST, forecast_offset: 1 }] },
+    hass,
+  );
+  editor._openPanel = "chips";
+  const names = async (idx) => {
+    editor._expandedChip = idx;
+    editor[`_acc_open_${idx}`] = "text";
+    editor[`_text_acc_${idx}`] = "text_value";
+    await settle(editor);
+    const forms = [...editor.shadowRoot.querySelectorAll("ha-form")].flatMap((f) => (f.schema || []).map((s) => s.name));
+    return forms;
+  };
+  assert.ok((await names(0)).includes("date_format"));
+  assert.ok(!(await names(0)).includes("unit_format"));
+  assert.ok((await names(1)).includes("unit_format"));
+  assert.ok(!(await names(1)).includes("date_format"));
+  // A forecast chip offers it for its day label.
+  editor._expandedChip = 2;
+  editor._acc_open_2 = "text";
+  editor._text_acc_2 = "text_label";
+  await settle(editor);
+  const form = [...editor.shadowRoot.querySelectorAll("ha-form")].find((f) => (f.schema || []).some((s) => s.name === "date_format"));
+  assert.ok(form);
+  form.dispatchEvent(new CustomEvent("value-changed", { detail: { value: { ...form.data, date_format: "%a %-d." } }, bubbles: true }));
+  await settle(editor);
+  assert.equal(emitted.at(-1).chips[2].date_format, "%a %-d.");
+  form.dispatchEvent(new CustomEvent("value-changed", { detail: { value: { ...form.data, date_format: "" } }, bubbles: true }));
+  await settle(editor);
+  assert.ok(!("date_format" in emitted.at(-1).chips[2]));
+  validate(emitted.at(-1));
+});
+
+test("the chip type offers Sun path for sun entities and leaves no gauge keys behind", async () => {
+  const typeButtons = (editor) => [...editor.shadowRoot.querySelectorAll(".chip-tab-body .segmented[aria-label='Chip type'] button")].map((b) => b.textContent.trim());
+  let { editor, emitted } = await mountEditor({ weather_entity: "weather.home", chips: [{ entity: "sun.sun", type: "ring", ring_min: 0, ring_max: 10 }] });
+  editor._openPanel = "chips";
+  editor._expandedChip = 0;
+  editor._acc_open_0 = "look";
+  await settle(editor);
+  assert.ok(typeButtons(editor).includes("Sun path"));
+  [...editor.shadowRoot.querySelectorAll(".chip-tab-body .segmented[aria-label='Chip type'] button")].find((b) => b.textContent.trim() === "Sun path").click();
+  await settle(editor);
+  const chip = emitted.at(-1).chips[0];
+  assert.equal(chip.type, "sun_path");
+  assert.deepEqual(Object.keys(chip).filter((k) => k.startsWith("sun_path_")), []);
+  document.body.replaceChildren();
+  ({ editor } = await mountEditor({ weather_entity: "weather.home", chips: [{ entity: "sensor.temperature" }] }));
+  editor._openPanel = "chips";
+  editor._expandedChip = 0;
+  editor._acc_open_0 = "look";
+  await settle(editor);
+  assert.deepEqual(typeButtons(editor), ["Default", "Ring", "Bar"]);
+});
+
+test("the visibility tab writes Home Assistant conditions for a chip", async () => {
+  const { editor, emitted } = await mountEditor({ weather_entity: "weather.home", chips: [{ entity: "sensor.temperature" }] });
+  editor._openPanel = "chips";
+  editor._expandedChip = 0;
+  editor._acc_open_0 = "visibility";
+  await settle(editor);
+  const visForm = () => [...editor.shadowRoot.querySelectorAll("ha-form")].find((f) => (f.schema || []).some((s) => s.name === "condition"));
+  const send = async (value) => {
+    const form = visForm();
+    form.dispatchEvent(new CustomEvent("value-changed", { detail: { value: { ...form.data, ...value } }, bubbles: true }));
+    await settle(editor);
+    return emitted.at(-1).chips[0].visibility;
+  };
+  assert.equal(visForm(), undefined);
+  const add = [...editor.shadowRoot.querySelectorAll(".add-card-btn")].find((b) => b.textContent.includes("Add condition"));
+  add.click();
+  await settle(editor);
+  // A new condition starts on the chip's own entity.
+  assert.deepEqual(emitted.at(-1).chips[0].visibility, [{ condition: "state", entity: "sensor.temperature" }]);
+  assert.deepEqual(await send({ state: ["21.5"] }), [{ condition: "state", entity: "sensor.temperature", state: "21.5" }]);
+  assert.deepEqual(await send({ match: "not", state: ["1", "2"] }), [{ condition: "state", entity: "sensor.temperature", state_not: ["1", "2"] }]);
+  // Another type starts empty.
+  assert.deepEqual(await send({ condition: "numeric_state" }), [{ condition: "numeric_state" }]);
+  assert.deepEqual(await send({ entity: "sensor.temperature", above: 3, below: "" }), [{ condition: "numeric_state", entity: "sensor.temperature", above: 3 }]);
+  await send({ condition: "screen" });
+  assert.deepEqual(await send({ screens: ["mobile", "wide"] }), [{ condition: "screen", media_query: "(max-width: 767px), (min-width: 1280px)" }]);
+  assert.deepEqual(visForm().data.screens, ["mobile", "wide"]);
+  assert.deepEqual(await send({ media_query: "(orientation: portrait)" }), [{ condition: "screen", media_query: "(orientation: portrait)" }]);
+  await send({ condition: "time" });
+  assert.deepEqual(await send({ after: "08:00:00", before: "18:30:00", weekdays: ["sat", "mon"] }), [{ condition: "time", after: "08:00", before: "18:30", weekdays: ["mon", "sat"] }]);
+  await send({ condition: "user" });
+  assert.deepEqual(await send({ users: ["u1"] }), [{ condition: "user", users: ["u1"] }]);
+  validate(emitted.at(-1));
+  // Removing the last condition removes the key.
+  editor.shadowRoot.querySelector(".vis-cond-head .clear-btn").click();
+  await settle(editor);
+  assert.ok(!("visibility" in emitted.at(-1).chips[0]));
+});
+
+test("an and/or/not group stays as it is and points to YAML", async () => {
+  const group = { condition: "or", conditions: [{ condition: "user", users: ["u1"] }] };
+  const { editor } = await mountEditor({ weather_entity: "weather.home", chips: [{ entity: "sensor.temperature", visibility: [group] }] });
+  editor._openPanel = "chips";
+  editor._expandedChip = 0;
+  editor._acc_open_0 = "visibility";
+  await settle(editor);
+  assert.ok(editor.shadowRoot.textContent.includes("YAML editor"));
+  assert.ok(editor.shadowRoot.querySelector(".vis-status"));
+});
+
+test("own CSS sits in the card panel and writes the css option", async () => {
+  const { editor, emitted } = await mountEditor({ weather_entity: "weather.home" });
+  editor._openPanel = "card";
+  editor._openSection = "css";
+  await settle(editor);
+  const form = [...editor.shadowRoot.querySelectorAll("ha-form")].find((f) => (f.schema || []).some((s) => s.name === "css"));
+  assert.ok(form);
+  form.dispatchEvent(new CustomEvent("value-changed", { detail: { value: { ...form.data, css: ".chip { color: red; }" } }, bubbles: true }));
+  await settle(editor);
+  assert.equal(emitted.at(-1).css, ".chip { color: red; }");
+  validate(emitted.at(-1));
+});
+
+test("the temperature curve is picked in the chips panel, its height only with a curve", async () => {
+  const { editor, emitted } = await mountEditor({ weather_entity: "weather.home", chips: [{ ...FORECAST, forecast_offset: 1 }], forecast_curve: "line", forecast_curve_height: 60 });
+  editor._openPanel = "chips";
+  await settle(editor);
+  const form = [...editor.shadowRoot.querySelectorAll("ha-form")].find((f) => (f.schema || []).some((s) => s.name === "forecast_curve"));
+  assert.ok(form);
+  assert.deepEqual(form.schema[0].selector.select.options.map((o) => o.value), ["off", "line", "soft", "band", "color"]);
+  form.dispatchEvent(new CustomEvent("value-changed", { detail: { value: { ...form.data, forecast_curve: "color" } }, bubbles: true }));
+  await settle(editor);
+  assert.equal(emitted.at(-1).forecast_curve, "color");
+  assert.equal(emitted.at(-1).forecast_curve_height, 60);
+  validate(emitted.at(-1));
+  form.dispatchEvent(new CustomEvent("value-changed", { detail: { value: { ...form.data, forecast_curve: "" } }, bubbles: true }));
+  await settle(editor);
+  // Without a curve its height goes too.
+  assert.ok(!("forecast_curve" in emitted.at(-1)));
+  assert.ok(!("forecast_curve_height" in emitted.at(-1)));
+});
+
+test("a chip moves between the two chip areas and free positioning", async () => {
+  const { editor, emitted } = await mountEditor({ weather_entity: "weather.home", chips: [{ entity: "sensor.temperature" }, { entity: "weather.home", attribute: "humidity" }] });
+  editor._openPanel = "chips";
+  editor._expandedChip = 0;
+  editor._acc_open_0 = "position";
+  await settle(editor);
+  const pick = async (place) => {
+    editor.shadowRoot.querySelector(`[data-place="${place}"]`).click();
+    await settle(editor);
+    return emitted.at(-1).chips[0];
+  };
+  // Without a second area the list shows the grid icon, and a button adds the area.
+  assert.ok(editor.shadowRoot.querySelector(".add-area-two"));
+  assert.ok(!editor.shadowRoot.querySelector(".chip-badge-area"));
+  assert.deepEqual(await pick("2"), { entity: "sensor.temperature", area: 2 });
+  assert.deepEqual([...editor.shadowRoot.querySelectorAll(".chip-badge-area")].map((b) => b.textContent.trim()), ["2", "1"]);
+  assert.ok(!editor.shadowRoot.querySelector(".add-area-two"));
+  const free = await pick("free");
+  assert.equal(free.position, "custom");
+  assert.ok(!("area" in free));
+  assert.deepEqual(await pick("1"), { entity: "sensor.temperature" });
+  validate(emitted.at(-1));
+});
+
+test("the second chip area has its own place, layout, style and background", async () => {
+  const { editor, emitted } = await mountEditor({ weather_entity: "weather.home", chip_area_background: true, chips: [{ entity: "sensor.temperature", area: 2 }] });
+  editor._openPanel = "chips";
+  await settle(editor);
+  const area = () => emitted.at(-1).chip_area_2;
+  const cell = editor.shadowRoot.querySelector('.area-two-grid [data-value="bottom-right"]');
+  cell.click();
+  await settle(editor);
+  assert.deepEqual(area(), { position: "bottom-right" });
+  editor.shadowRoot.querySelector('.area-two-layout [data-value="grid"]').click();
+  await settle(editor);
+  const cols = editor.shadowRoot.querySelector('[data-area-key="columns"]');
+  cols.value = "5";
+  cols.dispatchEvent(new Event("change"));
+  await settle(editor);
+  editor.shadowRoot.querySelector('.area-two-style [data-value="vertical"]').click();
+  await settle(editor);
+  editor.shadowRoot.querySelector('.area-two-bg [data-value="contrast"]').click();
+  await settle(editor);
+  assert.deepEqual(area(), { position: "bottom-right", layout: "grid", columns: 5, style: "vertical", background: true, background_style: "contrast" });
+  editor.shadowRoot.querySelector('.area-two-bg [data-value="off"]').click();
+  await settle(editor);
+  assert.ok(!("background" in area()));
+  validate(emitted.at(-1));
+  // Removing the area puts its chips back into the first one.
+  editor.shadowRoot.querySelector(".remove-area-two").click();
+  await settle(editor);
+  assert.ok(!("chip_area_2" in emitted.at(-1)));
+  assert.deepEqual(emitted.at(-1).chips, [{ entity: "sensor.temperature" }]);
+});
+
+test("the editor shows a layout's values grey and saves only your own", async () => {
+  const { editor, emitted } = await mountEditor({ weather_entity: "weather.home", card_layout: "panel" });
+  editor._openPanel = "chips";
+  await settle(editor);
+  // Shown: the layout's grid with two columns, marked as coming from the layout.
+  assert.equal(editor._formData.chip_area_layout, "grid");
+  const gridBtn = editor.shadowRoot.querySelector('button[data-field="chip_area_layout"][data-value="grid"]');
+  assert.ok(gridBtn.classList.contains("active"));
+  assert.ok(gridBtn.classList.contains("from-layout"));
+  // The layout's second area shows as well, grey.
+  assert.ok(editor.shadowRoot.querySelector(".from-layout-area"));
+  // A form that sends all its values back saves only the changed one.
+  const form = [...editor.shadowRoot.querySelectorAll("ha-form")].find((f) => (f.schema || []).some((s) => s.name === "forecast_curve"));
+  assert.equal(form.data.forecast_curve, "soft");
+  assert.match(editor._computeHelper({ name: "forecast_curve" }), /From the layout/);
+  form.dispatchEvent(new CustomEvent("value-changed", { detail: { value: { ...form.data, forecast_curve: "line" } }, bubbles: true }));
+  await settle(editor);
+  const saved = emitted.at(-1);
+  assert.equal(saved.forecast_curve, "line");
+  for (const k of ["chip_area_layout", "chip_area_columns", "card_height", "chip_area_2", "chip_style"]) assert.ok(!(k in saved), k);
+  // Your own value is no longer grey.
+  assert.ok(!editor._fromLayout("forecast_curve"));
+  // A change to the layout's second area keeps the rest of it.
+  editor.shadowRoot.querySelector('.area-two-style [data-value="inline"]').click();
+  await settle(editor);
+  assert.deepEqual(emitted.at(-1).chip_area_2, { position: "bottom-left", layout: "grid", columns: 5, width: "100%", gap: "4px", style: "inline" });
+  validate(emitted.at(-1));
 });

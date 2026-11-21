@@ -43,6 +43,8 @@ await Promise.all(
   ),
 );
 await copyFile(`${FONT_DIR}/LICENSE`, "dist/figtree-LICENSE.txt");
+// The house of the Home layout (src/atmo-weather-config.js, HOUSE_FILES).
+await cp("assets/house", "dist", { recursive: true });
 
 // docs/ is the GitHub Pages site. index.html (the landing page) and docs/*.html
 // (the documentation) are built from docs-src/; demo.html (the live demo) is

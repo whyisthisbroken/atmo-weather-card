@@ -25,6 +25,21 @@ import {
   spawnSplash,
 } from "../src/atmo-weather-precip.js";
 
+// Runs fn with a fixed random sequence, so chance-based tests always see the same draws.
+function seeded(fn, start = 7) {
+  const saved = Math.random;
+  let seed = start;
+  Math.random = () => {
+    seed = (seed * 16807) % 2147483647;
+    return (seed - 1) / 2147483646;
+  };
+  try {
+    fn();
+  } finally {
+    Math.random = saved;
+  }
+}
+
 function ctx() {
   const c = {
     drawImageCalls: 0,
@@ -237,13 +252,15 @@ test("a leaf crosses the card in the wind's direction", () => {
   assert.ok(palette.length === 12);
 });
 
-test("leaves spawn up to their limit and leave after crossing", () => {
-  const c = card({ _hass: { config: { latitude: 52 } }, _windKmh: 30, _leafTimer: 0 });
-  const g = ctx();
-  for (let i = 0; i < 200; i++) drawLeaves(c, g, 420, 230, 0);
-  assert.ok(c._leaves.length >= 1 && c._leaves.length <= 3);
-  assert.ok(g.fillCalls > 0);
-  c._precip = { leafDensity: 3 };
-  for (let i = 0; i < 600; i++) drawLeaves(c, g, 420, 230, Math.PI);
-  assert.ok(c._leaves.length <= 9);
-});
+// Seeded: with real chance the first 200 frames now and then spawned no leaf.
+test("leaves spawn up to their limit and leave after crossing", () =>
+  seeded(() => {
+    const c = card({ _hass: { config: { latitude: 52 } }, _windKmh: 30, _leafTimer: 0 });
+    const g = ctx();
+    for (let i = 0; i < 200; i++) drawLeaves(c, g, 420, 230, 0);
+    assert.ok(c._leaves.length >= 1 && c._leaves.length <= 3);
+    assert.ok(g.fillCalls > 0);
+    c._precip = { leafDensity: 3 };
+    for (let i = 0; i < 600; i++) drawLeaves(c, g, 420, 230, Math.PI);
+    assert.ok(c._leaves.length <= 9);
+  }));

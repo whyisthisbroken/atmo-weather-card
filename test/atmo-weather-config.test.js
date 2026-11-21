@@ -162,3 +162,29 @@ test("frame rates are 20, 30 or 60, and old values keep the rate they really had
   assert.ok(!("perf_fps" in migrateConfig({})));
   assert.deepEqual(Object.values(PERF_PRESETS).map((p) => p.perf_fps), [20, 30, 60]);
 });
+
+test("the second chip area reads its own keys and never the first area's", async () => {
+  const { areaTwoConfig, chipArea } = await import("../src/atmo-weather-config.js");
+  const base = { chip_area_position: "bottom-left", chip_area_layout: "grid", chip_area_columns: 3, chip_area_background: true, chip_style: "vertical", card_background_style: "contrast" };
+  const empty = areaTwoConfig(base);
+  assert.strictEqual(empty.chip_area_position, "top-left");
+  assert.strictEqual(empty.chip_area_layout, undefined);
+  assert.strictEqual(empty.chip_area_columns, undefined);
+  assert.strictEqual(empty.chip_area_background, false);
+  // The chip style and the background style stay unless the area sets its own.
+  assert.strictEqual(empty.chip_style, "vertical");
+  assert.strictEqual(empty.card_background_style, "contrast");
+  const own = areaTwoConfig({ ...base, chip_area_2: { position: "bottom-right", layout: "grid", columns: 5, gap: 4, background: true, style: "stacked", background_style: "frosted", grouped: "yes" } });
+  assert.strictEqual(own.chip_area_position, "bottom-right");
+  assert.strictEqual(own.chip_area_columns, 5);
+  assert.strictEqual(own.chip_area_gap, "4");
+  assert.strictEqual(own.chip_area_background, true);
+  assert.strictEqual(own.chip_area_grouped, false);
+  assert.strictEqual(own.chip_style, "stacked");
+  assert.strictEqual(own.card_background_style, "frosted");
+  assert.strictEqual(areaTwoConfig({ chip_area_2: [1] }).chip_area_position, "top-left");
+  assert.strictEqual(chipArea({ area: 2 }), 2);
+  assert.strictEqual(chipArea({ area: "2" }), 2);
+  assert.strictEqual(chipArea({ area: 3 }), 1);
+  assert.strictEqual(chipArea({}), 1);
+});

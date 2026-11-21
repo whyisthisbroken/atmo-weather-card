@@ -6,8 +6,8 @@ Security fixes are provided for the latest release only.
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 2026.11.7 | :white_check_mark: |
-| < 2026.11.7 | :x:            |
+| 2026.11.10 | :white_check_mark: |
+| < 2026.11.10 | :x:            |
 
 ## Reporting a Vulnerability
 

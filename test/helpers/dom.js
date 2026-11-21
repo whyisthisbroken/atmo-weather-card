@@ -18,6 +18,7 @@ function createContext() {
     createPattern: () => ({}),
     measureText: (text) => ({ width: String(text).length * 6 }),
     getImageData: (x, y, w, h) => ({ data: new Uint8ClampedArray(w * h * 4), width: w, height: h }),
+    createImageData: (w, h) => ({ data: new Uint8ClampedArray(w * h * 4), width: w, height: h }),
   };
   const state = {};
   return new Proxy(state, {

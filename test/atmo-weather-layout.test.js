@@ -1,7 +1,7 @@
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
 
-import { errors, makeHass, mountCard, runFrames } from "./helpers/dom.js";
+import { errors, makeHass, mountCard, resizeAll, runFrames } from "./helpers/dom.js";
 import {
   applyCardLayout,
   CARD_LAYOUTS,
@@ -9,6 +9,8 @@ import {
   layoutDefaults,
 } from "../src/atmo-weather-config.js";
 import { CLOUD_PALETTES } from "../src/atmo-weather-data.js";
+import { layoutChipLabel } from "../src/atmo-weather-helpers.js";
+import { makeTranslator } from "../src/atmo-weather-i18n.js";
 import { drawRain, drawSnow } from "../src/atmo-weather-precip.js";
 
 await import("../src/atmo-weather-card.js");
@@ -33,10 +35,20 @@ test("every layout brings a height, a sky position and chips on the weather enti
     assert.ok(cfg.celestial_alignment, layout);
     assert.ok(cfg.chips.length >= 3, layout);
     for (const chip of cfg.chips) {
-      assert.equal(chip.entity, "weather.garden", layout);
+      // Home and Panel show the sunset of the sun entity.
+      assert.ok(["weather.garden", "sun.sun"].includes(chip.entity), layout);
       assert.ok(!("name" in chip) || typeof chip.name === "string", layout);
     }
   }
+  // The sunset follows the card's sun entity.
+  const home = applyCardLayout({ weather_entity: "weather.garden", sun_entity: "sun.garden", card_layout: "home" });
+  assert.ok(home.chips.some((c) => c.entity === "sun.garden" && c.attribute === "next_setting"));
+  // Panel puts the next hours into the second chip area under a soft curve.
+  const panel = applyCardLayout({ weather_entity: "weather.garden", card_layout: "panel" });
+  assert.equal(panel.chips.filter((c) => c.area === 2).length, 5);
+  assert.equal(panel.forecast_curve, "soft");
+  assert.equal(panel.chip_area_2.position, "bottom-left");
+  assert.equal(home.wind_compass, "ticks");
   // Upper case and spaces are fine.
   assert.equal(applyCardLayout({ card_layout: " Compact " }).card_height, 96);
 });
@@ -94,7 +106,7 @@ test("Home Assistant gets a suggestion per layout for a weather entity", () => {
   assert.equal(entry.preview, true);
   const hass = makeHass();
   const list = entry.getEntitySuggestion(hass, "weather.home");
-  assert.deepEqual(list.map((s) => s.label), ["Standard", "Compact", "Wide"]);
+  assert.deepEqual(list.map((s) => s.label), ["Standard", "Compact", "Wide", "Home", "Panel"]);
   assert.equal(list[1].config.type, "custom:atmo-weather-card");
   assert.equal(list[1].config.card_layout, "compact");
   assert.equal(list[2].config.weather_entity, "weather.home");
@@ -219,4 +231,111 @@ test("layout readings take Home Assistant's label and stay away without a value"
   runFrames(3);
   const names = [...plain.shadowRoot.querySelectorAll(".chip-name")].map((c) => c.textContent);
   assert.ok(names.includes("Humidity"), names.join(","));
+});
+
+test("a layout tile takes the card's own word where Home Assistant has no translation", () => {
+  // Home Assistant without a German name for next_setting returns the key in words.
+  const hass = makeHass({ language: "de" });
+  hass.formatEntityAttributeName = (st, a) => ({ humidity: "Luftfeuchtigkeit", next_setting: "Next setting", wind_bearing: "Windrichtung" })[a] || "";
+  const card = mountCard({ card_layout: "panel" }, hass);
+  runFrames(3);
+  const names = [...card.shadowRoot.querySelectorAll(".chip-name")].map((c) => c.textContent.trim());
+  assert.ok(names.includes("Sonnenuntergang"), names.join(","));
+  assert.ok(names.includes("Luftfeuchtigkeit"), names.join(","));
+  assert.ok(!names.includes("Next setting"), names.join(","));
+  document.body.replaceChildren();
+  // In English Home Assistant's label stays.
+  const en = makeHass();
+  en.formatEntityAttributeName = (st, a) => ({ next_setting: "Next setting" })[a] || "";
+  const enCard = mountCard({ card_layout: "panel" }, en);
+  runFrames(3);
+  assert.ok([...enCard.shadowRoot.querySelectorAll(".chip-name")].some((c) => c.textContent.trim() === "Next setting"));
+});
+
+test("layoutChipLabel keeps real translations and words it has none for", () => {
+  const de = makeTranslator("de");
+  assert.equal(layoutChipLabel("Next setting", "next_setting", "Sunset", "de", de), "Sonnenuntergang");
+  assert.equal(layoutChipLabel("Nächster Untergang", "next_setting", "Sunset", "de", de), "Nächster Untergang");
+  assert.equal(layoutChipLabel("Next setting", "next_setting", "Sunset", "fr", makeTranslator("fr")), "Next setting");
+  assert.equal(layoutChipLabel("Next setting", "next_setting", "Sunset", "en", makeTranslator("en")), "Next setting");
+  assert.equal(layoutChipLabel("", "precipitation_probability", "Rain", "de", de), "Regen");
+});
+
+test("panel's rain tile stays away when the forecast has no rain probability", async () => {
+  const day = 864e5;
+  const feed = (withRain) => {
+    const hass = makeHass();
+    Object.assign(hass.states["weather.home"].attributes, { uv_index: 3, pressure: 1016 });
+    hass.connection.subscribeMessage = async (callback, message) => {
+      if (message.forecast_type === "daily")
+        setTimeout(() => callback({ forecast: [0, 1].map((n) => ({ datetime: new Date(Date.now() + n * day).toISOString(), temperature: 14, templow: 6, condition: "rainy", ...(withRain ? { precipitation_probability: 70 } : {}) })) }), 0);
+      return () => {};
+    };
+    return hass;
+  };
+  for (const withRain of [false, true]) {
+    document.body.replaceChildren();
+    const card = mountCard({ card_layout: "panel" }, feed(withRain));
+    await new Promise((r) => setTimeout(r, 5));
+    runFrames(3);
+    const text = [...card.shadowRoot.querySelectorAll(".chip")].map((c) => c.textContent).join("|");
+    assert.doesNotMatch(text, /N\/A/);
+    // Four tiles in two rows: with the rain chance the pressure stays away,
+    // without it the pressure takes the free place.
+    const tiles = [...card.shadowRoot.querySelectorAll("#chips-row .chip")].map((c) => c.textContent);
+    assert.equal(tiles.length, 4, tiles.join("|"));
+    if (withRain) {
+      assert.match(tiles.join("|"), /70/);
+      assert.doesNotMatch(tiles.join("|"), /Pressure|1016/);
+    } else assert.match(tiles.join("|"), /Pressure|1016/);
+  }
+});
+
+test("a forecast chip past the end of the forecast stays away", async () => {
+  const hass = makeHass();
+  hass.connection.subscribeMessage = async (callback, message) => {
+    if (message.forecast_type === "daily")
+      setTimeout(() => callback({ forecast: [0, 1, 2].map((n) => ({ datetime: new Date(Date.now() + n * 864e5).toISOString(), temperature: 10 + n, condition: "sunny" })) }), 0);
+    return () => {};
+  };
+  const day = (forecast_offset) => ({ entity: "weather.home", forecast: "daily", attribute: "temperature", forecast_offset });
+  const card = mountCard({ chips: [day(1), day(2), day(3), day(5)] }, hass);
+  await new Promise((r) => setTimeout(r, 5));
+  runFrames(3);
+  const vals = [...card.shadowRoot.querySelectorAll(".chip")].map((c) => c.textContent.replace(/\D+/g, " ").trim());
+  // Day 2 and 3 exist, day 4 and 6 do not: no second copy of day 3.
+  assert.equal(vals.length, 2, vals.join("|"));
+});
+
+test("wide's tomorrow tile writes the low with the same short degree sign", async () => {
+  const hass = makeHass();
+  hass.connection.subscribeMessage = async (callback, message) => {
+    if (message.forecast_type === "daily")
+      setTimeout(() => callback({ forecast: [0, 1].map((n) => ({ datetime: new Date(Date.now() + n * 864e5).toISOString(), temperature: 17, templow: 7, condition: "sunny" })) }), 0);
+    return () => {};
+  };
+  const card = mountCard({ card_layout: "wide" }, hass);
+  resizeAll(900, 260);
+  await new Promise((r) => setTimeout(r, 5));
+  runFrames(3);
+  const tile = [...card.shadowRoot.querySelectorAll(".chip")].find((c) => /17/.test(c.textContent));
+  assert.ok(tile);
+  assert.match(tile.textContent, /7°/);
+  assert.doesNotMatch(tile.textContent, /°C/);
+});
+
+test("tiles in a grid row keep the same height, even next to a ring or a forecast tile", async () => {
+  const { buildStyles } = await import("../src/atmo-weather-styles.js");
+  const css = buildStyles();
+  // Rules that pull a row of enhanced chips to one edge must leave grid rows
+  // stretched, or a short tile (sunrise) sits lower than a tall one (forecast).
+  const rules = css.match(/[^{}]*has-enhanced-child[^{}]*\{[^}]*align-items:\s*flex-(end|start)[^}]*\}/g) || [];
+  assert.ok(rules.length >= 2);
+  for (const r of rules) assert.match(r, /:not\(\.row-grid\)/);
+  assert.match(css, /\.row-grid\s*\{[^}]*align-items: stretch/);
+});
+
+test("home: the bar text and gaps shrink with the card width, so a narrow card keeps one line", () => {
+  const home = layoutDefaults("home", "weather.home", "sun.sun");
+  for (const key of ["chip_text_size", "chip_icon_size", "chip_area_gap"]) assert.match(home[key], /^clamp\(\d+px, [\d.]+cqw, \d+px\)$/, key);
 });

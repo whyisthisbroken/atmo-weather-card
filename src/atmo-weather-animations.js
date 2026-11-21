@@ -1198,7 +1198,7 @@ export function renderAnimationFrame(
   if (card._windStyle === "leaves" && windDisplayActive(card))
     drawLeaves(card, fg, w, h, windSetup(card).angle);
   else if (card._leaves.length) card._leaves.length = 0;
-  card._drawLightning(fg, w, h);
+  card._drawLightning(fg, w, h, mid);
   card._drawRain(fg, w, h, effectiveWind);
   card._drawHail(fg, w, h, effectiveWind);
   card._drawSnow(fg, w, h, effectiveWind);
@@ -1926,7 +1926,9 @@ function drawBolt(ctx, bolt, alpha, dark) {
   ctx.restore();
 }
 
-export function drawLightning(card, ctx, w, h) {
+// The flash lights the whole scene on ctx (in front of a house picture); the
+// channel goes on boltCtx behind the picture, so it never strikes in front of it.
+export function drawLightning(card, ctx, w, h, boltCtx = ctx) {
   if (!(card._params && card._params.thunder)) return;
   const frameScale = card._frameScale || 1;
   const fadeOpacity = card._layerFadeProgress.effects;
@@ -1977,5 +1979,5 @@ export function drawLightning(card, ctx, w, h) {
   ctx.restore();
   // The channel only shows while the flash is bright, so it flickers with it.
   if (card._bolt && card._flashOpacity > 0.3)
-    drawBolt(ctx, card._bolt, Math.min(1, (card._flashOpacity - 0.3) * 2) * fadeOpacity, card._isThemeDark);
+    drawBolt(boltCtx, card._bolt, Math.min(1, (card._flashOpacity - 0.3) * 2) * fadeOpacity, card._isThemeDark);
 }

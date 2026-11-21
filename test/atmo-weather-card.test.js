@@ -388,7 +388,7 @@ test("set hass skips work when the watched entities are unchanged", () => {
 
 function applyConfig(config) {
   const card = Object.create(AtmosphericWeatherCard.prototype);
-  const slot = { style: {} };
+  const slot = { style: { setProperty(name, value) { this[name] = value; } } };
   card._elements = {
     root: { classList: { toggle() {} } },
     imageSlot: slot,

@@ -173,11 +173,78 @@ export function timeFormatOptions(haLocale) {
   }
   return {};
 }
-export function fcLabel(dt, daily, locale, haLocale) {
+export function fcLabel(dt, daily, locale, haLocale, dateFormat) {
   const d = new Date(dt);
+  if (hasDateCodes(dateFormat)) return formatDateCodes(d, dateFormat, locale);
   return daily
     ? d.toLocaleDateString(locale, { weekday: "short" })
     : d.toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit", ...timeFormatOptions(haLocale) });
+}
+
+// Date codes like Home Assistant templates use them: "%a, %d" prints "Thu, 12".
+// A "-" after the percent sign drops the leading zero ("%-d" prints "5").
+const DATE_CODE_RE = /%(-?)([aAbBdmyYHIMSp%])/g;
+export function hasDateCodes(pattern) {
+  return typeof pattern === "string" && /%-?[aAbBdmyYHIMSp]/.test(pattern);
+}
+export function formatDateCodes(date, pattern, locale) {
+  const d = date instanceof Date ? date : new Date(date);
+  if (isNaN(d) || typeof pattern !== "string") return "";
+  const name = (opts) => {
+    try {
+      return d.toLocaleDateString(locale, opts);
+    } catch {
+      return d.toLocaleDateString("en", opts);
+    }
+  };
+  const pad = (n, keep) => (keep ? String(n).padStart(2, "0") : String(n));
+  return pattern.replace(DATE_CODE_RE, (_, dash, code) => {
+    const zero = dash !== "-";
+    switch (code) {
+      case "a": return name({ weekday: "short" });
+      case "A": return name({ weekday: "long" });
+      case "b": return name({ month: "short" });
+      case "B": return name({ month: "long" });
+      case "d": return pad(d.getDate(), zero);
+      case "m": return pad(d.getMonth() + 1, zero);
+      case "y": return pad(d.getFullYear() % 100, zero);
+      case "Y": return String(d.getFullYear());
+      case "H": return pad(d.getHours(), zero);
+      case "I": return pad(d.getHours() % 12 || 12, zero);
+      case "M": return pad(d.getMinutes(), zero);
+      case "S": return pad(d.getSeconds(), zero);
+      case "p": return d.getHours() < 12 ? "AM" : "PM";
+      default: return "%";
+    }
+  });
+}
+
+// The moon phase from the date alone, for cards without a moon sensor.
+// Within about a day of the real phase, plenty for a picture of the moon.
+const SYNODIC_MONTH_DAYS = 29.530588853;
+const NEW_MOON_EPOCH = Date.UTC(2000, 0, 6, 18, 14);
+const MOON_PHASE_NAMES = [
+  "new_moon",
+  "waxing_crescent",
+  "first_quarter",
+  "waxing_gibbous",
+  "full_moon",
+  "waning_gibbous",
+  "last_quarter",
+  "waning_crescent",
+];
+export function moonPhaseAt(date) {
+  const days = (date.getTime() - NEW_MOON_EPOCH) / 86400000;
+  let age = (days / SYNODIC_MONTH_DAYS) % 1;
+  if (age < 0) age += 1;
+  // The lit part of the disc, 0 at new moon and 1 at full moon.
+  const illumination =
+    Math.round(((1 - Math.cos(2 * Math.PI * age)) / 2) * 100) / 100;
+  return {
+    state: MOON_PHASE_NAMES[Math.round(age * 8) % 8],
+    illumination,
+    direction: illumination >= 1 ? "none" : age < 0.5 ? "right" : "left",
+  };
 }
 
 // Image rules swap the house image while an entity matches: status_entity
@@ -193,6 +260,31 @@ function imageRuleStates(state) {
     .map((s) => String(s).trim().toLowerCase())
     .filter(Boolean);
   return states.length ? states : ACTIVE_STATES;
+}
+
+// The label of a layout chip. Home Assistant names an attribute in the user's
+// language; without a translation it returns the key in words (next_setting:
+// "Next setting"). Then the card's own word wins, when it has one for that
+// language. In English, or without an own word, Home Assistant's label stays.
+export function layoutChipLabel(haLabel, attribute, fallback, lang, translate) {
+  const ha = String(haLabel || "").trim();
+  if (!ha) return translate ? translate(fallback) : fallback;
+  const base = String(lang || "").toLowerCase().split("-")[0];
+  const raw = String(attribute || "").replace(/_/g, " ").trim().toLowerCase();
+  if (base && base !== "en" && translate && ha.toLowerCase() === raw) {
+    const own = translate(fallback);
+    if (own && own !== fallback) return own;
+  }
+  return ha;
+}
+
+// image_max_width as CSS: a number is a share of the card width in %, a value
+// with a unit stays as it is. Empty, 0 or nonsense: no limit.
+export function imageMaxWidth(value) {
+  if (value == null) return "";
+  const s = String(value).trim();
+  if (/^\d+(\.\d+)?$/.test(s)) return Number(s) > 0 ? `${Math.min(Number(s), 100)}%` : "";
+  return /^\d+(\.\d+)?(px|%|cqw|em|rem|vw)$/.test(s) && parseFloat(s) > 0 ? s : "";
 }
 
 export function buildImageRules(config) {

@@ -906,6 +906,20 @@ export const POS_CLASSES = Object.freeze([
   "pos-bottom-center",
   "pos-bottom-right",
 ]);
+// How much direct sunlight reaches the ground, by atmosphere (--awc-sun-light).
+export const SUN_LIGHT = Object.freeze({
+  clear: 1,
+  exceptional: 1,
+  fair: 0.75,
+  windy: 0.7,
+  mist: 0.3,
+  overcast: 0.15,
+  rain: 0.05,
+  snow: 0.05,
+  pouring: 0,
+  storm: 0,
+  night: 0,
+});
 export const ATMOSPHERE_CSS = Object.freeze({
   mist: "weather-fog",
   fog: "weather-fog",

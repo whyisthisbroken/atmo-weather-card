@@ -1,5 +1,11 @@
+// Every rule of the chip area also styles the second one.
+const bothAreas = (css) =>
+  css
+    .replace(/#chips-row\b(?!-)/g, ":is(#chips-row, #chips-row-2)")
+    .replace(/#chips-group\b(?!-)/g, ":is(#chips-group, #chips-group-2)");
+
 export function buildStyles() {
-  return `
+  return bothAreas(`
           :host {
             --awc-font-family: 'Figtree', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
             display: block; width: 100%; position: relative; background: transparent !important; min-height: 200px; font-family: var(--awc-font-family); letter-spacing: -0.015em; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
@@ -81,8 +87,12 @@ export function buildStyles() {
           #card-root.is-offscreen .awc-marquee-host .awc-marquee-track { animation-play-state: paused; }
           canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; --mask-v: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent); --mask-h: linear-gradient(to right, transparent, black 10%, black 90%, transparent); -webkit-mask-image: var(--mask-v), var(--mask-h); mask-image: var(--mask-v), var(--mask-h); -webkit-mask-composite: source-in; mask-composite: intersect; }
           #fg-canvas { -webkit-mask-image: none !important; mask-image: none !important; }
+          #frost { position: absolute; inset: 0; pointer-events: none; overflow: hidden; border-radius: inherit; }
+          #frost > * { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0; transition: opacity 3s ease; }
+          #frost > canvas { -webkit-mask-image: none !important; mask-image: none !important; }
+          #frost > .frost-glass { -webkit-mask-size: 100% 100%; mask-size: 100% 100%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; }
           #image-slot { position: absolute; top: 0; height: 100%; width: auto; user-select: none; pointer-events: none; box-sizing: border-box; }
-          #image-slot > img { display: block; height: 100%; width: auto; max-width: 100%; object-fit: contain; border: none; outline: none; }
+          #image-slot > img { display: block; height: 100%; width: auto; max-width: 100%; object-fit: contain; object-position: var(--_awc-img-pos, 50% 50%); border: none; outline: none; }
           #image-slot > img.awc-img-layer { position: absolute; top: 0; left: 0; }
           #image-slot > img[src=""],
           #image-slot > img:not([src]) { display: none; visibility: hidden; }
@@ -114,6 +124,13 @@ export function buildStyles() {
           #wind-compass .cmp.cmp-bg { --_cmp-glow: none; padding: 4px 10px 6px; border-radius: 12px; background: var(--_text-bg, rgba(255, 255, 255, 0.22)); border: 1px solid var(--_text-bg-border, rgba(255, 255, 255, 0.35)); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
           #wind-compass .cmp-style-pill { flex-direction: row; align-items: center; gap: 8px; padding: 5px 12px 5px 6px; border-radius: 999px; background: var(--_text-bg, rgba(255, 255, 255, 0.22)); border: 1px solid var(--_text-bg-border, rgba(255, 255, 255, 0.35)); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
           #wind-compass .cmp-style-pill .cmp-label { filter: none; }
+          #wind-compass .cmp-style-ticks .cmp-label { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); text-align: center; white-space: normal; font-size: 16px; font-weight: 700; letter-spacing: 0; line-height: 1.05; }
+          #wind-compass .cmp-style-ticks .cmp-label span { display: block; margin: 0; opacity: 1; font-weight: 700; }
+          #wind-compass .cmp-style-ticks .cmp-label .cmp-unit { font-size: 10px; font-weight: 500; opacity: 0.75; }
+          #wind-compass .cmp-style-badge { flex-direction: row; align-items: center; gap: 10px; padding: 8px 14px 8px 8px; border-radius: 16px; background: var(--_text-bg, rgba(255, 255, 255, 0.22)); border: 1px solid var(--_text-bg-border, rgba(255, 255, 255, 0.35)); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+          #wind-compass .cmp-style-badge .cmp-dot { fill: currentColor; opacity: 0.12; }
+          #wind-compass .cmp-style-badge .cmp-label { filter: none; display: flex; flex-direction: column-reverse; align-items: flex-start; font-size: 11px; line-height: 1.15; }
+          #wind-compass .cmp-style-badge .cmp-label span + span { margin-left: 0; font-size: 17px; font-weight: 700; opacity: 1; }
           #wind-compass .cmp-style-pill .cmp-label span + span::before { content: "· "; }
           #text-wrapper { position: absolute; inset: 0; pointer-events: none; box-sizing: border-box; overflow: visible; }
           #text-wrapper > .pos-top-left { top: var(--_awc-pad-v, var(--awc-card-padding, 16px)); left: var(--_awc-pad-h, var(--awc-card-padding, 16px)); }
@@ -128,6 +145,8 @@ export function buildStyles() {
           #chips-group { position: absolute; pointer-events: none; font-family: var(--awc-font-family, var(--ha-font-family, var(--paper-font-body1_-_font-family, sans-serif))); letter-spacing: -0.01em; transition: color 0.3s ease, text-shadow 0.3s ease; min-width: 0; max-width: calc(100% - var(--_awc-pad-h, var(--awc-card-padding, 16px)) * 2); box-sizing: border-box; }
           #chips-row,
           .chip-free { color: var(--awc-text-color); }
+          #forecast-curve { position: absolute; left: 0; bottom: calc(100% + 4px); width: 100%; overflow: hidden; pointer-events: none; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25)); }
+          #forecast-curve.below { bottom: auto; top: calc(100% + 4px); }
           .chip-sub { display: block; font-size: var(--awc-sub-size, 0.78em); opacity: 0.65; font-weight: var(--awc-sub-weight, 500); line-height: 1.2; white-space: var(--awc-sub-wrap, nowrap); overflow: var(--awc-sub-visible, hidden); text-overflow: var(--awc-sub-overflow, ellipsis); }
           .chip-val .fancy-unit { font-size: 0.55em; font-weight: 500; opacity: 0.85; vertical-align: baseline; position: relative; top: -0.45em; margin-left: 3px; }
           .chip.has-sub:not(.format-stacked):not(.format-vertical) { align-items: flex-start; }
@@ -241,8 +260,8 @@ export function buildStyles() {
           #chips-row.pos-right:not(.has-visible-count) > .chip.format-vertical { align-content: center; }
           #chips-row.has-visible-count > .chip.format-stacked,
           #chips-row.has-visible-count > .chip.format-vertical { align-content: center; }
-          #chips-row[class*="pos-bottom"]:not(.has-visible-count).has-enhanced-child { align-items: flex-end; }
-          #chips-row[class*="pos-top"]:not(.has-visible-count).has-enhanced-child { align-items: flex-start; }
+          #chips-row[class*="pos-bottom"]:not(.has-visible-count):not(.row-grid).has-enhanced-child { align-items: flex-end; }
+          #chips-row[class*="pos-top"]:not(.has-visible-count):not(.row-grid).has-enhanced-child { align-items: flex-start; }
           .chip { display: flex; align-items: center; gap: 0; flex: 0 0 auto; min-width: 0; max-width: 100%; white-space: nowrap; box-sizing: border-box; scroll-snap-align: start; padding: var(--awc-chips-padding, 0); cursor: pointer; }
           .chip:not(.with-bg) .chip-name { opacity: var(--awc-bottom-opacity, 0.7); }
           .chip.has-icon-bg.frosted:not(.with-bg) .chip-name { opacity: var(--awc-bottom-opacity, 0.7); }
@@ -345,6 +364,21 @@ export function buildStyles() {
           .chip.chip-ring.with-bg { border-radius: 50%; padding: var(--awc-chips-padding, 10px); }
           .chip.chip-ring.format-vertical .chip-icon { margin-bottom: var(--awc-vertical-icon-gap, var(--awc-chip-gap, 4px)); }
           .chip.chip-ring.format-vertical .chip-name { margin-bottom: var(--awc-chip-text-gap, 2px); }
+          /* type: sun_path, the sun's arc from sunrise to sunset */
+          .chip.chip-sunpath-type { min-width: 108px; }
+          .chip .chip-val.chip-sunpath { display: grid; gap: 1px; width: 100%; min-width: 96px; max-width: 150px; overflow: visible; white-space: nowrap; }
+          /* In a plain row the arc keeps a tile's size instead of filling the row. */
+          .chip.chip-sunpath-type:not(.format-vertical):not(.format-stacked) .chip-val.chip-sunpath { width: 120px; flex: 0 0 auto; }
+          .chip-sunpath .sp-arc { width: 100%; height: auto; display: block; overflow: visible; }
+          .chip-sunpath .sp-horizon { stroke: currentColor; stroke-opacity: 0.35; stroke-width: 0.8; }
+          .chip-sunpath .sp-track { fill: none; stroke: currentColor; stroke-opacity: 0.45; stroke-width: 1.2; stroke-dasharray: 1.6 2.4; }
+          .chip-sunpath .sp-done { fill: none; stroke: var(--awc-sunpath-color, #f2b84b); stroke-width: 2; stroke-linecap: round; }
+          .chip-sunpath .sp-night .sp-done { stroke: var(--awc-sunpath-night-color, #c9d3f0); }
+          .chip-sunpath .sp-glow { fill: #ffd36b; opacity: 0.35; }
+          .chip-sunpath .sp-sun { fill: #ffd36b; stroke: #fff6d8; stroke-width: 1.2; }
+          .chip-sunpath .sp-moon { fill: #e8ecf6; }
+          .chip-sunpath .sp-moon-shade { fill: #000; opacity: 0.28; }
+          .chip-sunpath .sp-times { display: flex; justify-content: space-between; gap: 8px; font-size: 0.72em; line-height: 1.2; }
           .chip-ring-wrap { position: relative; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; scroll-snap-align: start; }
           .chip-ring-wrap::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: var(--awc-ring-gradient, conic-gradient(var(--awc-ring-color, var(--primary-color, #03a9f4)) var(--awc-ring-pct, 0%), transparent 0)); -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - var(--awc-ring-w, 4px) - 0.5px), #000 calc(100% - var(--awc-ring-w, 4px))); mask: radial-gradient(farthest-side, transparent calc(100% - var(--awc-ring-w, 4px) - 0.5px), #000 calc(100% - var(--awc-ring-w, 4px))); transition: --awc-ring-pct 0.6s cubic-bezier(0.4, 0, 0.2, 1); pointer-events: none; z-index: 0; }
           .chip-ring-wrap.has-segments::before { -webkit-mask: conic-gradient(#000 var(--awc-ring-pct, 0%), transparent 0), radial-gradient(farthest-side, transparent calc(100% - var(--awc-ring-w, 4px) - 0.5px), #000 calc(100% - var(--awc-ring-w, 4px))); mask: conic-gradient(#000 var(--awc-ring-pct, 0%), transparent 0), radial-gradient(farthest-side, transparent calc(100% - var(--awc-ring-w, 4px) - 0.5px), #000 calc(100% - var(--awc-ring-w, 4px))); -webkit-mask-composite: source-in; mask-composite: intersect; }
@@ -407,5 +441,5 @@ export function buildStyles() {
           #custom-cards-wrapper.cc-align-center { align-content: center; }
           #custom-cards-wrapper.cc-align-bottom { align-content: flex-end; }
 
-`;
+`);
 }
