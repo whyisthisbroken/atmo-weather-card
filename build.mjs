@@ -1,5 +1,5 @@
 import { build } from "esbuild";
-import { copyFile, cp, mkdir, readFile, rm } from "node:fs/promises";
+import { copyFile, cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { writeDocs } from "./scripts/build-docs.mjs";
 
 const FONT_DIR = "node_modules/@fontsource-variable/figtree";
@@ -60,5 +60,11 @@ await Promise.all([
   ),
   copyFile(`${FRAUNCES}/LICENSE`, "docs/fonts/fraunces-LICENSE.txt"),
 ]);
-await Promise.all(["site.css", "site.js"].map((f) => copyFile(`docs-src/${f}`, `docs/${f}`)));
+// Always LF: docs/ is stored as is, and a Windows checkout (CRLF) would else
+// build a file that differs from the CI build on Linux.
+await Promise.all(
+  ["site.css", "site.js"].map(async (f) =>
+    writeFile(`docs/${f}`, (await readFile(`docs-src/${f}`, "utf8")).replace(/\r\n/g, "\n")),
+  ),
+);
 await writeDocs(version);

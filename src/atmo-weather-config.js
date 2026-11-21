@@ -602,6 +602,48 @@ export function usesBundledHouse(config) {
   );
 }
 
+// The look a layout stands for, also where it keeps the default: the card's
+// size, where the picture sits and the whole chip row. Picking a layout in the
+// editor resets these and the layout's own values (an old chip_area_align:
+// spread squeezed the Home bar until its values were cut off).
+export const LAYOUT_LOOK_KEYS = Object.freeze([
+  "card_height", "card_square",
+  "image_alignment", "image_scale", "image_x", "image_y", "image_max_width",
+  "chip_area_position", "chip_area_layout", "chip_area_columns", "chip_area_align",
+  "chip_area_width", "chip_area_height", "chip_area_padding", "chip_area_gap",
+  "chip_area_scroll_count", "chip_area_grouped", "chip_area_full_width",
+  "chip_area_background", "chip_area_separator", "chip_area_background_color",
+  "chip_style", "chip_padding", "chip_gap", "chip_text_gap", "chip_text_size",
+  "chip_label_size", "chip_icon_size", "chip_icon_padding", "chip_icon_background",
+  "chip_icon_background_color", "chip_background_color", "card_background_style",
+]);
+
+// What a chip shows, to find two chips with the same value.
+const chipShows = (c) =>
+  [c.type || "", c.entity || "", c.attribute || "", c.forecast || "", Number(c.forecast_offset) || 0].join("|");
+// Where a chip sits and how it looks; the layout's chip row decides that.
+const CHIP_PLACE_AND_LOOK = Object.freeze([
+  "position", "position_anchor", "position_x", "position_y", "area",
+  "style", "align", "background", "icon_background", "background_color",
+  "icon_background_color", "padding", "text_size", "label_size", "inner_gap",
+  "text_gap", "icon_size", "icon_padding", "width", "height", "value_weight",
+  "label_weight", "chip_round", "sub_value_size", "sub_value_weight",
+]);
+
+// Your chips made ready to join a layout's chips (layout_chips: true): they
+// lose their own place and look, so they line up in the layout's chip row,
+// and a chip that shows what a layout chip already shows is left out.
+export function arrangeChipsForLayout(own, layoutChips) {
+  const taken = new Set((layoutChips || []).map(chipShows));
+  return (Array.isArray(own) ? own : [])
+    .filter((c) => c && typeof c === "object" && !taken.has(chipShows(c)))
+    .map((c) => {
+      const n = { ...c };
+      for (const k of CHIP_PLACE_AND_LOOK) delete n[k];
+      return n;
+    });
+}
+
 // The config the card runs: the layout's values under the card's own.
 export function applyCardLayout(config, width = 0) {
   // image_day / image_night: none means no picture, not a file called none.
@@ -623,6 +665,11 @@ export function applyCardLayout(config, width = 0) {
   // The pictures go over the card's own values (those are only empty image
   // keys here); the house's placement stays under them.
   const out = { ...base, ...(house ? HOUSE_PLACEMENT : null), ...config, ...house };
-  out.chips = ownChips ? config.chips : base.chips;
+  // layout_chips: true shows the layout's chips and your own after them.
+  out.chips = !ownChips
+    ? base.chips
+    : config.layout_chips === true
+      ? [...base.chips, ...config.chips]
+      : config.chips;
   return out;
 }

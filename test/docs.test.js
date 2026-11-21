@@ -36,7 +36,11 @@ test("the site is built from docs-src", async () => {
   for (const html of [landing, ...Object.values(docPages)]) assert.ok(html.includes(`${version}`));
   assert.ok(landing.includes('import("./atmo-weather-card.js")'));
   assert.ok(docPages.setup.includes('import("../atmo-weather-card.js")'));
-  for (const f of ["site.css", "site.js"]) assert.equal(read(`docs/${f}`), read(`docs-src/${f}`));
+  // The build writes them with LF whatever the checkout uses.
+  for (const f of ["site.css", "site.js"]) {
+    assert.equal(read(`docs/${f}`), read(`docs-src/${f}`).replace(/\r\n/g, "\n"), `run npm run build (${f})`);
+    assert.ok(!read(`docs/${f}`).includes("\r"), `${f} has LF line ends`);
+  }
 });
 
 test("the live card of the documentation starts sunny without measured cloud cover", () => {
