@@ -1,4 +1,4 @@
-/* Atmo Weather Card 2026.11.10
+/* Atmo Weather Card 2026.11.11
  * MIT License, https://github.com/whyisthisbroken/atmo-weather-card
  * Copyright (c) 2026 shpongledsummer
  * Copyright (c) 2026 whyisthisbroken
