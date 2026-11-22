@@ -1225,21 +1225,21 @@ The sections below document every option, including type, default, and behavior.
 
 ### Card layouts
 
-`card_layout` gives the card a finished look with one option. Each layout sets the height, where the sun and moon stand, the chip row and a set of chips. Every value you set yourself wins over the layout, and so do your own chips: the layout's chips only show while the card has none of its own, unless you set `layout_chips: true`. Their labels are short words of the card in English and German (**Humidity**, **Wind**; **Luftfeuchte**, **Wind**), in other languages they come from Home Assistant, and a reading your weather entity does not report, such as the pressure, is left out. In the editor the layouts are the first panel, **Layouts**, each with a small picture and a line about it.
+`card_layout` gives the card a finished look with one option. Each layout sets the height, where the sun and moon stand, the chip row and a set of chips. Every value you set yourself wins over the layout, and so do your own chips: the layout's chips only show while the card has none of its own, unless you set `layout_chips: true`. Their labels are short words of the card in English and German (**Humidity**, **Wind**; **Luftfeuchte**, **Wind**), in other languages they come from Home Assistant, and a reading your weather entity does not report, such as the pressure, is left out. In the editor the layouts are the first panel, **Layouts**, each with a small picture and a line about it. Under **Chips** the editor lists the chips the layout shows right now (in Panel only the tiles your weather service fills); your first change to them, even a name, makes them chips of your own, so you can change, move or remove each one.
 
 Picking a layout in the editor resets your own values for the settings that layout brings, and for the card height, the image placement and the look of the chip row, so an old value like `image_scale: 0` or `chip_area_align: spread` does not spoil its look. Everything else stays as it is: entities, sensors, performance, effects, birds and tap actions. A note says how many values were reset and has an **Undo** button. If the card has chips of its own, the editor asks two questions:
 
-1. **Keep your own chips?** With **Use the layout's chips** your chips go and the card shows the chips of the layout.
-2. **Arrange them for the layout?** With **Arrange** your chips join the chips of the layout (`layout_chips: true`): they lose their own place and look and line up in the layout's chip row, and a chip that shows the same as a layout chip, like the temperature, is left out. With **Keep positions** nothing changes.
+1. **Keep your own chips?** **Keep** leaves your chips and adds nothing of the layout's content: no chips of its own and no wind compass (Home); your own compass stays as it was. **Use the layout's chips** removes your chips and shows the layout as it comes, with its chips and compass.
+2. After **Keep**: **Arrange them for the layout?** **Arrange** moves your chips into the layout's chip row: they lose their own place and look and take the look of the row. **Keep positions** leaves your chips exactly as they are.
 
-**Undo** puts back the card exactly as it was before you picked the layout: the layout, your values and your chips. Picking a second layout right after the first still undoes back to the start. After a chip choice, **Change** gives you your chips back and asks again; outside the questions it is in the Layouts panel. Any other change ends the step, so Undo never takes back something you did afterwards.
+**Undo** puts back the card exactly as it was before you picked the layout: the layout, your values and your chips. Picking a second layout right after the first still undoes back to the start. After a chip choice, **Change** goes back to the card right after the layout was picked and asks again; outside the questions it is in the Layouts panel. Any other change ends the step, so Undo never takes back something you did afterwards.
 
 <img width="480" alt="card_layout standard, compact and wide" src="images/example-layouts.webp" />
 
 | Option        | Type     | Default | Description |
 | :------------ | :------- | :------ | :---------- |
 | `card_layout` | `string` | —       | `standard`: a big, light temperature, the condition under it and a quiet row with humidity, wind and tomorrow. `compact`: one slim strip, about 96 px high, with the temperature, the condition and two readings. `wide`: for wall tablets and wide columns from about 700 px, a very big temperature on the left and humidity, wind, pressure and tomorrow in two columns on the right. On a card narrower than 600 px it shows the standard layout instead, so it also works in a phone column. `home`: a house on the right, [the one that comes with the card](#bundled-house) or your own (`image_day`, `image_night`); the sunset time top left, a big temperature and the condition bottom left, a tick ring compass top right and a frosted bar with values bottom right. `panel`: a tall card, about 440 px; the temperature and today's high and low on top, four tiles (wind, humidity with a bar, UV index with a colored bar, rain chance; when your weather service sends no UV index or rain chance, the pressure and then the sunset take the free place) and the next five hours under a soft curve. Without a value the card uses only your own settings. |
-| `layout_chips` | `boolean` | `false` | With chips of your own: `true` shows the chips of the layout as well, yours after them. Does nothing without a `card_layout` or without own chips. |
+| `layout_chips` | `boolean` | `false` | With chips of your own: `true` shows the chips of the layout as well, yours after them. Does nothing without a `card_layout` or without own chips. The editor never sets it; write it in YAML if you want both. |
 
 ```yaml scene=partlycloudy try=card_layout:standard|compact|wide|home|panel
 type: custom:atmo-weather-card
@@ -2201,7 +2201,7 @@ The [temperature curve](#forecast-curve) draws over the first area when it has a
 
 #### Temperature curve
 
-`forecast_curve` draws the course of the temperature over the forecast chips, daily or hourly. It uses every forecast chip in the chip area that shows `temperature` (at least two) and puts a point above the middle of each. Freely placed chips do not count. With the chip area at the top of the card the curve sits below the chips.
+`forecast_curve` draws the course of the temperature over the forecast chips, daily or hourly. It uses every forecast chip in the chip area that shows `temperature` (at least two) and puts a point above the middle of each. Freely placed chips do not count. With the chip area at the top of the card the curve sits below the chips. Where the card has no such chip row, like in the Home layout, the editor greys the option out and says why.
 
 | Value   | Look |
 | :------ | :--- |

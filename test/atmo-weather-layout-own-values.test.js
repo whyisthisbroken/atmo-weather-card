@@ -1,7 +1,7 @@
 import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
 
-import { errors, makeHass, mountCard } from "./helpers/dom.js";
+import { errors, makeHass, mountCard, runFrames } from "./helpers/dom.js";
 import {
   applyCardLayout,
   CARD_LAYOUTS,
@@ -146,6 +146,23 @@ test("Compact leaves room for a temperature with a decimal and a minus", () => {
   assert.equal(temp.text_size, "40px");
   assert.equal(condition.position_x, "136px");
   assert.match(c.chip_area_padding, /134px$/);
+});
+
+// Report of 2026-11-22: a small white box in the corner of the Home layout.
+// It was the empty frosted chip row: the only chip (a clock) is placed freely.
+test("a chip row without chips is not drawn", () => {
+  const clock = { entity: "weather.home", attribute: "temperature", position: "custom", position_anchor: "left", position_x: "50", position_y: "0" };
+  const empty = mountCard({ card_layout: "home", wind_compass: "off", chips: [clock] });
+  runFrames(2);
+  assert.equal(empty.shadowRoot.querySelector("#chips-group").style.display, "none");
+  document.body.replaceChildren();
+  const filled = mountCard({ card_layout: "home", chips: [clock, { entity: "weather.home", attribute: "humidity" }] });
+  runFrames(2);
+  assert.equal(filled.shadowRoot.querySelector("#chips-group").style.display, "");
+  document.body.replaceChildren();
+  const hidden = mountCard({ card_layout: "home", chip_area_hide: true });
+  runFrames(2);
+  assert.equal(hidden.shadowRoot.querySelector("#chips-group").style.display, "none");
 });
 
 test("cssLengths makes bare numbers pixels", () => {

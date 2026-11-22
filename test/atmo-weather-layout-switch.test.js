@@ -130,7 +130,8 @@ test("Undo after keeping and arranging the chips puts back the whole card", asyn
   await pick(editor, "home");
   await click(editor, ".layout-ask", "Keep");
   await click(editor, ".layout-ask", "Arrange");
-  assert.equal(emitted.at(-1).layout_chips, true);
+  assert.ok(!("layout_chips" in emitted.at(-1)));
+  assert.equal(emitted.at(-1).wind_compass, "off");
   await click(editor, ".layout-reset", "Undo");
   assertBackToStart(editor, emitted, start);
 });
@@ -221,7 +222,7 @@ test("Change outside a layout step asks again, and Undo puts back the card from 
   assert.equal($(editor, ".layout-ask").dataset.step, "keep");
   await click(editor, ".layout-ask", "Keep");
   await click(editor, ".layout-ask", "Arrange");
-  assert.equal(emitted.at(-1).layout_chips, true);
+  assert.ok(!("layout_chips" in emitted.at(-1)));
   await click(editor, ".layout-reset", "Undo");
   assertBackToStart(editor, emitted, start);
 });
@@ -300,6 +301,16 @@ for (const layout of ["standard", "compact", "wide", "home", "panel"])
       // The layout's look, not the old values.
       for (const k of LAYOUT_LOOK_KEYS) assert.ok(!(k in cfg), `${k} is reset`);
       assert.equal(cfg.card_layout, layout);
+      const shown = applyCardLayout(cfg);
+      if (path[0] === "Keep") {
+        // Your chips only, nothing of the layout's content.
+        assert.ok(!("layout_chips" in cfg));
+        assert.equal(shown.chips.length, 1);
+        assert.equal(shown.chips[0].entity, "sensor.time");
+        if (layout === "home") assert.equal(shown.wind_compass, "off");
+      } else if (path[0] === "Use the layout's chips") {
+        assert.deepEqual(shown.chips, layoutDefaults(layout, "weather.home").chips);
+      }
       await click(editor, ".layout-reset", "Undo");
       assertBackToStart(editor, emitted, start);
     });
@@ -326,4 +337,78 @@ test("layout_chips puts the layout's chips before your own, and only with a layo
   assert.deepEqual(applyCardLayout({ weather_entity: "weather.home", card_layout: "standard", chips: own }).chips, own);
   assert.deepEqual(applyCardLayout({ weather_entity: "weather.home", card_layout: "standard", layout_chips: true }).chips, base);
   assert.deepEqual(applyCardLayout({ weather_entity: "weather.home", chips: own, layout_chips: true }).chips, own);
+});
+
+// The user's rules of 2026-11-22 for a layout pick with chips of your own:
+// keep + arrange: your chips in the layout's row, nothing added;
+// keep + keep positions: your chips untouched, nothing added;
+// no: the layout as it comes, with its chips (and compass).
+test("keep and arrange: your chips in the layout's row, no layout chips, no compass", async () => {
+  const { editor, emitted } = await mountEditor(USER_CARD);
+  await pick(editor, "home");
+  await click(editor, ".layout-ask", "Keep");
+  await click(editor, ".layout-ask", "Arrange");
+  const cfg = emitted.at(-1);
+  const shown = applyCardLayout(cfg);
+  assert.deepEqual(cfg.chips, [{ hide_icon: true, fancy_unit: true, entity: "sensor.time", hide_label: true, label_overflow: "marquee" }]);
+  assert.deepEqual(shown.chips, cfg.chips);
+  assert.equal(shown.wind_compass, "off");
+  assert.match($(editor, ".layout-reset").textContent, /arranged in the layout's chip row/);
+  assert.match($(editor, ".layout-reset").textContent, /wind compass stays/);
+});
+
+test("keep and keep positions: your chips untouched, no layout chips, no compass", async () => {
+  const { editor, emitted } = await mountEditor(USER_CARD);
+  await pick(editor, "home");
+  await click(editor, ".layout-ask", "Keep");
+  await click(editor, ".layout-ask", "Keep positions");
+  const shown = applyCardLayout(emitted.at(-1));
+  assert.deepEqual(emitted.at(-1).chips, [CLOCK]);
+  assert.deepEqual(shown.chips, [CLOCK]);
+  assert.equal(shown.wind_compass, "off");
+  assert.ok(!$(editor, ".layout-ask"));
+});
+
+test("not keeping: the layout as it comes, with its chips and compass", async () => {
+  const { editor, emitted } = await mountEditor(USER_CARD);
+  await pick(editor, "home");
+  await click(editor, ".layout-ask", "Use the layout's chips");
+  const shown = applyCardLayout(emitted.at(-1));
+  assert.deepEqual(shown.chips, layoutDefaults("home", "weather.home").chips);
+  assert.equal(shown.wind_compass, "ticks");
+});
+
+test("keeping your chips keeps your own compass from before the layout", async () => {
+  const { editor, emitted } = await mountEditor({ ...USER_CARD, wind_compass: "rose", wind_compass_position: "bottom-left" });
+  await pick(editor, "home");
+  assert.equal(applyCardLayout(emitted.at(-1)).wind_compass, "ticks", "the pick resets it first");
+  await click(editor, ".layout-ask", "Keep");
+  const shown = applyCardLayout(emitted.at(-1));
+  assert.equal(shown.wind_compass, "rose");
+  assert.equal(shown.wind_compass_position, "bottom-left");
+});
+
+test("Change after keeping goes back to the card right after the pick", async () => {
+  const { editor, emitted } = await mountEditor(USER_CARD);
+  await pick(editor, "home");
+  const afterPick = startOf(editor);
+  await click(editor, ".layout-ask", "Keep");
+  await click(editor, ".layout-ask", "Arrange");
+  await click(editor, ".layout-reset", "Change");
+  assert.deepEqual(emitted.at(-1), afterPick);
+  assert.equal($(editor, ".layout-ask").dataset.step, "keep");
+  await click(editor, ".layout-ask", "Use the layout's chips");
+  assert.equal(applyCardLayout(emitted.at(-1)).wind_compass, "ticks");
+});
+
+test("a second tile after keeping your chips leaves nothing of the first behind", async () => {
+  const { editor, emitted } = await mountEditor(USER_CARD);
+  await pick(editor, "home");
+  await click(editor, ".layout-ask", "Keep");
+  await click(editor, ".layout-ask", "Arrange");
+  await pick(editor, "panel");
+  const cfg = emitted.at(-1);
+  assert.equal(cfg.card_layout, "panel");
+  assert.ok(!("wind_compass" in cfg), "no compass setting from the Home step");
+  assert.deepEqual(cfg.chips, [CLOCK]);
 });

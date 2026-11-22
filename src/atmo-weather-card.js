@@ -2641,15 +2641,15 @@ class AtmosphericWeatherCard extends HTMLElement {
       a.rowChips = rendered.filter(
         (r, i) => !r.isFree && chipArea(this._chips[i]) === a.n,
       );
-      if (a.n === 2) {
-        // The second area shows only while it holds a chip.
-        const show =
-          a.rowChips.some((r) => r.html) &&
-          a.cfg.chip_area_hide !== true &&
-          cfg.chip_area_hide !== true;
-        const display = show ? "" : "none";
-        if (a.cg.style.display !== display) a.cg.style.display = display;
-      }
+      // An area shows only while it holds a chip. With only freely placed
+      // chips the first area stayed as an empty box with its background
+      // (a small white pill in the corner of the Home layout's bar).
+      const show =
+        a.rowChips.some((r) => r.html) &&
+        a.cfg.chip_area_hide !== true &&
+        cfg.chip_area_hide !== true;
+      const display = show ? "" : "none";
+      if (a.cg.style.display !== display) a.cg.style.display = display;
       rowRebuilt = this._renderAreaRow(a, a.rowChips) || rowRebuilt;
     }
     const rowChips = areas[0].rowChips;

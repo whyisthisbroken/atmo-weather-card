@@ -18,7 +18,12 @@ import {
   perfPreset,
   usesBundledHouse,
   withoutLayoutNudges,
+  applyCardLayout,
+  shownLayoutChips,
+  ownChipFromLayout,
+  curveHasChips,
 } from "./atmo-weather-config.js";
+import { layoutChipLabel } from "./atmo-weather-helpers.js";
 import { editorLanguage, makeTranslator } from "./atmo-weather-i18n.js";
 import { isBearingChip } from "./atmo-weather-compass.js";
 import { checkConditions } from "./atmo-weather-conditions.js";
@@ -2920,11 +2925,86 @@ class AtmosphericWeatherCardEditor extends LitElement {
     if (!key) return;
     this._updateField(key, e.target.checked === true);
   }
-  _getChips() {
+  // Your own chips, as they are in the config.
+  _ownChips() {
     const chips = (this._config || {}).chips;
     if (!Array.isArray(chips) || chips.length === 0) return [];
     if (chips.every((s) => s && typeof s === "object")) return chips;
     return chips.map((s) => (s && typeof s === "object" ? s : {}));
+  }
+  // The chips the editor lists and edits: your own, or, while the card has
+  // none and a layout, the chips the layout shows right now. Every change
+  // writes the list back, so the first change makes them your own chips.
+  _getChips() {
+    const own = this._ownChips();
+    return own.length ? own : this._layoutChipList();
+  }
+  _layoutChipList() {
+    const cfg = this._config || {};
+    if (!cfg.card_layout) return [];
+    const hass = this.hass;
+    const states = (hass && hass.states) || null;
+    const key = this._layoutChipKey;
+    if (key && key.cfg === cfg && key.states === states && key.fc === this._fcVersion) return this._layoutChipCache;
+    const chips = applyCardLayout(cfg).chips || [];
+    const value = (chip) => {
+      if (chip.forecast) {
+        const list = this._editorForecast(chip.entity, chip.forecast === "hourly" ? "hourly" : "daily");
+        if (!list) return null;
+        const entry = list[Math.max(0, parseInt(chip.forecast_offset, 10) || 0)];
+        const v = entry ? entry[chip.attribute] : undefined;
+        return v === null ? undefined : v;
+      }
+      const st = states && states[chip.entity];
+      const v = st && st.attributes ? st.attributes[chip.attribute] : undefined;
+      return v === null ? undefined : v;
+    };
+    const lang = (hass && ((hass.locale && hass.locale.language) || hass.language)) || "en";
+    const tr = makeTranslator(editorLanguage(hass));
+    const list = shownLayoutChips(chips, value).map((chip) => {
+      if (!chip._layoutLabel) return ownChipFromLayout(chip, "");
+      const st = states && states[chip.entity];
+      const ha = st && hass && typeof hass.formatEntityAttributeName === "function" ? hass.formatEntityAttributeName(st, chip.attribute) : "";
+      return ownChipFromLayout(chip, layoutChipLabel(ha, chip.attribute, chip._layoutLabel, lang, tr));
+    });
+    this._layoutChipKey = { cfg, states, fc: this._fcVersion };
+    this._layoutChipCache = list;
+    return list;
+  }
+  // A forecast for the layout's chips that depend on it (the rain chance of
+  // Panel): asked once, like the card does. null until it arrives.
+  _editorForecast(entity, type) {
+    const cache = (this._fcLists = this._fcLists || {});
+    const k = `${entity}|${type}`;
+    if (k in cache) return cache[k];
+    cache[k] = null;
+    const conn = this.hass && this.hass.connection;
+    if (!entity || !conn || typeof conn.subscribeMessage !== "function") return null;
+    let unsub = null,
+      done = false;
+    const finish = () => {
+      done = true;
+      if (typeof unsub === "function") unsub();
+    };
+    Promise.resolve(
+      conn.subscribeMessage(
+        (msg) => {
+          if (done) return;
+          cache[k] = Array.isArray(msg && msg.forecast) ? msg.forecast : [];
+          this._fcVersion = (this._fcVersion || 0) + 1;
+          finish();
+          this.requestUpdate();
+        },
+        { type: "weather/subscribe_forecast", forecast_type: type, entity_id: entity },
+      ),
+    ).then(
+      (u) => {
+        unsub = u;
+        if (done && typeof u === "function") u();
+      },
+      () => {},
+    );
+    return null;
   }
   // A copy: Home Assistant freezes the config it hands to the editor.
   _getCustomCards() {
@@ -3604,40 +3684,36 @@ class AtmosphericWeatherCardEditor extends LitElement {
   // Picking a layout is one step you can take back as a whole. It drops your
   // own values for the settings the layout brings, so it looks as intended
   // (an old image_scale: 0 would hide the house), and with chips of your own
-  // it asks what to do with them. Undo puts back the card exactly as it was
-  // before the pick: layout, values and chips. Any other change ends the step.
+  // it asks what to do with them. Every pick starts from the card as it was
+  // before the first one, so a second tile right after the first leaves
+  // nothing of the first behind. Undo puts back exactly that card. Any other
+  // change ends the step.
   _pickLayout(value) {
     const prev = this._config || {};
     const to = String(value || "").trim().toLowerCase();
     if (to === String(prev.card_layout || "").trim().toLowerCase()) return;
-    const base = layoutDefaults(to, prev.weather_entity || "", prev.sun_entity || "sun.sun");
+    const open = this._layoutSwitch;
+    const start = open ? open.before : cloneConfig(prev);
+    const base = layoutDefaults(to, start.weather_entity || "", start.sun_entity || "sun.sun");
     const keys = base
       ? [...new Set([...Object.keys(base), ...LAYOUT_LOOK_KEYS])].filter(
-          (k) => k !== "chips" && Object.prototype.hasOwnProperty.call(prev, k),
+          (k) => k !== "chips" && Object.prototype.hasOwnProperty.call(start, k),
         )
       : [];
-    // Another tile right after the first: Undo still goes back to the start.
-    const open = this._layoutSwitch;
-    const before = open ? open.before : cloneConfig(prev);
-    const reset = (open ? open.reset : 0) + keys.length;
-    // A second pick starts again from your own chips.
-    const ownBefore = open && Array.isArray(open.before.chips) && open.before.chips.length ? open.before.chips : null;
-    const chips = ownBefore ? { chips: cloneConfig(ownBefore) } : {};
-    const restoreLayoutChips = open && open.before.layout_chips === true;
+    const next = cloneConfig(start);
+    for (const k of keys) delete next[k];
+    if (to) next.card_layout = to;
+    else delete next.card_layout;
     this._layoutSwitch = {
       layout: to,
-      before,
-      reset,
-      ask: to && Array.isArray(before.chips) && before.chips.length ? "keep" : null,
+      before: start,
+      reset: keys.length,
+      ask: to && Array.isArray(start.chips) && start.chips.length ? "keep" : null,
       chips: null,
     };
-    this._patch(
-      { card_layout: to, ...chips, ...(restoreLayoutChips ? { layout_chips: true } : {}) },
-      {
-        strip: [...(to ? keys : ["card_layout"]), ...(open && !restoreLayoutChips ? ["layout_chips"] : [])],
-        layoutStep: true,
-      },
-    );
+    this._patch(next, { replace: true, layoutStep: true });
+    // The card right after the pick, before any chip answer: Change goes back here.
+    if (this._layoutSwitch) this._layoutSwitch.afterPick = cloneConfig(this._config);
   }
   // Undo: the card as it was before the layout was picked.
   _undoLayoutSwitch() {
@@ -3646,60 +3722,70 @@ class AtmosphericWeatherCardEditor extends LitElement {
     this._layoutSwitch = null;
     this._patch(cloneConfig(step.before), { replace: true });
   }
-  // "Keep your chips?" No: the layout's chips replace yours.
+  // What a layout shows besides its chips (the wind compass of Home). With
+  // your own chips it stays as it was before the layout: your own compass,
+  // or none.
+  _ownContentPatch(step) {
+    const look = layoutLook(this._config || {});
+    const keys = Object.keys(look).filter((k) => k.startsWith("wind_compass"));
+    const patch = {};
+    for (const k of keys)
+      patch[k] = Object.prototype.hasOwnProperty.call(step.before, k) ? step.before[k] : CONFIG_DEFAULTS[k];
+    return patch;
+  }
+  // "Keep your chips?" No: the layout as it comes, with its chips.
   _dropOwnChips() {
     const step = this._layoutSwitch;
     if (!step) return;
     this._layoutSwitch = { ...step, ask: null, chips: "layout" };
-    this._patch({}, { strip: ["chips", "layout_chips"], layoutStep: true });
+    const next = cloneConfig(step.afterPick || this._config);
+    delete next.chips;
+    delete next.layout_chips;
+    this._patch(next, { replace: true, layoutStep: true });
   }
+  // Yes: your chips stay and the layout adds no chips or compass of its own.
+  // Then the second question: arrange them or leave them where they are.
   _keepOwnChips() {
     const step = this._layoutSwitch;
-    if (step) this._layoutSwitch = { ...step, ask: "arrange" };
+    if (!step) return;
+    this._layoutSwitch = { ...step, ask: "arrange", chips: "kept" };
+    const patch = this._ownContentPatch(step);
+    this._patch({ ...patch }, { strip: ["layout_chips"], layoutStep: true });
   }
+  // "Arrange them?" No: your chips stay exactly as they are.
   _keepChipPositions() {
     const step = this._layoutSwitch;
     if (step) this._layoutSwitch = { ...step, ask: null, chips: "kept" };
   }
-  // "Arrange them?" Yes: your chips join the layout's chips and take the look
-  // of its chip row. A chip that shows what a layout chip already shows goes.
+  // "Arrange them?" Yes: your chips move into the layout's chip row and take
+  // its look (they lose their own place and look). No chips of the layout
+  // are added.
   _arrangeOwnChips() {
     const step = this._layoutSwitch;
-    const c = this._config || {};
-    const base = layoutDefaults(
-      String(c.card_layout || "").trim().toLowerCase(),
-      c.weather_entity || "",
-      c.sun_entity || "sun.sun",
-    );
-    if (!step || !base) return;
+    if (!step) return;
     this._layoutSwitch = { ...step, ask: null, chips: "arranged" };
-    const chips = arrangeChipsForLayout(this._getChips(), base.chips || []);
-    this._patch(chips.length ? { chips, layout_chips: true } : {}, {
-      strip: chips.length ? [] : ["chips", "layout_chips"],
+    const chips = arrangeChipsForLayout(this._ownChips(), []);
+    this._patch(chips.length ? { chips } : {}, {
+      strip: chips.length ? ["layout_chips"] : ["chips", "layout_chips"],
       layoutStep: true,
     });
   }
-  // Change: your own chips back as they were, and the question again. Outside
-  // a layout step it starts one, so Undo has a card to go back to.
+  // Change: back to the card right after the layout was picked, and the
+  // question again. Outside a layout step it starts one, so Undo has a card
+  // to go back to.
   _askAboutChips() {
     const c = this._config || {};
     const layout = String(c.card_layout || "");
     if (!layout) return;
     const step = this._layoutSwitch;
     if (!step) {
-      this._layoutSwitch = { layout, before: cloneConfig(c), reset: 0, ask: "keep", chips: null };
+      this._layoutSwitch = { layout, before: cloneConfig(c), afterPick: cloneConfig(c), reset: 0, ask: "keep", chips: null };
       return;
     }
-    const own = step.before;
-    const ownChips = Array.isArray(own.chips) && own.chips.length ? cloneConfig(own.chips) : null;
-    this._layoutSwitch = { ...step, ask: ownChips ? "keep" : null, chips: null };
-    this._patch(
-      { ...(ownChips ? { chips: ownChips } : {}), ...(own.layout_chips === true ? { layout_chips: true } : {}) },
-      {
-        strip: [...(ownChips ? [] : ["chips"]), ...(own.layout_chips === true ? [] : ["layout_chips"])],
-        layoutStep: true,
-      },
-    );
+    const after = cloneConfig(step.afterPick || step.before);
+    const hasOwn = Array.isArray(after.chips) && after.chips.length > 0;
+    this._layoutSwitch = { ...step, ask: hasOwn ? "keep" : null, chips: null };
+    this._patch(after, { replace: true, layoutStep: true });
   }
   _onChipAreaBackgroundModeSelect(e) {
     const mode = this._ds(e, "bgMode");
@@ -6675,11 +6761,13 @@ class AtmosphericWeatherCardEditor extends LitElement {
       },
     ];
     return html`${this._formData.card_layout && !list.length
-        ? html`<div class="info">${t("The card shows the chips of its layout. Add a chip to use your own instead.")}</div>`
+        ? html`<div class="info">${t("The card shows the chips of its layout.")}</div>`
+        : this._formData.card_layout && !this._ownChips().length
+          ? html`<div class="info layout-chips-list">${t("These are the chips of the layout. Your first change makes them your own chips.")}</div>`
         : this._formData.card_layout && this._formData.layout_chips === true
           ? html`<div class="info">${t("The card also shows the chips of its layout, before your own.")}</div>`
           : ""}
-      <div class="sensor-list">
+      <div class="sensor-list ${this._ownChips().length ? "" : "from-layout"}" title=${this._ownChips().length ? "" : t("From the layout")}>
         ${list.map((chip, idx) => this._renderChipRow(chip, idx, list.length))}
       </div>
       <button type="button" class="add-chip-btn" @click=${this._addChip}>
@@ -6728,13 +6816,25 @@ class AtmosphericWeatherCardEditor extends LitElement {
             "forecast_curve",
             "Draws the temperature as a curve over the forecast chips of a chip area that show the temperature, at least two of them.",
             "chips.html#forecast-curve",
-          )}${this._renderForm([
-            {
-              name: "forecast_curve",
-              selector: { select: { mode: "dropdown", options: tOpts(OPT.forecast_curve) } },
-            },
-          ])}
-          ${this._formData.forecast_curve
+          )}${this._curveUsable()
+            ? this._renderForm([
+                {
+                  name: "forecast_curve",
+                  selector: { select: { mode: "dropdown", options: tOpts(OPT.forecast_curve) } },
+                },
+              ])
+            : html`<div class="info curve-unused">
+                  ${t("Not shown on this card: the curve needs at least two forecast chips with the temperature in a chip row, like the next hours of the Panel layout.")}
+                </div>
+                <ha-form
+                  .hass=${this.hass}
+                  .data=${this._formData}
+                  .schema=${[{ name: "forecast_curve", selector: { select: { mode: "dropdown", options: tOpts(OPT.forecast_curve) } } }]}
+                  .computeLabel=${this._computeLabel}
+                  .disabled=${true}
+                  @value-changed=${this._valueChanged}
+                ></ha-form>`}
+          ${this._formData.forecast_curve && this._curveUsable()
             ? this._renderSlider(
                 "forecast_curve_height",
                 t(LABELS.forecast_curve_height),
@@ -6967,10 +7067,15 @@ class AtmosphericWeatherCardEditor extends LitElement {
     const a = this._config && this._config.chip_area_2;
     return a && typeof a === "object" && !Array.isArray(a) ? { ...a } : {};
   }
+  // forecast_curve only draws over a chip row with two forecast chips that
+  // show the temperature (your own chips, or the layout's).
+  _curveUsable() {
+    return curveHasChips(applyCardLayout(this._config || {}).chips);
+  }
   _hasAreaTwo() {
     if (this._config && this._config.chip_area_2) return true;
     // The layout's second area, while the layout's chips are in use.
-    if (this._layoutValues().chip_area_2 && this._getChips().length === 0) return true;
+    if (this._layoutValues().chip_area_2 && this._ownChips().length === 0) return true;
     return this._getChips().some(
       (c) => chipArea(c) === 2 && String(c.position || "").toLowerCase() !== "custom",
     );
@@ -7284,21 +7389,24 @@ class AtmosphericWeatherCardEditor extends LitElement {
     const step = s && s.layout === current ? s : null;
     const c = this._config || {};
     // Own chips outside a layout step: offer the questions again.
-    const ownChips = current && !step && this._getChips().length > 0 && c.layout_chips !== true;
+    const ownChips = current && !step && this._ownChips().length > 0 && c.layout_chips !== true;
     const btn = (label, handler, secondary) =>
       html`<button type="button" class="inline-action-btn ${secondary ? "secondary" : ""}" @click=${handler}>
         ${t(label)}
       </button>`;
     const CHIP_NOTES = {
-      arranged: "Your chips were arranged for the layout.",
+      arranged: "Your chips were arranged in the layout's chip row. The layout adds no chips of its own.",
       layout: "The card now shows the chips of the layout.",
-      kept: "Your own chips replace the chips of this layout.",
+      kept: "Your own chips stay as they are. The layout adds no chips of its own.",
     };
     const lines = [];
     if (step && step.reset === 1) lines.push(t("One own value was reset so the layout looks as intended."));
     else if (step && step.reset > 1)
       lines.push(t("{n} own values were reset so the layout looks as intended.", { n: step.reset }));
     if (step && step.chips) lines.push(t(CHIP_NOTES[step.chips]));
+    // With your own chips the layout's compass stays away too.
+    if (step && (step.chips === "kept" || step.chips === "arranged") && Object.keys(this._layoutValues()).some((k) => k.startsWith("wind_compass")))
+      lines.push(t("The wind compass stays as it was before the layout."));
     return html`${lines.length
         ? html`<div class="info inline-action layout-reset">
             <span>${lines.map((l, i) => html`${i ? html`<br />` : ""}${l}`)}</span>
@@ -7309,7 +7417,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
         : ""}
       ${step && step.ask === "keep"
         ? html`<div class="info inline-action layout-ask" data-step="keep">
-            <span>${t("Keep your own chips? Without them the card shows the chips of the layout.")}</span>
+            <span>${t("Keep your own chips? With them the layout adds no chips or wind compass of its own. Without them the card shows the layout with its chips.")}</span>
             <span class="inline-action-btns">
               ${btn("Keep", this._keepOwnChips)} ${btn("Use the layout's chips", this._dropOwnChips, true)}
             </span>
@@ -7318,7 +7426,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
       ${step && step.ask === "arrange"
         ? html`<div class="info inline-action layout-ask" data-step="arrange">
             <span
-              >${t("Arrange them for the layout? Your chips join the chips of the layout and take the look of its chip row.")}</span
+              >${t("Arrange them for the layout? Your chips move into the layout's chip row and take its look. Without arranging they stay exactly where they are.")}</span
             >
             <span class="inline-action-btns">
               ${btn("Arrange", this._arrangeOwnChips)} ${btn("Keep positions", this._keepChipPositions, true)}

@@ -662,6 +662,47 @@ export function arrangeChipsForLayout(own, layoutChips) {
     });
 }
 
+// The layout chips the card shows right now, as the card picks them: a
+// reading the weather service does not send stays away, and of a group only
+// the first ones with a value take the places (the tiles of Panel).
+// value(chip) returns the value, undefined when it is missing, or null when
+// it is not known yet (then the chip counts as shown).
+export function shownLayoutChips(chips, value) {
+  const count = {};
+  return (Array.isArray(chips) ? chips : []).filter((chip) => {
+    if (!chip || typeof chip !== "object") return false;
+    if (chip._layoutOptional && chip.attribute && value(chip) === undefined) return false;
+    if (chip._layoutGroup) {
+      count[chip._layoutGroup] = (count[chip._layoutGroup] || 0) + 1;
+      if (count[chip._layoutGroup] > chip._layoutMax) return false;
+    }
+    return true;
+  });
+}
+
+// A layout chip as a chip of your own: without the layout's bookkeeping, and
+// with the label it shows as its name, so it looks the same.
+export function ownChipFromLayout(chip, label) {
+  const out = {};
+  for (const [k, v] of Object.entries(chip || {})) if (!k.startsWith("_layout")) out[k] = v;
+  if (label && !out.name) out.name = label;
+  return out;
+}
+
+// True when a chip row shows at least two forecast chips with the
+// temperature: only then the card draws forecast_curve.
+export function curveHasChips(chips) {
+  const per = {};
+  for (const c of Array.isArray(chips) ? chips : []) {
+    if (!c || typeof c !== "object" || !c.forecast || c.attribute !== "temperature") continue;
+    if (String(c.position || "").toLowerCase() === "custom") continue;
+    const a = chipArea(c);
+    per[a] = (per[a] || 0) + 1;
+    if (per[a] >= 2) return true;
+  }
+  return false;
+}
+
 // The config the card runs: the layout's values under the card's own.
 export function applyCardLayout(config, width = 0) {
   // image_day / image_night: none means no picture, not a file called none.
