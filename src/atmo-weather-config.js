@@ -323,14 +323,18 @@ export function layoutDefaults(layout, weather = "", sun = "sun.sun") {
       celestial_alignment: "right",
       celestial_x: 40,
       chip_area_position: "bottom-left",
-      chip_area_padding: "0px 0px 2px 112px",
+      // Room for five characters ("-25.8°", "103.5°" in Fahrenheit): the
+      // short degree sign, a slightly smaller temperature and the condition
+      // and values further right. With "°C" and 112 px, "12.4 °C" ran into
+      // the condition.
+      chip_area_padding: "0px 0px 2px 134px",
       chip_area_gap: "10px",
       chip_padding: "0px",
       chip_text_size: "13px",
       chip_icon_size: "14px",
       chips: [
-        bigTemperature(weather, 44, 14, 14),
-        conditionLine(weather, 15, 114, 18),
+        { ...bigTemperature(weather, 40, 14, 16), unit_format: "°", fancy_unit: false },
+        conditionLine(weather, 15, 136, 18),
         reading(weather, "humidity", null, "mdi:water-percent"),
         reading(weather, "wind_speed", null, "mdi:weather-windy"),
       ],
@@ -561,12 +565,12 @@ export const HOUSE_FILES = Object.freeze({
 export const HOUSE_PLACEMENT = Object.freeze({ image_alignment: "bottom-right", image_scale: 55, image_y: "19%" });
 
 // The layout's image_x / image_y nudge the picture from the layout's own spot.
-// With a spot of your own in the image grid they go, so the picture sits
-// exactly where you put it (your own image_x / image_y stay).
+// Once you pick a spot in the image grid yourself, also the layout's own one,
+// they go, so the picture sits exactly where the grid shows it (your own
+// image_x / image_y stay).
 export function withoutLayoutNudges(values, config) {
-  const own = String((config && config.image_alignment) || "").trim().toLowerCase();
-  const theirs = String((values && values.image_alignment) || "").trim().toLowerCase();
-  if (!own || !theirs || own === theirs) return values;
+  const own = String((config && config.image_alignment) || "").trim();
+  if (!own || !values || !("image_x" in values || "image_y" in values)) return values;
   const { image_x, image_y, ...rest } = values;
   return rest;
 }

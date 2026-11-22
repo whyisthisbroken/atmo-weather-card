@@ -169,6 +169,19 @@ const CHIP_TAB_HELP = {
     "chips.html#chip-visibility",
   ],
 };
+// The values a card's layout brings (without its chips), as the card uses
+// them: with the bundled house's placement, and without the layout's image
+// nudges when the card has an image spot of its own.
+function layoutLook(cfg) {
+  const base =
+    layoutDefaults(
+      String(cfg.card_layout || "").trim().toLowerCase(),
+      cfg.weather_entity || "",
+      cfg.sun_entity || "sun.sun",
+    ) || {};
+  const { chips, ...rest } = base;
+  return withoutLayoutNudges(usesBundledHouse(cfg) ? { ...rest, ...HOUSE_PLACEMENT } : rest, cfg);
+}
 // A deep copy of a config (plain JSON data), for Undo.
 const cloneConfig = (config) => JSON.parse(JSON.stringify(config || {}));
 // The same text for the same config, whatever the order of its keys.
@@ -2861,15 +2874,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
   _layoutValues() {
     const cfg = this._config || {};
     if (this._layoutValuesFor === cfg) return this._layoutValuesCache;
-    const base =
-      layoutDefaults(
-        String(cfg.card_layout || "").trim().toLowerCase(),
-        cfg.weather_entity || "",
-        cfg.sun_entity || "sun.sun",
-      ) || {};
-    const { chips, ...rest } = base;
-    // The bundled house sits smaller and lower than an own picture.
-    const values = withoutLayoutNudges(usesBundledHouse(cfg) ? { ...rest, ...HOUSE_PLACEMENT } : rest, cfg);
+    const values = layoutLook(cfg);
     this._layoutValuesFor = cfg;
     this._layoutValuesCache = values;
     return values;
@@ -3355,10 +3360,18 @@ class AtmosphericWeatherCardEditor extends LitElement {
       )
         delete out[key];
     }
+    // A value equal to the default goes, because the card falls back to the
+    // default anyway. Not where the layout brings another value: there the
+    // default is your choice against the layout (wind_compass: off in Home),
+    // and without it the layout's value would come back.
+    const look = layoutLook(out);
     for (const [k, defVal] of Object.entries(CONFIG_DEFAULTS)) {
-      if (out[k] === defVal) delete out[k];
+      const layoutDiffers = Object.prototype.hasOwnProperty.call(look, k) && look[k] !== defVal;
+      if (out[k] === defVal && !layoutDiffers) delete out[k];
     }
-    const inactive = this._computeInactiveKeys(out);
+    // Settings without effect go, judged by what the card shows: the
+    // layout's values under your own.
+    const inactive = this._computeInactiveKeys({ ...look, ...out });
     for (const k of inactive) delete out[k];
     delete out._color_mode;
     const ordered = {};
@@ -5343,18 +5356,22 @@ class AtmosphericWeatherCardEditor extends LitElement {
               },
             ])}`
         : ""}`;
-    const subValueContent = html`<div class="toggle-group">
-        <label class="toggle-row">
-          <span>${t("Hide")}</span>
-          <ha-switch
-            data-chip-idx=${idx}
-            data-key="hide_sub_value"
-            data-mode=${TOGGLE_MODE.TRUE_DELETE}
-            .checked=${chip.hide_sub_value === true}
-            @change=${this._onChipToggleChange}
-          ></ha-switch
-        ></label>
-      </div>
+    // Hide only means something once there is a second value: without one the
+    // switch flipped back at once (the editor drops hide_sub_value then).
+    const subValueContent = html`${hasSubValue
+        ? html`<div class="toggle-group">
+            <label class="toggle-row">
+              <span>${t("Hide")}</span>
+              <ha-switch
+                data-chip-idx=${idx}
+                data-key="hide_sub_value"
+                data-mode=${TOGGLE_MODE.TRUE_DELETE}
+                .checked=${chip.hide_sub_value === true}
+                @change=${this._onChipToggleChange}
+              ></ha-switch
+            ></label>
+          </div>`
+        : ""}
       ${chip.hide_sub_value !== true
         ? html`${entityResetForm("sub_value_entity", "sub_value_attribute", {
             entity: {},

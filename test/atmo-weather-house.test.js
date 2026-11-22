@@ -144,11 +144,17 @@ test("a spot of your own in the image grid drops the layout's nudges, your own s
   const nudged = applyCardLayout({ ...HOME, image_alignment: "top-left", image_y: "8" });
   assert.equal(nudged.image_y, "8");
   assert.equal(nudged.image_x, undefined);
-  // The layout's own spot keeps them, also written out by hand.
-  const same = applyCardLayout({ ...HOME, image_alignment: "Bottom-Right" });
-  assert.equal(same.image_y, HOUSE_PLACEMENT.image_y);
+  // Report of 2026-11-22: picking the layout's own spot (bottom right) in the
+  // grid kept the nudges, so the picture was not where the grid showed it.
+  const same = applyCardLayout({ ...HOME, image_alignment: "bottom-right" });
+  assert.equal(same.image_x, undefined);
+  assert.equal(same.image_y, undefined);
+  // Without a spot of your own the layout's nudges stay.
+  assert.equal(applyCardLayout(HOME).image_y, HOUSE_PLACEMENT.image_y);
   assert.deepEqual(withoutLayoutNudges({ image_alignment: "top-right", image_x: "16", image_y: "11%" }, { image_alignment: "center" }), { image_alignment: "top-right" });
-  assert.deepEqual(withoutLayoutNudges({ image_x: "1" }, { image_alignment: "center" }), { image_x: "1" });
+  assert.deepEqual(withoutLayoutNudges({ image_alignment: "top-right", image_x: "16" }, { image_alignment: "top-right" }), { image_alignment: "top-right" });
+  assert.deepEqual(withoutLayoutNudges({ image_scale: 70 }, { image_alignment: "center" }), { image_scale: 70 });
+  assert.deepEqual(withoutLayoutNudges({ image_x: "1" }, {}), { image_x: "1" });
 });
 
 test("the bundled house stands bottom right and smaller than an own picture, own values win", () => {

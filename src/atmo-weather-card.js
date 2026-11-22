@@ -130,6 +130,7 @@ import {
   timeFormatOptions,
   forecastUnavailableText,
   imageMaxWidth,
+  cssLengths,
   layoutChipLabel,
   imageRuleMatches,
   imageRuleValue,
@@ -2374,13 +2375,11 @@ class AtmosphericWeatherCard extends HTMLElement {
       cfg.chip_label_size || "",
       "_prevChipNameFS",
     );
-    this._cssVar(
-      root,
-      "--awc-card-padding",
-      cfg.card_padding || "",
-      "_prevCardPadding",
-    );
-    const padRaw = (cfg.card_padding || "").toString().trim();
+    // A bare number is pixels: "0" alone is fine in CSS, but not inside the
+    // calc() that places the image, where it made the image jump to the
+    // top-left corner (and card_padding: 0 as a number counted as unset).
+    const padRaw = cssLengths(cfg.card_padding);
+    this._cssVar(root, "--awc-card-padding", padRaw, "_prevCardPadding");
     if (padRaw && this._prevCardPadParsed !== padRaw) {
       this._prevCardPadParsed = padRaw;
       const parts = padRaw.split(/\s+/);

@@ -282,6 +282,18 @@ export function layoutChipLabel(haLabel, attribute, fallback, lang, translate) {
   return ha;
 }
 
+// A list of CSS lengths like card_padding: a bare number is pixels ("0" ->
+// "0px", "8 16" -> "8px 16px"), so the value also works inside calc().
+export function cssLengths(value) {
+  if (value == null) return "";
+  return String(value)
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => (/^-?\d+(\.\d+)?$/.test(part) ? `${part}px` : part))
+    .join(" ");
+}
+
 // image_max_width as CSS: a number is a share of the card width in %, a value
 // with a unit stays as it is. Empty, 0 or nonsense: no limit.
 export function imageMaxWidth(value) {

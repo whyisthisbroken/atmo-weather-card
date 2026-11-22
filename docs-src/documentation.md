@@ -1232,7 +1232,7 @@ Picking a layout in the editor resets your own values for the settings that layo
 1. **Keep your own chips?** With **Use the layout's chips** your chips go and the card shows the chips of the layout.
 2. **Arrange them for the layout?** With **Arrange** your chips join the chips of the layout (`layout_chips: true`): they lose their own place and look and line up in the layout's chip row, and a chip that shows the same as a layout chip, like the temperature, is left out. With **Keep positions** nothing changes.
 
-Each step can be undone, and **Change** in the Layouts panel asks again later.
+**Undo** puts back the card exactly as it was before you picked the layout: the layout, your values and your chips. Picking a second layout right after the first still undoes back to the start. After a chip choice, **Change** gives you your chips back and asks again; outside the questions it is in the Layouts panel. Any other change ends the step, so Undo never takes back something you did afterwards.
 
 <img width="480" alt="card_layout standard, compact and wide" src="images/example-layouts.webp" />
 
@@ -1617,7 +1617,7 @@ You can add your own images (such as a house image) to the card. This works in b
 | `image_max_width` | `number` | —           | The most of the card width the image may take, in percent, or a CSS size like `240px`. On a narrower card the whole image shrinks and stays at its spot, so it does not run into the values next to it. The [`home` layout](#card-layouts) uses `58`. In the editor: **Image** → **Placement** → **Max width**. |
 | `image_alignment` | `string` | `top-right` | Image placement. Options: `top-left`, `top-center`, `top-right`, `center-left`, `center`, `center-right`, `bottom-left`, `bottom-center`, `bottom-right`. |
 | `image_x`         | `string` | `0`         | Moves the image sideways from its spot in `image_alignment`, positive to the right. Pixels or CSS values such as `-20` or `10%`; a percentage is of the card width. |
-| `image_y`         | `string` | `0`         | Moves the image away from the edge it sits at: down from the top, up from the bottom, down from the middle. Pixels or CSS values such as `10` or `-5%`; a percentage is of the card height. A layout's `image_x` and `image_y` belong to its own spot: pick another `image_alignment` and the image sits exactly there. |
+| `image_y`         | `string` | `0`         | Moves the image away from the edge it sits at: down from the top, up from the bottom, down from the middle. Pixels or CSS values such as `10` or `-5%`; a percentage is of the card height. A layout's `image_x` and `image_y` only apply while you have not picked a spot yourself: with an `image_alignment` of your own the image sits exactly at that spot. |
 | `status_entity`   | `string` | —           | Entity to monitor for a status-specific image (for example a door sensor).                                                                                |
 | `status_day`      | `string` | —           | Day image to show while `status_entity` is active, open, or home.                                                                                         |
 | `status_night`    | `string` | —           | Night image to show while `status_entity` is active, open, or home.                                                                                       |
