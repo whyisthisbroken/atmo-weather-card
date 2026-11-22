@@ -171,7 +171,7 @@
 <p><span id="bundled-house"></span></p>
 <h3 id="the-house-of-the-home-layout"><a class="anchor" href="#the-house-of-the-home-layout" aria-hidden="true">#</a>The house of the Home layout</h3>
 <p>The <a href="appearance.html#card-layouts"><code>home</code> layout</a> brings a house of its own, so the card looks finished without any picture. It is an invented house, rendered with Gemini, in six pictures: by day and at night, wet while it rains or storms (<code>rainy</code>, <code>pouring</code>, <code>lightning-rainy</code>, <code>lightning</code>, <code>hail</code>) and snowy while it snows (<code>snowy</code>, <code>snowy-rainy</code>). Day and night follow the sun, and the pictures <a href="#image-transition">blend</a> into each other like your own.</p>
-<p>The house is wide, so it sits a little smaller and lower than an own picture (<code>image_scale: 55</code>, <code>image_y: &quot;28%&quot;</code>), and on a narrow card it shrinks with <code>image_max_width</code>. To make it bigger, open <strong>Image</strong> → <strong>Placement</strong> in the editor or set <code>image_scale</code> yourself; your values win.</p>
+<p>The house is wide, so it is a little smaller than an own picture and stands bottom right, just above the bar (<code>image_alignment: bottom-right</code>, <code>image_scale: 55</code>, <code>image_y: &quot;19%&quot;</code>). Made bigger, it grows upwards from there, and on a narrow card it shrinks with <code>image_max_width</code>. To make it bigger, open <strong>Image</strong> → <strong>Placement</strong> in the editor or set <code>image_scale</code> yourself; your values win.</p>
 <p align="center"><img src="../images/house-all.webp" alt="The house of the home layout by day, at night, in the rain and in the snow" width="560" /></p>
 
 <p>As soon as you set a picture of your own, <code>image_day</code>, <code>image_night</code>, <code>image_folder</code>, <code>image_conditions</code> or <code>status_entity</code>, your pictures replace the whole house. <code>image_day: none</code> shows no picture at all. The snowy house only shows while it snows; for snow that stays on the roof, use your own pictures with a sensor, see <a href="#image-conditions">Images by state</a>.</p>
@@ -220,7 +220,7 @@
 <td data-label="Option" id="opt-image_max_width" style="text-align:left"><code>image_max_width</code></td>
 <td data-label="Type" style="text-align:left"><code>number</code></td>
 <td data-label="Default" style="text-align:left">—</td>
-<td data-label="Description" style="text-align:left">The most of the card width the image may take, in percent, or a CSS size like <code>240px</code>. On a narrower card the image shrinks and keeps its side and its bottom line, so it does not run into the values next to it. The <a href="appearance.html#card-layouts"><code>home</code> layout</a> uses <code>58</code>. In the editor: <strong>Image</strong> → <strong>Placement</strong> → <strong>Max width</strong>.</td>
+<td data-label="Description" style="text-align:left">The most of the card width the image may take, in percent, or a CSS size like <code>240px</code>. On a narrower card the whole image shrinks and stays at its spot, so it does not run into the values next to it. The <a href="appearance.html#card-layouts"><code>home</code> layout</a> uses <code>58</code>. In the editor: <strong>Image</strong> → <strong>Placement</strong> → <strong>Max width</strong>.</td>
 </tr>
 <tr>
 <td data-label="Option" id="opt-image_alignment" style="text-align:left"><code>image_alignment</code></td>
@@ -232,13 +232,13 @@
 <td data-label="Option" id="opt-image_x" style="text-align:left"><code>image_x</code></td>
 <td data-label="Type" style="text-align:left"><code>string</code></td>
 <td data-label="Default" style="text-align:left"><code>0</code></td>
-<td data-label="Description" style="text-align:left">Horizontal offset from the selected image alignment. Accepts pixels or CSS values such as <code>-20</code> or <code>10%</code>.</td>
+<td data-label="Description" style="text-align:left">Moves the image sideways from its spot in <code>image_alignment</code>, positive to the right. Pixels or CSS values such as <code>-20</code> or <code>10%</code>; a percentage is of the card width.</td>
 </tr>
 <tr>
 <td data-label="Option" id="opt-image_y" style="text-align:left"><code>image_y</code></td>
 <td data-label="Type" style="text-align:left"><code>string</code></td>
 <td data-label="Default" style="text-align:left"><code>0</code></td>
-<td data-label="Description" style="text-align:left">Vertical offset from the selected image alignment. Accepts pixels or CSS values such as <code>10</code> or <code>-5%</code>.</td>
+<td data-label="Description" style="text-align:left">Moves the image away from the edge it sits at: down from the top, up from the bottom, down from the middle. Pixels or CSS values such as <code>10</code> or <code>-5%</code>; a percentage is of the card height. A layout&#39;s <code>image_x</code> and <code>image_y</code> belong to its own spot: pick another <code>image_alignment</code> and the image sits exactly there.</td>
 </tr>
 <tr>
 <td data-label="Option" id="opt-status_entity" style="text-align:left"><code>status_entity</code></td>

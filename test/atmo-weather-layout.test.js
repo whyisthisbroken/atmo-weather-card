@@ -216,14 +216,14 @@ test("thunderstorms by day get dark clouds and light rain", () => {
   assert.equal(rain._renderState.rainRgb, "58, 72, 100");
 });
 
-test("layout readings take Home Assistant's label and stay away without a value", () => {
-  const hass = makeHass({ weather: "rainy" });
-  hass.formatEntityAttributeName = (st, a) => ({ humidity: "Luftfeuchtigkeit", wind_speed: "Windgeschwindigkeit" })[a] || "";
+test("layout readings take Home Assistant's label in other languages and stay away without a value", () => {
+  const hass = makeHass({ weather: "rainy", language: "fr" });
+  hass.formatEntityAttributeName = (st, a) => ({ humidity: "Humidité", wind_speed: "Vitesse du vent" })[a] || "";
   delete hass.states["weather.home"].attributes.pressure;
   const card = mountCard({ card_layout: "wide" }, hass);
   runFrames(3);
   const text = [...card.shadowRoot.querySelectorAll(".chip")].map((c) => c.textContent).join("|");
-  assert.match(text, /Luftfeuchtigkeit/);
+  assert.match(text, /Humidité/);
   assert.doesNotMatch(text, /Pressure|N\/A/);
   document.body.replaceChildren();
   // Without the function the English fallback shows.
@@ -231,6 +231,25 @@ test("layout readings take Home Assistant's label and stay away without a value"
   runFrames(3);
   const names = [...plain.shadowRoot.querySelectorAll(".chip-name")].map((c) => c.textContent);
   assert.ok(names.includes("Humidity"), names.join(","));
+});
+
+// Report of 2026-11-22: "Luftfeuchtigkeit" and "Windgeschwindigkeit" from
+// Home Assistant pushed the Standard row into two lines in the card picker.
+test("in English and German layout chips take the card's own short words", () => {
+  const de = makeHass({ language: "de" });
+  de.formatEntityAttributeName = (st, a) => ({ humidity: "Luftfeuchtigkeit", wind_speed: "Windgeschwindigkeit" })[a] || "";
+  const card = mountCard({ card_layout: "standard" }, de);
+  runFrames(3);
+  const names = [...card.shadowRoot.querySelectorAll(".chip-name")].map((c) => c.textContent.trim());
+  assert.ok(names.includes("Luftfeuchte") && names.includes("Wind"), names.join(","));
+  assert.ok(!names.some((n) => /Luftfeuchtigkeit|Windgeschwindigkeit/.test(n)), names.join(","));
+  document.body.replaceChildren();
+  const en = makeHass();
+  en.formatEntityAttributeName = (st, a) => ({ humidity: "Humidity", wind_speed: "Wind speed" })[a] || "";
+  const enCard = mountCard({ card_layout: "standard" }, en);
+  runFrames(3);
+  const enNames = [...enCard.shadowRoot.querySelectorAll(".chip-name")].map((c) => c.textContent.trim());
+  assert.ok(enNames.includes("Wind") && !enNames.includes("Wind speed"), enNames.join(","));
 });
 
 test("a layout tile takes the card's own word where Home Assistant has no translation", () => {
@@ -241,23 +260,25 @@ test("a layout tile takes the card's own word where Home Assistant has no transl
   runFrames(3);
   const names = [...card.shadowRoot.querySelectorAll(".chip-name")].map((c) => c.textContent.trim());
   assert.ok(names.includes("Sonnenuntergang"), names.join(","));
-  assert.ok(names.includes("Luftfeuchtigkeit"), names.join(","));
+  assert.ok(names.includes("Luftfeuchte"), names.join(","));
   assert.ok(!names.includes("Next setting"), names.join(","));
   document.body.replaceChildren();
-  // In English Home Assistant's label stays.
+  // In English the card's word too.
   const en = makeHass();
   en.formatEntityAttributeName = (st, a) => ({ next_setting: "Next setting" })[a] || "";
   const enCard = mountCard({ card_layout: "panel" }, en);
   runFrames(3);
-  assert.ok([...enCard.shadowRoot.querySelectorAll(".chip-name")].some((c) => c.textContent.trim() === "Next setting"));
+  assert.ok([...enCard.shadowRoot.querySelectorAll(".chip-name")].some((c) => c.textContent.trim() === "Sunset"));
 });
 
 test("layoutChipLabel keeps real translations and words it has none for", () => {
   const de = makeTranslator("de");
   assert.equal(layoutChipLabel("Next setting", "next_setting", "Sunset", "de", de), "Sonnenuntergang");
-  assert.equal(layoutChipLabel("Nächster Untergang", "next_setting", "Sunset", "de", de), "Nächster Untergang");
+  assert.equal(layoutChipLabel("Nächster Untergang", "next_setting", "Sunset", "de", de), "Sonnenuntergang");
+  assert.equal(layoutChipLabel("Windgeschwindigkeit", "wind_speed", "Wind", "de-AT", de), "Wind");
   assert.equal(layoutChipLabel("Next setting", "next_setting", "Sunset", "fr", makeTranslator("fr")), "Next setting");
-  assert.equal(layoutChipLabel("Next setting", "next_setting", "Sunset", "en", makeTranslator("en")), "Next setting");
+  assert.equal(layoutChipLabel("Prochain coucher", "next_setting", "Sunset", "fr", makeTranslator("fr")), "Prochain coucher");
+  assert.equal(layoutChipLabel("Next setting", "next_setting", "Sunset", "en", makeTranslator("en")), "Sunset");
   assert.equal(layoutChipLabel("", "precipitation_probability", "Rain", "de", de), "Regen");
 });
 

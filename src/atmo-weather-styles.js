@@ -91,7 +91,8 @@ export function buildStyles() {
           #frost > * { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0; transition: opacity 3s ease; }
           #frost > canvas { -webkit-mask-image: none !important; mask-image: none !important; }
           #frost > .frost-glass { -webkit-mask-size: 100% 100%; mask-size: 100% 100%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; }
-          #image-slot { position: absolute; top: 0; height: 100%; width: auto; user-select: none; pointer-events: none; box-sizing: border-box; }
+          /* max-content: the whole picture's width, also where the space beside its anchor is smaller (centred: only half the card); image_max_width caps it. */
+          #image-slot { position: absolute; top: 0; height: 100%; width: max-content; user-select: none; pointer-events: none; box-sizing: border-box; }
           #image-slot > img { display: block; height: 100%; width: auto; max-width: 100%; object-fit: contain; object-position: var(--_awc-img-pos, 50% 50%); border: none; outline: none; }
           #image-slot > img.awc-img-layer { position: absolute; top: 0; left: 0; }
           #image-slot > img[src=""],

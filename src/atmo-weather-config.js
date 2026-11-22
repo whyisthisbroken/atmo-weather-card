@@ -298,11 +298,13 @@ export function layoutDefaults(layout, weather = "", sun = "sun.sun") {
       celestial_alignment: "right",
       celestial_x: 45,
       chip_area_position: "bottom-left",
-      chip_area_padding: "0px 0px 2px 10px",
-      chip_area_gap: "14px",
+      // Gaps and text shrink with the card width (cqw = 1 % of it), so the
+      // row stays on one line on a phone and in Home Assistant's card picker.
+      chip_area_padding: "0px 0px 2px clamp(4px, 2.5cqw, 10px)",
+      chip_area_gap: "clamp(4px, 3cqw, 14px)",
       chip_style: "vertical",
-      chip_padding: "4px 8px",
-      chip_text_size: "15px",
+      chip_padding: "4px clamp(4px, 2cqw, 8px)",
+      chip_text_size: "clamp(13px, 4.6cqw, 15px)",
       chip_label_size: "10px",
       chip_icon_size: "14px",
       chips: [
@@ -377,7 +379,7 @@ export function layoutDefaults(layout, weather = "", sun = "sun.sun") {
       image_scale: 70,
       // Out by the card padding, so the house meets the right edge.
       image_x: "16",
-      image_y: "16%",
+      image_y: "11%",
       // On a narrow card the house shrinks instead of running into the
       // temperature on the left.
       image_max_width: 58,
@@ -553,9 +555,21 @@ export const HOUSE_FILES = Object.freeze({
   snowDay: "house-snow-day.webp",
   snowNight: "house-snow-night.webp",
 });
-// The bundled house is wide: smaller and a bit lower than an own picture, it
-// stays clear of the temperature and of the wind ring. Your own values win.
-export const HOUSE_PLACEMENT = Object.freeze({ image_scale: 55, image_y: "28%" });
+// The bundled house is wide: smaller than an own picture, it stays clear of
+// the temperature and of the wind ring. It stands on its ground line just
+// above the bar, so it grows upwards when you make it bigger. Your own values win.
+export const HOUSE_PLACEMENT = Object.freeze({ image_alignment: "bottom-right", image_scale: 55, image_y: "19%" });
+
+// The layout's image_x / image_y nudge the picture from the layout's own spot.
+// With a spot of your own in the image grid they go, so the picture sits
+// exactly where you put it (your own image_x / image_y stay).
+export function withoutLayoutNudges(values, config) {
+  const own = String((config && config.image_alignment) || "").trim().toLowerCase();
+  const theirs = String((values && values.image_alignment) || "").trim().toLowerCase();
+  if (!own || !theirs || own === theirs) return values;
+  const { image_x, image_y, ...rest } = values;
+  return rest;
+}
 // A thunderstorm without reported rain still wets the house: it nearly always rains.
 export const HOUSE_RAIN_STATES = Object.freeze(["rainy", "pouring", "lightning-rainy", "lightning", "hail"]);
 export const HOUSE_SNOW_STATES = Object.freeze(["snowy", "snowy-rainy"]);
@@ -664,7 +678,8 @@ export function applyCardLayout(config, width = 0) {
       : null;
   // The pictures go over the card's own values (those are only empty image
   // keys here); the house's placement stays under them.
-  const out = { ...base, ...(house ? HOUSE_PLACEMENT : null), ...config, ...house };
+  const look = withoutLayoutNudges({ ...base, ...(house ? HOUSE_PLACEMENT : null) }, config);
+  const out = { ...look, ...config, ...house };
   // layout_chips: true shows the layout's chips and your own after them.
   out.chips = !ownChips
     ? base.chips

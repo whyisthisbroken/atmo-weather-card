@@ -152,6 +152,10 @@ import {
 // Injected by build.mjs from package.json.
 const CARD_VERSION =
   typeof __AWC_VERSION__ === "string" ? __AWC_VERSION__ : "dev";
+// Fingerprint of the editor bundle, injected by build.mjs: the editor URL
+// changes whenever the editor does, so no browser keeps an old one.
+const EDITOR_HASH =
+  typeof __AWC_EDITOR_HASH__ === "string" ? __AWC_EDITOR_HASH__ : CARD_VERSION;
 console.info(
   `%c ATMO WEATHER CARD ${CARD_VERSION} `,
   "color: white; font-weight: 700; background: linear-gradient(90deg, #355C7D 0%, #6C5B7B 50%, #C06C84 100%); padding: 6px 12px; border-radius: 6px; font-family: sans-serif; letter-spacing: 0.5px; text-shadow: 0 1px 2px rgba(0,0,0,0.2);",
@@ -471,70 +475,45 @@ class AtmosphericWeatherCard extends HTMLElement {
     if (this._elements && this._elements.imageSlot) {
       const slot = this._elements.imageSlot;
       const scale = config.image_scale !== undefined ? config.image_scale : 100;
-      slot.style.height = `${scale}%`;
       const align = (
         config.image_alignment || CONFIG_DEFAULTS.image_alignment
       ).toLowerCase();
-      slot.style.top = "";
-      slot.style.bottom = "";
-      slot.style.left = "";
-      slot.style.right = "";
-      slot.style.transform = "";
       const padH =
         "var(--_awc-pad-h, var(--awc-card-padding, var(--ha-space-4, 16px)))";
       const padV =
         "var(--_awc-pad-v, var(--awc-card-padding, var(--ha-space-4, 16px)))";
       const [v, h] = parseAnchor(align);
-      // image_max_width: the most of the card width the image may take. On a
-      // narrower card it shrinks and keeps its side and its bottom line.
+      // image_max_width: the most of the card width the picture may take. The
+      // whole picture shrinks (height follows its shape), so it keeps its spot.
       const maxWidth = imageMaxWidth(config.image_max_width);
+      const maxW = maxWidth.endsWith("%") ? `${parseFloat(maxWidth)}cqw` : maxWidth;
+      slot.style.height = maxW
+        ? `min(${scale}%, calc(${maxW} / var(--_awc-img-ar, 0.0001)))`
+        : `${scale}%`;
       slot.style.maxWidth = maxWidth;
-      slot.style.setProperty(
-        "--_awc-img-pos",
-        maxWidth ? `${h === "left" ? "left" : h === "center" ? "center" : "right"} bottom` : "",
-      );
+      slot.style.setProperty("--_awc-img-pos", maxWidth ? `${h === "left" ? "left" : h === "center" ? "center" : "right"} bottom` : "");
+      // image_x / image_y move the picture from its spot; % is of the card.
+      const len = (raw) => {
+        const s = raw !== undefined ? String(raw).trim() : "";
+        if (!s) return "0px";
+        return /[%a-z]/i.test(s) ? s : `${s}px`;
+      };
+      const ox = len(config.image_x),
+        oy = len(config.image_y);
+      slot.style.top = slot.style.bottom = slot.style.left = slot.style.right = "auto";
       const t = [];
-      if (h === "left") {
-        slot.style.left = padH;
-        slot.style.right = "auto";
-      } else if (h === "center") {
-        slot.style.left = "50%";
-        slot.style.right = "auto";
+      if (h === "left") slot.style.left = `calc(${padH} + (${ox}))`;
+      else if (h === "center") {
+        slot.style.left = `calc(50% + (${ox}))`;
         t.push("translateX(-50%)");
-      } else {
-        slot.style.right = padH;
-        slot.style.left = "auto";
-      }
-      if (v === "top") {
-        slot.style.top = padV;
-        slot.style.bottom = "auto";
-      } else if (v === "center") {
-        slot.style.top = "50%";
-        slot.style.bottom = "auto";
+      } else slot.style.right = `calc(${padH} - (${ox}))`;
+      // Positive image_y moves away from the edge the picture sits at.
+      if (v === "top") slot.style.top = `calc(${padV} + (${oy}))`;
+      else if (v === "center") {
+        slot.style.top = `calc(50% + (${oy}))`;
         t.push("translateY(-50%)");
-      } else {
-        slot.style.bottom = padV;
-        slot.style.top = "auto";
-      }
+      } else slot.style.bottom = `calc(${padV} + (${oy}))`;
       slot.style.transform = t.join(" ");
-      const ox =
-        config.image_x !== undefined ? String(config.image_x).trim() : "";
-      const oy =
-        config.image_y !== undefined ? String(config.image_y).trim() : "";
-      if (ox || oy) {
-        const tx2 = ox
-          ? `translateX(${/[%a-z]/i.test(ox) ? ox : ox + "px"})`
-          : "";
-        let oyEffective = oy;
-        if (oy && v === "bottom") {
-          oyEffective = oy.startsWith("-") ? oy.slice(1) : `-${oy}`;
-        }
-        const ty2 = oyEffective
-          ? `translateY(${/[%a-z]/i.test(oyEffective) ? oyEffective : oyEffective + "px"})`
-          : "";
-        const extra = [tx2, ty2].filter(Boolean).join(" ");
-        slot.style.transform = t.length ? `${t.join(" ")} ${extra}` : extra;
-      }
     }
     const root = this._elements.root;
     root.classList.toggle("no-mask-v", config.card_mask_vertical === false);
@@ -1126,7 +1105,7 @@ class AtmosphericWeatherCard extends HTMLElement {
         "./atmo-weather-card-editor.js",
         import.meta.url,
       );
-      editorUrl.searchParams.set("v", CARD_VERSION);
+      editorUrl.searchParams.set("v", EDITOR_HASH);
       await import(editorUrl.href);
     }
     return document.createElement("atmo-weather-card-editor");
@@ -3724,6 +3703,11 @@ class AtmosphericWeatherCard extends HTMLElement {
     };
     img.onload = () => {
       img.style.opacity = "1";
+      // The picture's shape: under image_max_width the slot keeps the whole
+      // picture instead of a box with the picture shrunk inside it.
+      const slot = this._elements && this._elements.imageSlot;
+      if (slot && img.naturalWidth > 0 && img.naturalHeight > 0)
+        slot.style.setProperty("--_awc-img-ar", (img.naturalWidth / img.naturalHeight).toFixed(4));
     };
   }
   // Loads the next image next to the shown one and blends them once it is

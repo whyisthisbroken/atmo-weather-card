@@ -1225,7 +1225,7 @@ The sections below document every option, including type, default, and behavior.
 
 ### Card layouts
 
-`card_layout` gives the card a finished look with one option. Each layout sets the height, where the sun and moon stand, the chip row and a set of chips. Every value you set yourself wins over the layout, and so do your own chips: the layout's chips only show while the card has none of its own, unless you set `layout_chips: true`. Their labels come from Home Assistant in your language, and a reading your weather entity does not report, such as the pressure, is left out. In the editor the layouts are the first panel, **Layouts**, each with a small picture and a line about it.
+`card_layout` gives the card a finished look with one option. Each layout sets the height, where the sun and moon stand, the chip row and a set of chips. Every value you set yourself wins over the layout, and so do your own chips: the layout's chips only show while the card has none of its own, unless you set `layout_chips: true`. Their labels are short words of the card in English and German (**Humidity**, **Wind**; **Luftfeuchte**, **Wind**), in other languages they come from Home Assistant, and a reading your weather entity does not report, such as the pressure, is left out. In the editor the layouts are the first panel, **Layouts**, each with a small picture and a line about it.
 
 Picking a layout in the editor resets your own values for the settings that layout brings, and for the card height, the image placement and the look of the chip row, so an old value like `image_scale: 0` or `chip_area_align: spread` does not spoil its look. Everything else stays as it is: entities, sensors, performance, effects, birds and tap actions. A note says how many values were reset and has an **Undo** button. If the card has chips of its own, the editor asks two questions:
 
@@ -1596,7 +1596,7 @@ Pictures in front of the sky: the house of the `home` layout, your own house by 
 
 The [`home` layout](#card-layouts) brings a house of its own, so the card looks finished without any picture. It is an invented house, rendered with Gemini, in six pictures: by day and at night, wet while it rains or storms (`rainy`, `pouring`, `lightning-rainy`, `lightning`, `hail`) and snowy while it snows (`snowy`, `snowy-rainy`). Day and night follow the sun, and the pictures [blend](#image-transition) into each other like your own.
 
-The house is wide, so it sits a little smaller and lower than an own picture (`image_scale: 55`, `image_y: "28%"`), and on a narrow card it shrinks with `image_max_width`. To make it bigger, open **Image** → **Placement** in the editor or set `image_scale` yourself; your values win.
+The house is wide, so it is a little smaller than an own picture and stands bottom right, just above the bar (`image_alignment: bottom-right`, `image_scale: 55`, `image_y: "19%"`). Made bigger, it grows upwards from there, and on a narrow card it shrinks with `image_max_width`. To make it bigger, open **Image** → **Placement** in the editor or set `image_scale` yourself; your values win.
 
 <p align="center"><img src="images/house-all.webp" alt="The house of the home layout by day, at night, in the rain and in the snow" width="560" /></p>
 
@@ -1614,10 +1614,10 @@ You can add your own images (such as a house image) to the card. This works in b
 | `image_night_source` | `string` | `sun`    | When the night images show. `sun`: from sunset to sunrise, like the sky. `theme`: while the card is dark, following the [Color Mode](#color-mode). Applies to `image_night`, `status_night` and the night images of `image_conditions`. Without a `sun_entity`, `sun` acts like `theme`. |
 | `image_transition` | `number` | `1`       | Seconds one image takes to blend into the next when it changes: day to night, a state image, an entry of `image_conditions`. `0` switches at once, at most `10`. See [Blending between images](#image-transition). |
 | `image_scale`     | `number` | `100`       | Image size as a percentage of the total card height.                                                                                                      |
-| `image_max_width` | `number` | —           | The most of the card width the image may take, in percent, or a CSS size like `240px`. On a narrower card the image shrinks and keeps its side and its bottom line, so it does not run into the values next to it. The [`home` layout](#card-layouts) uses `58`. In the editor: **Image** → **Placement** → **Max width**. |
+| `image_max_width` | `number` | —           | The most of the card width the image may take, in percent, or a CSS size like `240px`. On a narrower card the whole image shrinks and stays at its spot, so it does not run into the values next to it. The [`home` layout](#card-layouts) uses `58`. In the editor: **Image** → **Placement** → **Max width**. |
 | `image_alignment` | `string` | `top-right` | Image placement. Options: `top-left`, `top-center`, `top-right`, `center-left`, `center`, `center-right`, `bottom-left`, `bottom-center`, `bottom-right`. |
-| `image_x`         | `string` | `0`         | Horizontal offset from the selected image alignment. Accepts pixels or CSS values such as `-20` or `10%`.                                                 |
-| `image_y`         | `string` | `0`         | Vertical offset from the selected image alignment. Accepts pixels or CSS values such as `10` or `-5%`.                                                    |
+| `image_x`         | `string` | `0`         | Moves the image sideways from its spot in `image_alignment`, positive to the right. Pixels or CSS values such as `-20` or `10%`; a percentage is of the card width. |
+| `image_y`         | `string` | `0`         | Moves the image away from the edge it sits at: down from the top, up from the bottom, down from the middle. Pixels or CSS values such as `10` or `-5%`; a percentage is of the card height. A layout's `image_x` and `image_y` belong to its own spot: pick another `image_alignment` and the image sits exactly there. |
 | `status_entity`   | `string` | —           | Entity to monitor for a status-specific image (for example a door sensor).                                                                                |
 | `status_day`      | `string` | —           | Day image to show while `status_entity` is active, open, or home.                                                                                         |
 | `status_night`    | `string` | —           | Night image to show while `status_entity` is active, open, or home.                                                                                       |
@@ -2448,7 +2448,7 @@ When it is cold, rime grows on the card like on a car windscreen: a milky, grain
 | Temperature      | Humidity   | Frost                                                                                                     |
 | :--------------- | :--------- | :-------------------------------------------------------------------------------------------------------- |
 | above +3.5 °C    | any        | none                                                                                                      |
-| 0 to +3.5 °C     | from 85 %  | a thin rime at the edges, more the closer it gets to 0 °C and the more humid the air; not in rain, sleet or hail |
+| 0 to +3.5 °C     | from 85 %  | rime at the edges, since on a clear morning the glass is colder than the air: clearly visible from about +1 °C, more the closer it gets to 0 °C and the more humid the air; not in rain, sleet or hail |
 | 0 °C             | any        | rime along the edges and in the corners                                                                   |
 | 0 to −12 °C      | any        | it reaches further in the colder it gets; from −12 °C it covers most of the card, the middle stays clearer |
 

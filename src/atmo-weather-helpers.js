@@ -262,14 +262,18 @@ function imageRuleStates(state) {
   return states.length ? states : ACTIVE_STATES;
 }
 
-// The label of a layout chip. Home Assistant names an attribute in the user's
-// language; without a translation it returns the key in words (next_setting:
-// "Next setting"). Then the card's own word wins, when it has one for that
-// language. In English, or without an own word, Home Assistant's label stays.
+// The label of a layout chip. In English and German the card's own short word
+// wins ("Luftfeuchte", "Wind"): Home Assistant's names ("Windgeschwindigkeit")
+// are too long for a row of values on a phone or in the card picker. In other
+// languages Home Assistant names the attribute; without a translation it
+// returns the key in words (next_setting: "Next setting"), then the card's
+// own word wins when it has one for that language.
 export function layoutChipLabel(haLabel, attribute, fallback, lang, translate) {
   const ha = String(haLabel || "").trim();
-  if (!ha) return translate ? translate(fallback) : fallback;
   const base = String(lang || "").toLowerCase().split("-")[0];
+  if (base === "en") return fallback;
+  if (base === "de") return translate ? translate(fallback) : fallback;
+  if (!ha) return translate ? translate(fallback) : fallback;
   const raw = String(attribute || "").replace(/_/g, " ").trim().toLowerCase();
   if (base && base !== "en" && translate && ha.toLowerCase() === raw) {
     const own = translate(fallback);

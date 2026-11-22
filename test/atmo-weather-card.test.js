@@ -416,8 +416,70 @@ test("setConfig turns card_height into a CSS size", () => {
 test("image_alignment accepts the left and right shorthands", () => {
   const { slot } = applyConfig({ image_alignment: "left" });
 
-  assert.equal(slot.style.top, "50%");
+  assert.equal(slot.style.top, "calc(50% + (0px))");
   assert.equal(slot.style.right, "auto");
+  assert.equal(slot.style.transform, "translateY(-50%)");
+});
+
+const PAD_H = "var(--_awc-pad-h, var(--awc-card-padding, var(--ha-space-4, 16px)))";
+const PAD_V = "var(--_awc-pad-v, var(--awc-card-padding, var(--ha-space-4, 16px)))";
+
+// Report of 2026-11-22: a bigger house moved down, a smaller one up, because
+// image_y in % was a share of the picture, moved with translate.
+test("a loaded picture tells the slot its shape", () => {
+  const { card, slot } = applyConfig({});
+  const img = { style: {}, naturalWidth: 800, naturalHeight: 481 };
+  card._wireImage(img);
+  img.onload();
+  assert.equal(img.style.opacity, "1");
+  assert.equal(slot.style["--_awc-img-ar"], "1.6632");
+  // A picture without a size (broken SVG) leaves the shape alone.
+  const empty = { style: {}, naturalWidth: 0, naturalHeight: 0 };
+  card._wireImage(empty);
+  empty.onload();
+  assert.equal(slot.style["--_awc-img-ar"], "1.6632");
+});
+
+test("image_x and image_y move the picture by the card, not by the picture's own size", () => {
+  const small = applyConfig({ image_alignment: "top-right", image_scale: 40, image_x: "16", image_y: "20%" }).slot;
+  const big = applyConfig({ image_alignment: "top-right", image_scale: 90, image_x: "16", image_y: "20%" }).slot;
+  for (const slot of [small, big]) {
+    assert.equal(slot.style.top, `calc(${PAD_V} + (20%))`);
+    assert.equal(slot.style.right, `calc(${PAD_H} - (16px))`);
+    assert.equal(slot.style.bottom, "auto");
+    assert.equal(slot.style.left, "auto");
+    assert.equal(slot.style.transform, "");
+  }
+  assert.equal(small.style.height, "40%");
+  assert.equal(big.style.height, "90%");
+});
+
+test("image_y moves away from the edge the picture sits at", () => {
+  const bottom = applyConfig({ image_alignment: "bottom-left", image_x: "-4", image_y: "12" }).slot;
+  assert.equal(bottom.style.bottom, `calc(${PAD_V} + (12px))`);
+  assert.equal(bottom.style.left, `calc(${PAD_H} + (-4px))`);
+  assert.equal(bottom.style.top, "auto");
+  const center = applyConfig({ image_alignment: "center", image_y: "-5%" }).slot;
+  assert.equal(center.style.top, "calc(50% + (-5%))");
+  assert.equal(center.style.left, "calc(50% + (0px))");
+  assert.equal(center.style.transform, "translateX(-50%) translateY(-50%)");
+});
+
+// The same report: under image_max_width the picture shrank inside a tall box
+// and slid to its bottom, out of sight on a big image_scale.
+test("image_max_width shrinks the whole picture: the slot height follows the picture's shape", async () => {
+  const { slot } = applyConfig({ image_alignment: "center", image_scale: 195, image_max_width: 98 });
+  assert.equal(slot.style.height, "min(195%, calc(98cqw / var(--_awc-img-ar, 0.0001)))");
+  assert.equal(slot.style.maxWidth, "98%");
+  const px = applyConfig({ image_scale: 70, image_max_width: "240px" }).slot;
+  assert.equal(px.style.height, "min(70%, calc(240px / var(--_awc-img-ar, 0.0001)))");
+  // Centred, the space right of left: 50% is only half the card; the slot
+  // still takes the whole picture (a centred house stopped growing at ~50 %).
+  const { buildStyles } = await import("../src/atmo-weather-styles.js");
+  assert.match(buildStyles(), /#image-slot {[^}]*width: max-content/);
+  const free = applyConfig({ image_scale: 70 }).slot;
+  assert.equal(free.style.height, "70%");
+  assert.equal(free.style.maxWidth, "");
 });
 
 test("forecast data renders without waiting for a state change", () => {

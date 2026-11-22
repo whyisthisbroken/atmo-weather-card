@@ -9,9 +9,14 @@ const clamp01 = (v) => Math.max(0, Math.min(1, v));
 // States where water on the glass is rain, not rime, while it is above 0 °C.
 const WET_STATES = new Set(["rainy", "pouring", "lightning-rainy", "snowy-rainy", "hail"]);
 
+// The amount at 0 °C. Below that amount the rime hardly shows, and a car
+// windscreen at 0 °C in humid air is plainly white at the edges.
+export const FROST_AT_ZERO = 0.65;
+
 // How much rime: { amount 0..1, density 0..1 }. Temperature in °C, humidity
-// in %. Above 0 °C only in very humid air (from 85 %) and up to +3.5 °C, a
-// thin rime at the edges. From 0 °C always, reaching further down to -12 °C.
+// in %. Above 0 °C only in very humid air (from 85 %) and up to +3.5 °C: on a
+// clear morning the glass is colder than the air, so a rim of rime shows
+// already at +1 °C. From 0 °C always, reaching further down to -12 °C.
 export function frostLevel(temperature, humidity, state) {
   const t = Number(temperature);
   if (temperature == null || !Number.isFinite(t)) return { amount: 0, density: 0 };
@@ -20,10 +25,11 @@ export function frostLevel(temperature, humidity, state) {
   if (t > 0) {
     if (!hasRh || WET_STATES.has(state)) return { amount: 0, density: 0 };
     const wet = clamp01((rh - 85) / 15);
-    return { amount: clamp01((3.5 - t) / 3.5) * wet * 0.35, density: 0.45 * wet };
+    const near = Math.pow(clamp01((3.5 - t) / 3.5), 0.6);
+    return { amount: FROST_AT_ZERO * near * wet, density: 0.3 + 0.4 * wet };
   }
   const humid = hasRh ? clamp01((rh - 50) / 50) : 0.4;
-  return { amount: 0.3 + 0.7 * clamp01(-t / 12), density: 0.3 + 0.7 * humid };
+  return { amount: FROST_AT_ZERO + (1 - FROST_AT_ZERO) * clamp01(-t / 12), density: 0.3 + 0.7 * humid };
 }
 
 // Growth per second of the amount: the full layer in about a minute, thawing

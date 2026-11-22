@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
@@ -19,6 +20,17 @@ test("dist carries the package version", () => {
   assert.ok(card.startsWith(`/* Atmo Weather Card ${version}\n`));
   assert.ok(card.includes(`"${version}"`));
   assert.ok(!card.includes("__AWC_VERSION__"));
+});
+
+test("the card loads the editor with a fingerprint of the editor file", () => {
+  // A moved tag keeps the version; the fingerprint still changes, so no
+  // browser keeps an old editor from its cache (report of 2026-11-22).
+  const hash = createHash("sha256")
+    .update(readFileSync(new URL("../dist/atmo-weather-card-editor.js", import.meta.url)))
+    .digest("hex")
+    .slice(0, 12);
+  assert.ok(card.includes(`"${hash}"`), "the card carries the editor fingerprint");
+  assert.ok(!card.includes("__AWC_EDITOR_HASH__"));
 });
 
 test("dist carries the license and every copyright line of LICENSE", () => {

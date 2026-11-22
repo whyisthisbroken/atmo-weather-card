@@ -9,6 +9,7 @@ import {
   houseImages,
   HOUSE_FILES,
   HOUSE_PLACEMENT,
+  withoutLayoutNudges,
   HOUSE_RAIN_STATES,
   HOUSE_SNOW_STATES,
   usesBundledHouse,
@@ -133,16 +134,39 @@ test("Home with image_day: none shows no picture", () => {
   assert.equal(card.shadowRoot.querySelector("#image-slot").hidden, true);
 });
 
-test("the bundled house sits smaller and lower than an own picture, own values win", () => {
+// Report of 2026-11-22: the grid spots did not match, the layout's image_y
+// still pushed the picture away from the chosen spot.
+test("a spot of your own in the image grid drops the layout's nudges, your own stay", () => {
+  const centre = applyCardLayout({ ...HOME, image_alignment: "center-right" });
+  assert.equal(centre.image_alignment, "center-right");
+  assert.ok(!("image_x" in centre) || centre.image_x === undefined, String(centre.image_x));
+  assert.ok(!("image_y" in centre) || centre.image_y === undefined, String(centre.image_y));
+  const nudged = applyCardLayout({ ...HOME, image_alignment: "top-left", image_y: "8" });
+  assert.equal(nudged.image_y, "8");
+  assert.equal(nudged.image_x, undefined);
+  // The layout's own spot keeps them, also written out by hand.
+  const same = applyCardLayout({ ...HOME, image_alignment: "Bottom-Right" });
+  assert.equal(same.image_y, HOUSE_PLACEMENT.image_y);
+  assert.deepEqual(withoutLayoutNudges({ image_alignment: "top-right", image_x: "16", image_y: "11%" }, { image_alignment: "center" }), { image_alignment: "top-right" });
+  assert.deepEqual(withoutLayoutNudges({ image_x: "1" }, { image_alignment: "center" }), { image_x: "1" });
+});
+
+test("the bundled house stands bottom right and smaller than an own picture, own values win", () => {
   const house = applyCardLayout(HOME);
+  assert.equal(house.image_alignment, "bottom-right");
   assert.equal(house.image_scale, HOUSE_PLACEMENT.image_scale);
   assert.equal(house.image_y, HOUSE_PLACEMENT.image_y);
+  assert.equal(house.image_x, "16");
   const own = applyCardLayout({ ...HOME, image_day: "/local/me.png" });
+  assert.equal(own.image_alignment, "top-right");
   assert.equal(own.image_scale, 70);
-  assert.equal(own.image_y, "16%");
+  assert.equal(own.image_y, "11%");
   const bigger = applyCardLayout({ ...HOME, image_scale: 75 });
   assert.equal(bigger.image_scale, 75);
   assert.equal(file(bigger.image_day), HOUSE_FILES.day);
+  // Bigger, it keeps the layout's spot and nudges.
+  assert.equal(bigger.image_alignment, "bottom-right");
+  assert.equal(bigger.image_y, HOUSE_PLACEMENT.image_y);
   assert.ok(usesBundledHouse(HOME));
   assert.ok(!usesBundledHouse({ ...HOME, image_day: "none" }));
   assert.ok(!usesBundledHouse({ ...HOME, image_folder: "/local/h/" }));

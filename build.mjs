@@ -1,4 +1,5 @@
 import { build } from "esbuild";
+import { createHash } from "node:crypto";
 import { copyFile, cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { writeDocs } from "./scripts/build-docs.mjs";
 
@@ -25,16 +26,33 @@ await rm("dist", { recursive: true, force: true });
 await mkdir("dist");
 
 // The editor stays a separate entry point so it only loads when a dashboard
-// is edited. The card imports it by URL with the version as cache buster.
-await build({
-  entryPoints: ["src/atmo-weather-card.js", "src/atmo-weather-card-editor.js"],
+// is edited. The card imports it by URL with a fingerprint of the editor file
+// as cache buster: a browser fetches a changed editor even when the version
+// stays the same (a moved tag), and keeps an unchanged one cached.
+const common = {
   outdir: "dist",
   bundle: true,
   format: "esm",
   minify: true,
   legalComments: "eof",
-  define: { __AWC_VERSION__: JSON.stringify(version) },
   banner: { js: banner },
+};
+await build({
+  ...common,
+  entryPoints: ["src/atmo-weather-card-editor.js"],
+  define: { __AWC_VERSION__: JSON.stringify(version) },
+});
+const editorHash = createHash("sha256")
+  .update(await readFile("dist/atmo-weather-card-editor.js"))
+  .digest("hex")
+  .slice(0, 12);
+await build({
+  ...common,
+  entryPoints: ["src/atmo-weather-card.js"],
+  define: {
+    __AWC_VERSION__: JSON.stringify(version),
+    __AWC_EDITOR_HASH__: JSON.stringify(editorHash),
+  },
 });
 
 await Promise.all(

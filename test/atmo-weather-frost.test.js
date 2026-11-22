@@ -2,7 +2,7 @@ import { test, afterEach } from "node:test";
 import assert from "node:assert/strict";
 
 import { errors, makeHass, mountCard, runFrames } from "./helpers/dom.js";
-import { FrostLayer, frostLevel, FROST_GROW_PER_S, FROST_THAW_PER_S } from "../src/atmo-weather-frost.js";
+import { FrostLayer, frostLevel, FROST_AT_ZERO, FROST_GROW_PER_S, FROST_THAW_PER_S } from "../src/atmo-weather-frost.js";
 
 await import("../src/atmo-weather-card.js");
 
@@ -16,15 +16,18 @@ test("frost follows temperature and humidity", () => {
   assert.equal(frostLevel(10, 99).amount, 0);
   assert.equal(frostLevel(2, 80).amount, 0);
   assert.equal(frostLevel(4, 100).amount, 0);
-  // Just above 0 °C in very humid air: a thin rime, more towards 0 °C.
+  // Just above 0 °C in very humid air: rime at the edges, more towards 0 °C.
   const rime = frostLevel(1.9, 99);
-  assert.ok(rime.amount > 0 && rime.amount < 0.3);
-  assert.ok(frostLevel(0.5, 99).amount > rime.amount);
+  assert.ok(rime.amount > 0 && rime.amount < frostLevel(0.5, 99).amount);
+  // Report of 2026-11-22: 0.7 °C and 99 % at 8:10 showed no rime (amount
+  // 0.26 hardly shows). Now it is close to the amount at 0 °C.
+  assert.ok(frostLevel(0.7, 99).amount > 0.5, String(frostLevel(0.7, 99).amount));
+  assert.ok(frostLevel(0.01, 100).amount <= FROST_AT_ZERO);
   // Rain on the glass above 0 °C is water, not rime.
   assert.equal(frostLevel(1, 99, "rainy").amount, 0);
   assert.equal(frostLevel(1, 99, "pouring").amount, 0);
   // From 0 °C always, further the colder, full at -12 °C.
-  assert.ok(Math.abs(frostLevel(0, 40).amount - 0.3) < 1e-9);
+  assert.ok(Math.abs(frostLevel(0, 40).amount - FROST_AT_ZERO) < 1e-9);
   assert.ok(frostLevel(-6, 70).amount > frostLevel(-2, 70).amount);
   assert.equal(frostLevel(-12, 70).amount, 1);
   assert.equal(frostLevel(-20, 70).amount, 1);

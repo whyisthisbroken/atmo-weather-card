@@ -17,6 +17,7 @@ import {
   migrateConfig,
   perfPreset,
   usesBundledHouse,
+  withoutLayoutNudges,
 } from "./atmo-weather-config.js";
 import { editorLanguage, makeTranslator } from "./atmo-weather-i18n.js";
 import { isBearingChip } from "./atmo-weather-compass.js";
@@ -168,6 +169,19 @@ const CHIP_TAB_HELP = {
     "chips.html#chip-visibility",
   ],
 };
+// A deep copy of a config (plain JSON data), for Undo.
+const cloneConfig = (config) => JSON.parse(JSON.stringify(config || {}));
+// The same text for the same config, whatever the order of its keys.
+function configKey(value) {
+  if (Array.isArray(value)) return `[${value.map(configKey).join(",")}]`;
+  if (value && typeof value === "object")
+    return `{${Object.keys(value)
+      .filter((k) => value[k] !== undefined)
+      .sort()
+      .map((k) => `${JSON.stringify(k)}:${configKey(value[k])}`)
+      .join(",")}}`;
+  return JSON.stringify(value === undefined ? null : value);
+}
 // Rain rate units the precipitation picker accepts.
 function isRainRateUnit(unit) {
   const u = String(unit || "").replace(/\s+/g, "").toLowerCase();
@@ -344,8 +358,8 @@ const HELPERS = Object.freeze({
   image_scale: "Image height as a percentage of the card height.",
   image_max_width: "The most of the card width the image may take; on a narrower card it shrinks. 0 = no limit.",
   image_alignment: "",
-  image_x: "Fine-tune horizontal position. Pixels or CSS, e.g. -20 or 10%.",
-  image_y: "Fine-tune vertical position. Pixels or CSS, e.g. 10 or -5%.",
+  image_x: "Moves the image sideways from its spot, positive to the right. Pixels or CSS, e.g. -20 or 10% (of the card width).",
+  image_y: "Moves the image away from the edge it sits at (up from the bottom). Pixels or CSS, e.g. 10 or -5% (of the card height).",
   status_entity:
     "Shows a different image when this entity is active, open, or home.",
   status_day: "Day image shown while the status entity is active.",
@@ -855,9 +869,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
       _openPanel: { type: String, state: true },
       _openSection: { type: String, state: true },
       _cardHeightError: { type: String, state: true },
-      _layoutReset: { type: Object, state: true },
-      _layoutChipsUndo: { type: Object, state: true },
-      _layoutChipsAsk: { type: Object, state: true },
+      _layoutSwitch: { type: Object, state: true },
     };
   }
   set hass(val) {
@@ -2728,12 +2740,13 @@ class AtmosphericWeatherCardEditor extends LitElement {
         }
       }
       .chip-tabs {
+        /* All tabs stay in sight: on a narrow editor they wrap to a second
+           line instead of scrolling behind the edge. */
         display: flex;
+        flex-wrap: wrap;
         gap: 2px;
-        overflow-x: auto;
         border-bottom: 1px solid var(--divider-color);
         margin-bottom: var(--awc-e-s3);
-        scrollbar-width: none;
       }
       .chip-tab {
         flex-shrink: 0;
@@ -2810,7 +2823,10 @@ class AtmosphericWeatherCardEditor extends LitElement {
       c.sun_entity = "sun.sun";
       autofilled = true;
     }
-    this._config = this._cleanConfig(c);
+    const cleaned = this._cleanConfig(c);
+    // A change from outside (YAML, undo in Home Assistant) ends a layout step.
+    if (this._layoutSwitch && configKey(cleaned) !== configKey(this._config)) this._layoutSwitch = null;
+    this._config = cleaned;
     if (c.card_color_mode === "light") this._colorModeState = "force_light";
     else if (c.card_color_mode === "dark") this._colorModeState = "force_dark";
     else if (c.theme_entity) this._colorModeState = "entity";
@@ -2853,7 +2869,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
       ) || {};
     const { chips, ...rest } = base;
     // The bundled house sits smaller and lower than an own picture.
-    const values = usesBundledHouse(cfg) ? { ...rest, ...HOUSE_PLACEMENT } : rest;
+    const values = withoutLayoutNudges(usesBundledHouse(cfg) ? { ...rest, ...HOUSE_PLACEMENT } : rest, cfg);
     this._layoutValuesFor = cfg;
     this._layoutValuesCache = values;
     return values;
@@ -3285,6 +3301,9 @@ class AtmosphericWeatherCardEditor extends LitElement {
     if (Array.isArray(options.strip)) {
       for (const k of options.strip) delete next[k];
     }
+    // Any change outside a layout step ends that step: its Undo would
+    // otherwise take this change back too.
+    if (!options.layoutStep) this._layoutSwitch = null;
     this._config = this._cleanConfig(next);
     this._emit();
   }
@@ -3569,10 +3588,11 @@ class AtmosphericWeatherCardEditor extends LitElement {
     }
     this._updateField(field, value);
   }
-  // Picking a layout drops your own values for the settings it brings, so it
-  // looks as intended (an old image_scale: 0 would hide the house). Chips stay:
-  // they are your work, the panel offers the layout's chips with a button.
-  // Both can be undone.
+  // Picking a layout is one step you can take back as a whole. It drops your
+  // own values for the settings the layout brings, so it looks as intended
+  // (an old image_scale: 0 would hide the house), and with chips of your own
+  // it asks what to do with them. Undo puts back the card exactly as it was
+  // before the pick: layout, values and chips. Any other change ends the step.
   _pickLayout(value) {
     const prev = this._config || {};
     const to = String(value || "").trim().toLowerCase();
@@ -3583,68 +3603,89 @@ class AtmosphericWeatherCardEditor extends LitElement {
           (k) => k !== "chips" && Object.prototype.hasOwnProperty.call(prev, k),
         )
       : [];
-    this._layoutReset = keys.length
-      ? { layout: to, values: Object.fromEntries(keys.map((k) => [k, prev[k]])) }
-      : null;
-    this._layoutChipsUndo = null;
-    // With chips of your own the panel asks what to do with them.
-    this._layoutChipsAsk = to && this._getChips().length ? { layout: to, step: "keep" } : null;
-    this._patch({ card_layout: to }, { strip: to ? keys : ["card_layout"] });
-  }
-  _undoLayoutReset() {
-    const reset = this._layoutReset;
-    if (!reset) return;
-    this._layoutReset = null;
-    this._patch({ ...reset.values });
-  }
-  // Your chips and the layout_chips switch as they are, for Undo.
-  _chipsSnapshot(note) {
-    const c = this._config || {};
-    this._layoutChipsUndo = {
-      layout: String(c.card_layout || ""),
-      note,
-      chips: this._getChips().map((chip) => ({ ...chip })),
-      layout_chips: c.layout_chips === true,
+    // Another tile right after the first: Undo still goes back to the start.
+    const open = this._layoutSwitch;
+    const before = open ? open.before : cloneConfig(prev);
+    const reset = (open ? open.reset : 0) + keys.length;
+    // A second pick starts again from your own chips.
+    const ownBefore = open && Array.isArray(open.before.chips) && open.before.chips.length ? open.before.chips : null;
+    const chips = ownBefore ? { chips: cloneConfig(ownBefore) } : {};
+    const restoreLayoutChips = open && open.before.layout_chips === true;
+    this._layoutSwitch = {
+      layout: to,
+      before,
+      reset,
+      ask: to && Array.isArray(before.chips) && before.chips.length ? "keep" : null,
+      chips: null,
     };
+    this._patch(
+      { card_layout: to, ...chips, ...(restoreLayoutChips ? { layout_chips: true } : {}) },
+      {
+        strip: [...(to ? keys : ["card_layout"]), ...(open && !restoreLayoutChips ? ["layout_chips"] : [])],
+        layoutStep: true,
+      },
+    );
+  }
+  // Undo: the card as it was before the layout was picked.
+  _undoLayoutSwitch() {
+    const step = this._layoutSwitch;
+    if (!step) return;
+    this._layoutSwitch = null;
+    this._patch(cloneConfig(step.before), { replace: true });
   }
   // "Keep your chips?" No: the layout's chips replace yours.
   _dropOwnChips() {
-    if (!this._getChips().length) return;
-    this._layoutChipsAsk = null;
-    this._chipsSnapshot("layout");
-    this._patch({}, { strip: ["chips", "layout_chips"] });
+    const step = this._layoutSwitch;
+    if (!step) return;
+    this._layoutSwitch = { ...step, ask: null, chips: "layout" };
+    this._patch({}, { strip: ["chips", "layout_chips"], layoutStep: true });
   }
   _keepOwnChips() {
-    const ask = this._layoutChipsAsk;
-    this._layoutChipsAsk = ask ? { ...ask, step: "arrange" } : null;
+    const step = this._layoutSwitch;
+    if (step) this._layoutSwitch = { ...step, ask: "arrange" };
   }
   _keepChipPositions() {
-    this._layoutChipsAsk = null;
+    const step = this._layoutSwitch;
+    if (step) this._layoutSwitch = { ...step, ask: null, chips: "kept" };
   }
   // "Arrange them?" Yes: your chips join the layout's chips and take the look
   // of its chip row. A chip that shows what a layout chip already shows goes.
   _arrangeOwnChips() {
+    const step = this._layoutSwitch;
     const c = this._config || {};
     const base = layoutDefaults(
       String(c.card_layout || "").trim().toLowerCase(),
       c.weather_entity || "",
       c.sun_entity || "sun.sun",
     );
-    if (!base) return;
-    this._layoutChipsAsk = null;
-    this._chipsSnapshot("arranged");
+    if (!step || !base) return;
+    this._layoutSwitch = { ...step, ask: null, chips: "arranged" };
     const chips = arrangeChipsForLayout(this._getChips(), base.chips || []);
     this._patch(chips.length ? { chips, layout_chips: true } : {}, {
       strip: chips.length ? [] : ["chips", "layout_chips"],
+      layoutStep: true,
     });
   }
-  _undoLayoutChips() {
-    const undo = this._layoutChipsUndo;
-    if (!undo) return;
-    this._layoutChipsUndo = null;
+  // Change: your own chips back as they were, and the question again. Outside
+  // a layout step it starts one, so Undo has a card to go back to.
+  _askAboutChips() {
+    const c = this._config || {};
+    const layout = String(c.card_layout || "");
+    if (!layout) return;
+    const step = this._layoutSwitch;
+    if (!step) {
+      this._layoutSwitch = { layout, before: cloneConfig(c), reset: 0, ask: "keep", chips: null };
+      return;
+    }
+    const own = step.before;
+    const ownChips = Array.isArray(own.chips) && own.chips.length ? cloneConfig(own.chips) : null;
+    this._layoutSwitch = { ...step, ask: ownChips ? "keep" : null, chips: null };
     this._patch(
-      { chips: undo.chips, ...(undo.layout_chips ? { layout_chips: true } : {}) },
-      { strip: undo.layout_chips ? [] : ["layout_chips"] },
+      { ...(ownChips ? { chips: ownChips } : {}), ...(own.layout_chips === true ? { layout_chips: true } : {}) },
+      {
+        strip: [...(ownChips ? [] : ["chips"]), ...(own.layout_chips === true ? [] : ["layout_chips"])],
+        layoutStep: true,
+      },
     );
   }
   _onChipAreaBackgroundModeSelect(e) {
@@ -7222,31 +7263,34 @@ class AtmosphericWeatherCardEditor extends LitElement {
       </div>`;
   }
   _renderLayoutNotices(current) {
-    const reset = this._layoutReset && this._layoutReset.layout === current ? this._layoutReset : null;
-    const count = reset ? Object.keys(reset.values).length : 0;
-    const ask = this._layoutChipsAsk && this._layoutChipsAsk.layout === current ? this._layoutChipsAsk : null;
-    const undo =
-      !ask && this._layoutChipsUndo && this._layoutChipsUndo.layout === current ? this._layoutChipsUndo : null;
+    const s = this._layoutSwitch;
+    const step = s && s.layout === current ? s : null;
     const c = this._config || {};
-    // Own chips without a choice made in this editor: offer the questions again.
-    const ownChips = current && !ask && !undo && this._getChips().length > 0 && c.layout_chips !== true;
+    // Own chips outside a layout step: offer the questions again.
+    const ownChips = current && !step && this._getChips().length > 0 && c.layout_chips !== true;
     const btn = (label, handler, secondary) =>
       html`<button type="button" class="inline-action-btn ${secondary ? "secondary" : ""}" @click=${handler}>
         ${t(label)}
       </button>`;
-    return html`${reset
+    const CHIP_NOTES = {
+      arranged: "Your chips were arranged for the layout.",
+      layout: "The card now shows the chips of the layout.",
+      kept: "Your own chips replace the chips of this layout.",
+    };
+    const lines = [];
+    if (step && step.reset === 1) lines.push(t("One own value was reset so the layout looks as intended."));
+    else if (step && step.reset > 1)
+      lines.push(t("{n} own values were reset so the layout looks as intended.", { n: step.reset }));
+    if (step && step.chips) lines.push(t(CHIP_NOTES[step.chips]));
+    return html`${lines.length
         ? html`<div class="info inline-action layout-reset">
-            <span
-              >${count === 1
-                ? t("One own value was reset so the layout looks as intended.")
-                : t("{n} own values were reset so the layout looks as intended.", { n: count })}</span
-            >
-            <button type="button" class="inline-action-btn" @click=${this._undoLayoutReset}>
-              ${t("Undo")}
-            </button>
+            <span>${lines.map((l, i) => html`${i ? html`<br />` : ""}${l}`)}</span>
+            <span class="inline-action-btns">
+              ${btn("Undo", this._undoLayoutSwitch)} ${step.chips ? btn("Change", this._askAboutChips, true) : ""}
+            </span>
           </div>`
         : ""}
-      ${ask && ask.step === "keep"
+      ${step && step.ask === "keep"
         ? html`<div class="info inline-action layout-ask" data-step="keep">
             <span>${t("Keep your own chips? Without them the card shows the chips of the layout.")}</span>
             <span class="inline-action-btns">
@@ -7254,7 +7298,7 @@ class AtmosphericWeatherCardEditor extends LitElement {
             </span>
           </div>`
         : ""}
-      ${ask && ask.step === "arrange"
+      ${step && step.ask === "arrange"
         ? html`<div class="info inline-action layout-ask" data-step="arrange">
             <span
               >${t("Arrange them for the layout? Your chips join the chips of the layout and take the look of its chip row.")}</span
@@ -7264,26 +7308,12 @@ class AtmosphericWeatherCardEditor extends LitElement {
             </span>
           </div>`
         : ""}
-      ${undo
-        ? html`<div class="info inline-action layout-chips-undo">
-            <span
-              >${undo.note === "arranged"
-                ? t("Your chips were arranged for the layout.")
-                : t("The card now shows the chips of the layout.")}</span
-            >
-            ${btn("Undo", this._undoLayoutChips)}
-          </div>`
-        : ""}
       ${ownChips
         ? html`<div class="info inline-action layout-chips">
             <span>${t("Your own chips replace the chips of this layout.")}</span>
             ${btn("Change", this._askAboutChips)}
           </div>`
         : ""}`;
-  }
-  _askAboutChips() {
-    const layout = String((this._config || {}).card_layout || "");
-    this._layoutChipsAsk = layout ? { layout, step: "keep" } : null;
   }
   _panel(id, icon, title, sub, body) {
     return html`<ha-expansion-panel
@@ -8034,8 +8064,6 @@ class AtmosphericWeatherCardEditor extends LitElement {
       )}
       ${this._renderChipsEditor()}`;
   }
-  // A chip's tab row scrolls sideways on a narrow editor; keep the open tab
-  // in view (Visibility is the last one).
   updated() {
     // Controls that show a layout's value turn grey.
     for (const el of this.renderRoot.querySelectorAll("[data-field]")) {
@@ -8043,19 +8071,6 @@ class AtmosphericWeatherCardEditor extends LitElement {
       if (el.classList.contains("from-layout") !== from) el.classList.toggle("from-layout", from);
       if (from) el.title = el.title || t("From the layout");
     }
-    const reveal = () => {
-      for (const tab of this.renderRoot.querySelectorAll(".chip-tabs .chip-tab.active")) {
-        const row = tab.parentElement;
-        const tabBox = tab.getBoundingClientRect(),
-          rowBox = row.getBoundingClientRect();
-        if (!rowBox.width) continue;
-        if (tabBox.left < rowBox.left) row.scrollLeft -= rowBox.left - tabBox.left;
-        else if (tabBox.right > rowBox.right) row.scrollLeft += tabBox.right - rowBox.right;
-      }
-    };
-    reveal();
-    // Inside a dialog that is still opening the sizes settle a frame later.
-    if (typeof requestAnimationFrame === "function") requestAnimationFrame(reveal);
   }
   render() {
     if (!this.hass || !this._config) return html``;
