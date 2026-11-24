@@ -90,6 +90,8 @@ card_layout: standard
 - **Ready in one option, yours in every detail.** Five layouts, chips for any entity as text, ring or bar, your own house in the sky, your own CSS.
 - **Light on old tablets, smooth on new ones.** Presets from Low to Ultra 60 fps, pauses off screen, sends nothing to other servers. Editor in English and German.
 
+<p align="center"><img width="640" alt="The Home layout and its house through the day: wet in the rain, snowed in, lit windows at night" src="https://whyisthisbroken.github.io/atmo-weather-card/images/readme-home.avif" /></p>
+
 <details>
 <summary><b>Gallery: every weather condition, by day and by night</b></summary>
 
