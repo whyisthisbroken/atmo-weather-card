@@ -2,7 +2,7 @@
 
 **Maintenance:** Actively maintained, with fixes and new features added on a best-effort basis.
 
-**Availability:** Available as a custom repository in the [Home Assistant Marketplace](README.md#installation) for easy installation and updates. See the [Installation Guide](README.md#installation) for setup instructions.
+**Availability:** Listed in the catalog of the [Home Assistant Marketplace](README.md#installation) since November 2026, for easy installation and updates. See the [Installation Guide](README.md#installation) for setup instructions.
 
 ## Project History
 
@@ -28,4 +28,4 @@ npm run build   # regenerate dist/ and docs/
 
 The version lives in `package.json`, and the build writes it into `dist/`. Run `npm run build` before committing any change to `src/` or the version. The Tests workflow fails if `dist/` or `docs/` is out of date.
 
-Keep `hacs.json` in the repository root, because the Marketplace requires it for custom repositories. Do not attach files to GitHub releases: as soon as a release has an asset, the Marketplace downloads only the assets and skips `dist/`.
+Keep `hacs.json` in the repository root, because the Marketplace requires it. Do not attach files to GitHub releases: as soon as a release has an asset, the Marketplace downloads only the assets and skips `dist/`.

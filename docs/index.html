@@ -93,6 +93,8 @@
   .step::before { counter-increment: step; content: counter(step); display: block; font-family: var(--f-display); font-weight: var(--d-weight); font-variation-settings: var(--d-var); font-size: 34px; line-height: 1; color: var(--accent); margin-bottom: 10px; }
   .step h3 { margin: 0 0 6px; font-size: 17.5px; }
   .step p { margin: 0; color: var(--muted); font-size: 15px; }
+  .step .badge { display: inline-block; margin-top: 12px; line-height: 0; }
+  .step .badge img { height: 32px; width: auto; }
   .step pre { margin: 12px 0 0; background: var(--code); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font: 12.5px/1.5 var(--f-mono); overflow: auto; }
   .path { font-weight: 600; color: var(--text); }
   .note { margin-top: 18px; color: var(--muted); font-size: 14.5px; }
@@ -253,12 +255,13 @@
     </div>
     <div class="steps">
       <div class="step">
-        <h3>Add the repository</h3>
-        <p>In Home Assistant open <span class="path">Settings › Marketplace › Add from link</span> and enter <code>whyisthisbroken/atmo-weather-card</code>. Pick <b>Dashboard</b> as the type.</p>
+        <h3>Find the card</h3>
+        <p>In Home Assistant open <span class="path">Settings › Marketplace</span> and search for <b>Atmo Weather Card</b>, or open it there directly:</p>
+        <a class="badge" href="https://my.home-assistant.io/redirect/marketplace_repository/?owner=whyisthisbroken&amp;repository=atmo-weather-card&amp;category=plugin"><img src="https://my.home-assistant.io/badges/marketplace_repository.svg" alt="Open your Home Assistant instance and open this repository in the Marketplace."></a>
       </div>
       <div class="step">
         <h3>Install the card</h3>
-        <p>Open <b>Atmo Weather Card</b> in the Marketplace, select <b>Install</b>, then reload your dashboard.</p>
+        <p>Open it, select <b>Install</b>, then reload your dashboard.</p>
       </div>
       <div class="step">
         <h3>Add it to a dashboard</h3>

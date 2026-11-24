@@ -91,19 +91,24 @@ Requires Home Assistant 2026.11 or newer.
 
 [![Open your Home Assistant instance and open this repository in the Marketplace.](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=whyisthisbroken&repository=atmo-weather-card&category=plugin)
 
-Easiest way to install and manage updates. The card is added as a custom repository. Existing HACS installs moved to the Marketplace automatically with Home Assistant 2026.11.
+Easiest way to install and manage updates. The card is in the Marketplace catalog, so you find it with the search. Existing HACS installs moved to the Marketplace automatically with Home Assistant 2026.11.
 
 <details>
 <summary>Installation Steps</summary>
 
-1. Go to **Settings** → **Marketplace** and select **Add from link** (top right).
+1. Go to **Settings** → **Marketplace** and search for **Atmo Weather Card**. The button above opens the card there directly.
+2. Open Atmo Weather Card and select **Install**.
+3. Reload your dashboard (clear browser cache if the card doesn't appear).
+
+If the search does not find the card, add it as a custom repository instead:
+
+1. In the Marketplace, select **Add from link** (top right).
 2. Connect GitHub if you are asked to. Custom repositories require this connection.
 3. Under **GitHub link**, enter `whyisthisbroken/atmo-weather-card` and select **Add**.
 4. If you are asked for a **Type**, select **Dashboard** and select **Add** again.
-5. Open Atmo Weather Card and select **Install**.
-6. Reload your dashboard (clear browser cache if the card doesn't appear).
+5. Continue with step 2 above.
 
-The Marketplace checks custom repositories for new versions every 48 hours.
+If the Marketplace replies that the repository is already in the Marketplace, the card is in your catalog: search for it as in step 1.
 
 </details>
 
